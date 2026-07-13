@@ -456,7 +456,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <body>
 
 <!-- LOGIN (Supabase) -->
-<div id="rsemLogin" style="position:fixed;inset:0;z-index:99999;background:#f0efea;display:none;align-items:center;justify-content:center;font-family:system-ui,'Segoe UI',sans-serif">
+<div id="rsemLogin" style="position:fixed;inset:0;z-index:99999;background:#f0efea;display:flex;align-items:center;justify-content:center;font-family:system-ui,'Segoe UI',sans-serif">
   <div style="background:#fff;border:1px solid #e0ded7;border-radius:16px;padding:26px 28px;max-width:340px;width:90%;box-shadow:0 10px 34px rgba(0,0,0,.10);text-align:center">
     <div style="font-family:'Century Gothic','Trebuchet MS',sans-serif;font-weight:700;font-size:22px;color:#2c2c2a;margin-bottom:12px">altorancho.</div>
     <h1 style="font-size:18px;color:#2c2c2a;margin:0 0 4px">Reporte semanal</h1>
@@ -469,6 +469,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div id="rsemErr" style="color:#c0392b;font-size:12px;min-height:16px;margin-top:8px"></div>
   </div>
 </div>
+<script>document.documentElement.style.overflow='hidden';/* bloquea scroll mientras se ve el login (evita franja/asomo del fondo) */</script>
 
 <!-- HEADER -->
 <div class="page-hdr">
@@ -4013,7 +4014,7 @@ async function rsemEnter(){
   catch(e){ if(e&&e.auth) return false; console.warn('rsemEnter load',e); }
   rsemApplySnap(data);
   if(typeof showTab==='function') showTab('comp');
-  var ov=document.getElementById('rsemLogin'); if(ov) ov.style.display='none';
+  var ov=document.getElementById('rsemLogin'); if(ov) ov.style.display='none'; document.documentElement.style.overflow='';
   return true;
 }
 async function rsemBoot(){
