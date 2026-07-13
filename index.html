@@ -434,8 +434,9 @@ h1,.sec-hdr,.st,.ct,.mv,.fin-pct,.dm,.fin-title,.dc .dm{font-family:Calibri,"Seg
 .cmp-chip.act{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important}
 #secRPComp .sec-hdr{color:var(--txt)!important}
 #secRPComp{overflow:visible}
-#secRPComp .sec-hdr{position:sticky;top:0;z-index:6;background:var(--bg);margin-bottom:0;padding-top:.15rem}
-#secRPComp .rp-period{position:sticky;top:40px;z-index:5;background:var(--bg);font-size:15px;color:var(--txt)!important;padding:.55rem 0 .6rem;margin-bottom:.7rem;border-bottom:1px solid var(--brd)}
+#secRPComp .rp-sticky{position:sticky;top:var(--rp-sticky-top,60px);z-index:40;background:var(--bg);border:1px solid var(--brd);border-radius:14px;box-shadow:0 6px 22px rgba(44,44,42,.12);padding:.75rem 1.05rem .8rem;margin-bottom:1rem}
+#secRPComp .rp-sticky .sec-hdr{border:none!important;margin:0;padding:0}
+#secRPComp .rp-period{font-size:15px;color:var(--txt)!important;margin:.4rem 0 0}
 #secRPComp .rp-period strong{font-size:15.5px}
 table.prov-table.rpcomp thead th,table.prov-table.rpcomp .cobr-total-row td{background:var(--ch,var(--ink))!important;color:var(--chtx,#fff)!important;border-color:rgba(0,0,0,.06)!important}
 /* tablas: encabezado charcoal */
@@ -529,7 +530,10 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 
 <!-- SECCIÓN 0b: COMPARATIVA POR RUBRO/PROVEEDOR 2025 vs 2026 -->
 <div class="sec" id="secRPComp">
-  <div class="sec-hdr"><i class="ti ti-table"></i>YTD por Rubro / Proveedor <span class="sec-sub">· por canal · 2025 vs 2026 · facturación ajustada por IPC</span></div>
+  <div class="rp-sticky">
+    <div class="sec-hdr"><i class="ti ti-table"></i>YTD por Rubro / Proveedor <span class="sec-sub">· por canal · 2025 vs 2026 · facturación ajustada por IPC</span></div>
+    <div id="rpPeriodBox"></div>
+  </div>
   <div id="rpCompWrap"></div>
 </div>
 
@@ -1787,9 +1791,9 @@ function renderRPCompare(){
   }
   let html=renderBlock('TODOS LOS CANALES',compute(null),true,null);
   CANALES.forEach(([ck,label])=>{html+=renderBlock(label,compute(ck),false,ck);});
-  document.getElementById('rpCompWrap').innerHTML=`
-    <div class="rp-period">Período: <strong style="color:var(--petrol,#0E3B43)">${per}</strong> · 2025 ajustado por IPC interanual INDEC${estim?' · Jun 2026 estimado':''}</div>
-    <div class="rp-grid">${html||'<div class="prov-empty">Sin datos</div>'}</div>`;
+  var _pb=document.getElementById('rpPeriodBox');
+  if(_pb)_pb.innerHTML=`<div class="rp-period">Período: <strong style="color:var(--petrol,#0E3B43)">${per}</strong> · 2025 ajustado por IPC interanual INDEC${estim?' · Jun 2026 estimado':''}</div>`;
+  document.getElementById('rpCompWrap').innerHTML=`<div class="rp-grid">${html||'<div class="prov-empty">Sin datos</div>'}</div>`;
 }
 function buildFactMonthChips(){
   const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -4033,7 +4037,14 @@ window.addEventListener('load',function(){
       if(!(await rsemEnter())){ e.textContent='No autorizado o sin datos.'; b.disabled=false;b.textContent='Entrar'; }
     }catch(err){ e.textContent='Mail o contraseña incorrectos.'; b.disabled=false;b.textContent='Entrar'; }
   });
+  rsemSetStickyTop();
+  window.addEventListener('resize',rsemSetStickyTop);
   rsemBoot();
 });
+function rsemSetStickyTop(){
+  var nav=document.getElementById('topnav');
+  var h=nav?nav.getBoundingClientRect().height:44;
+  document.documentElement.style.setProperty('--rp-sticky-top',(Math.round(h)+12)+'px');
+}
 </script></body>
 </html>
