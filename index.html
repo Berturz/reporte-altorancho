@@ -578,7 +578,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
         <button class="btn" onclick="sfv('dia')">Diario</button>
         <button class="btn" onclick="sfv('canal')">Por canal</button>
       </div>
-      <div class="leg" id="fLeg"></div>
+      <div class="leg" id="fLeg" style="justify-content:center"></div>
       <div style="position:relative;width:100%;height:300px"><canvas id="cFC"></canvas></div>
     </div>
     <div class="cp">
@@ -1387,17 +1387,18 @@ function renderFC(){
     const sh=dates.length>60?dates.slice(-60):dates;labels=sh.map(d=>d.slice(5));tvData=sh.map(d=>aggD(d).tv);mgData=sh.map(d=>{const a=aggD(d);return a.cmv!==0?parseFloat((a.fc/a.cmv).toFixed(4)):null;});barColors=chTint('#4472c4',0.58);barBorders='#4472c4';
     document.getElementById('fLeg').innerHTML=`<span class="li"><span class="ld" style="background:#4472c4"></span>FC s/IVA${sh.length<dates.length?' (últimos '+sh.length+')':''}</span><span class="li"><span class="ldn" style="background:#1D9E75"></span>Mg ≥2.2</span><span class="li"><span class="ldn" style="background:#BA7517"></span>&lt;2.2</span>`;
   }else{
-    const bc=aggCanal(dates);labels=CANALES.filter(c=>bc[c].tv!==0);tvData=labels.map(c=>bc[c].tv);mgData=labels.map(c=>{const r=bc[c];return r.cmv!==0?parseFloat((r.fc/r.cmv).toFixed(4)):null;});barColors=labels.map(c=>chTint(CH_LIGHT[c]||'#4472c4',0.58));barBorders=labels.map(c=>CH_LIGHT[c]||'#4472c4');
-    document.getElementById('fLeg').innerHTML=labels.map(c=>`<span class="li"><span class="ld" style="background:${chTint(CH_LIGHT[c]||'#4472c4',0.58)};border:1.5px solid ${CH_LIGHT[c]||'#4472c4'}"></span>${CANAL_LABELS[c]||c}</span>`).join('');
+    const bc=aggCanal(dates);const chKeys=CANALES.filter(c=>bc[c].tv!==0);tvData=chKeys.map(c=>bc[c].tv);mgData=chKeys.map(c=>{const r=bc[c];return r.cmv!==0?parseFloat((r.fc/r.cmv).toFixed(4)):null;});barColors=chKeys.map(c=>chTint(CH_LIGHT[c]||'#4472c4',0.58));barBorders=chKeys.map(c=>CH_LIGHT[c]||'#4472c4');labels=chKeys.map(c=>CANAL_LABELS[c]||c);
+    document.getElementById('fLeg').innerHTML=chKeys.map(c=>`<span class="li"><span class="ld" style="background:${chTint(CH_LIGHT[c]||'#4472c4',0.58)};border:1.5px solid ${CH_LIGHT[c]||'#4472c4'}"></span>${CANAL_LABELS[c]||c}</span>`).join('');
   }
   fCh=new Chart(ctx,{type:'bar',data:{labels,datasets:[
     {label:'FC s/IVA',data:tvData,backgroundColor:barColors,borderColor:barBorders,borderWidth:1.5,borderRadius:4,yAxisID:'yL',order:2,categoryPercentage:0.8,barPercentage:0.92,maxBarThickness:110}
   ]},plugins:[{id:'fcLbl',afterDatasetsDraw(ch){if(ch.data.labels.length>16)return;const cx=ch.ctx;cx.save();cx.textAlign='center';const meta=ch.getDatasetMeta(0),ds=ch.data.datasets[0],bd=ds.borderColor,cAt=i=>Array.isArray(bd)?bd[i]:bd;const base=ch.scales.yL.getPixelForValue(0);meta.data.forEach(function(bar,i){const v=ds.data[i];if(v==null)return;
-    cx.textBaseline='bottom';cx.font='700 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle=cAt(i);cx.fillText(fmt(v),bar.x,bar.y-5);
-    var mg=mgData[i];if(mg!=null){var midY=(bar.y+base)/2;cx.textBaseline='middle';cx.font='800 13px Calibri,"Segoe UI",sans-serif';cx.fillStyle=mg>=2.2?'#1D9E75':'#BA7517';cx.fillText('Mg '+mg.toFixed(2),bar.x,midY);}
-  });cx.restore();}}],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:24}},
+    var bw=bar.width||40;var txt=fmt(v);cx.font='800 10px Calibri,"Segoe UI",sans-serif';var tw=cx.measureText(txt).width||1;var fs=Math.max(10,Math.min(20,10*(bw*0.98)/tw));
+    cx.textBaseline='bottom';cx.font='800 '+fs.toFixed(1)+'px Calibri,"Segoe UI",sans-serif';cx.fillStyle=cAt(i);cx.fillText(txt,bar.x,bar.y-6);
+    var mg=mgData[i];if(mg!=null){var midY=(bar.y+base)/2;cx.textBaseline='middle';cx.font='800 14px Calibri,"Segoe UI",sans-serif';cx.fillStyle=cAt(i);cx.fillText('Mg '+mg.toFixed(2),bar.x,midY);}
+  });cx.restore();}}],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:34}},
     plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label(c){return` FC: ${ffl(c.raw)}`;}}}},
-    scales:{x:{ticks:{autoSkip:true,maxRotation:45,font:{size:10}},grid:{display:false}},
+    scales:{x:{ticks:{autoSkip:true,maxRotation:45,font:{size:12,weight:'700'},color:function(c){try{var b=c.chart.data.datasets[0].borderColor;return Array.isArray(b)?(b[c.index]||'#333'):(b||'#333');}catch(e){return '#333';}}},grid:{display:false}},
       yL:{position:'left',ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}}});
 }
 function renderDonut(){
