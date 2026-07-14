@@ -1408,29 +1408,31 @@ function renderDonut(){
   const dc=document.querySelector('#secFact .donut-wrap .dc'); if(dc)dc.style.display='none';
   document.getElementById('dLeg').innerHTML='';
   const labelPlugin={id:'canalLabels',afterDatasetsDraw(ch){
-    const meta=ch.getDatasetMeta(0);const cxt=ch.ctx;cxt.save();const lh=14.5;const outside=[];
+    const meta=ch.getDatasetMeta(0);const cxt=ch.ctx;cxt.save();const outside=[];const chh=ch.height;const INSIDE_MIN=18;
     meta.data.forEach((arc,i)=>{
       const c=labels[i],val=data[i],pct=total>0?val/total*100:0,b=bc[c],mg=b.cmv>0?b.fc/b.cmv:0,col=CH_LIGHT[c]||'#4472c4',colT=CC[c]||'#2c2c2a';
-      const cp=arc.getCenterPoint();const big=pct>=9;
-      const nm=CANAL_LABELS[c]||c,mgTxt=(mg>0?'Mg '+mg.toFixed(2)+' · ':'')+pct.toFixed(1)+'%';
-      if(big){
-        cxt.textAlign='center';cxt.textBaseline='middle';
-        var G=18;
+      const cp=arc.getCenterPoint();const nm=CANAL_LABELS[c]||c;
+      if(pct>=INSIDE_MIN){
+        cxt.textAlign='center';cxt.textBaseline='middle';var G=17;
         var rows=[{t:nm,f:'800 15px'},{t:fmt(val),f:'800 13.5px'}];
         if(mg>0)rows.push({t:'Mg '+mg.toFixed(2),f:'700 12.5px'});
-        rows.push({t:pct.toFixed(1)+'%',f:'800 13px',extra:9});
+        rows.push({t:pct.toFixed(1)+'%',f:'800 13px',extra:8});
         var totalH=0;rows.forEach(function(R,ix){if(ix>0)totalH+=G+(R.extra||0);});
         var yy=cp.y-totalH/2;cxt.fillStyle=colT;
         rows.forEach(function(R,ix){if(ix>0)yy+=G+(R.extra||0);cxt.font=R.f+' Calibri,"Segoe UI",sans-serif';cxt.fillText(R.t,cp.x,yy);});
       }else{
         let dx=cp.x-arc.x,dy=cp.y-arc.y;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
         const R=(arc.outerRadius||60);
-        outside.push({col,colT,nm,val,pct,mg,cx:arc.x,cy:arc.y,dx,dy,ex:arc.x+dx*R,ey:arc.y+dy*R,lx:arc.x+dx*(R+22),ty:arc.y+dy*(R+22)});
+        outside.push({col,colT,nm,val,pct,mg,dx,dy,ex:arc.x+dx*R,ey:arc.y+dy*R,lx:arc.x+dx*(R+22),ty:arc.y+dy*(R+22)});
       }
     });
-    // de-colisión vertical de etiquetas externas (3 líneas c/u)
-    const gap=44,MINY=28;[outside.filter(o=>o.dx>=0),outside.filter(o=>o.dx<0)].forEach(g=>{
-      g.sort((a,b)=>a.ty-b.ty);if(g.length&&g[0].ty<MINY)g[0].ty=MINY;for(let k=1;k<g.length;k++){if(g[k].ty-g[k-1].ty<gap)g[k].ty=g[k-1].ty+gap;}
+    // de-colisión externas (3 líneas): topes superior/inferior dentro del canvas, ambos lados
+    const gap=46,lblH=42,minY=8+lblH/2,maxY=chh-8-lblH/2;
+    [outside.filter(o=>o.dx>=0),outside.filter(o=>o.dx<0)].forEach(g=>{
+      g.sort((a,b)=>a.ty-b.ty);
+      if(g.length&&g[0].ty<minY)g[0].ty=minY;
+      for(let k=1;k<g.length;k++){if(g[k].ty-g[k-1].ty<gap)g[k].ty=g[k-1].ty+gap;}
+      for(let k=g.length-1;k>=0;k--){if(g[k].ty>maxY){g[k].ty=maxY;for(let j=k-1;j>=0;j--){if(g[j+1].ty-g[j].ty<gap)g[j].ty=g[j+1].ty-gap;}}}
     });
     outside.forEach(o=>{const right=o.dx>=0,lx=o.lx;var lh2=13.5;var yy=o.ty-lh2;
       cxt.strokeStyle=o.col;cxt.lineWidth=1.2;cxt.beginPath();cxt.moveTo(o.ex,o.ey);cxt.lineTo(lx,o.ty);cxt.stroke();
