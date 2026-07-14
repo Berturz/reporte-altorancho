@@ -3926,7 +3926,7 @@ function rsemBuildPlano(){
     +'try{if(s.salidas&&s.salidas.SALIDAS_B_D)applySalidasState(s.salidas);}catch(e){}'
     +'try{if(s.impo&&s.impo.IMPO_D)applyIMPOState(s.impo);}catch(e){}'
     +'try{if(typeof renderProd==="function")renderProd();}catch(e){}'
-    +'try{if(typeof renderCajas==="function")renderCajas();}catch(e){}'
+    +'try{if(typeof buildCajasWeekChips==="function"){buildCajasWeekChips();renderCajas();}}catch(e){}'
     +'},300);});';
   var js='window.__RSEM_SNAP__='+JSON.stringify(snap).replace(/<\//g,'<\\/')+';\n'+handler;
   var clone=document.documentElement.cloneNode(true);
@@ -3993,7 +3993,7 @@ function rsemApplySnap(s){
   try{if(s.salidas&&s.salidas.SALIDAS_B_D)applySalidasState(s.salidas);}catch(e){}
   try{if(s.impo&&s.impo.IMPO_D)applyIMPOState(s.impo);}catch(e){}
   try{if(typeof renderProd==='function')renderProd();}catch(e){}
-  try{if(typeof renderCajas==='function')renderCajas();}catch(e){}
+  try{if(typeof buildCajasWeekChips==='function'){buildCajasWeekChips();renderCajas();}}catch(e){}
   return true;
 }
 function rsemHeaders(json){var h={'apikey':RSEM_SUPA_KEY,'Authorization':'Bearer '+RSEM_TOKEN};if(json)h['Content-Type']='application/json';return h;}
