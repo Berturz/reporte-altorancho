@@ -1371,7 +1371,7 @@ function updMetrics(){
   const mc=mg>=2.2?'#0f6e56':'#854f0b';
   document.getElementById('mG').innerHTML=`
     <div class="mc"><div class="ml2">Facturación s/IVA</div><div class="mv">${fmt(tv)}</div><div class="ms">${dates.length} días</div></div>
-    <div class="mc"><div class="ml2">Margen</div><div class="mv" style="color:${mc}">${mg>0?mg.toFixed(2):'—'}</div><div class="ms">FC / CMV · ref 2.2</div></div>`;
+    <div class="mc"><div class="ml2">Margen</div><div class="mv" style="color:${mc}">${mg>0?mg.toFixed(2):'—'}</div></div>`;
 }
 function sfv(v){fv=v;const bs=document.querySelectorAll('#fCtrl .btn');bs[0].classList.toggle('act',v==='mes');bs[1].classList.toggle('act',v==='dia');bs[2].classList.toggle('act',v==='canal');if(fCh)fCh.destroy();renderFC();}
 function renderFC(){
@@ -1592,7 +1592,6 @@ function renderOrigenCard(cardId, totals, badgeClass, label) {
       <div class="stat-item">
         <div class="stat-lbl">Margen</div>
         <div class="stat-val" style="color:${mc}">${mg > 0 ? mg.toFixed(2) : '—'}</div>
-        <div class="stat-sub">FC / CMV · ref 2.2</div>
       </div>
     </div>`;
 }
