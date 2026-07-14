@@ -2227,6 +2227,8 @@ function renderProv(){
 let rpMes = null; // se setea en init al primer mes disponible
 const RP_CANAL_LABELS = {lett:'AR Mayorista (Lett)', web:'Web', lbe:'Belgrano', lsi:'San Isidro', alc:'Alcorta', lnd:'Nordelta'};
 const RP_CANAL_ICONS  = {lett:'building-store', web:'device-laptop', lbe:'map-pin', lsi:'map-pin', alc:'map-pin', lnd:'map-pin'};
+// mapeo a las claves de CH_LIGHT para usar la misma paleta por canal que en Facturación
+const RP_CANAL_CHKEY  = {lett:'Lett', web:'Web', lbe:'LBE', lsi:'LSI', alc:'ALC', lnd:'LND'};
 const RP_CAT_PROV = {
   'ILUMINACION IMPORTADA':'Todos (excepto Lux Lighting)',
   'ILUMINACION NACIONAL':'Mix + Hierros',
@@ -2301,11 +2303,14 @@ function renderRP(){
     document.getElementById('rpCanalBlocks').innerHTML='<div class="prov-empty">Sin datos para el mes seleccionado</div>';
     return;
   }
-  document.getElementById('rpCanalBlocks').innerHTML = canales.map(c=>`
+  document.getElementById('rpCanalBlocks').innerHTML = canales.map(c=>{
+    const col = CH_LIGHT[RP_CANAL_CHKEY[c]] || '#4472c4';
+    return `
     <div class="rp-canal-block">
-      <div class="rp-canal-title"><i class="ti ti-${RP_CANAL_ICONS[c]||'building'}"></i>${RP_CANAL_LABELS[c]}</div>
+      <div class="rp-canal-title" style="color:${col};border-bottom:2px solid ${chTint(col,0.45)};padding-bottom:.3rem"><i class="ti ti-${RP_CANAL_ICONS[c]||'building'}" style="color:${col}"></i>${RP_CANAL_LABELS[c]}</div>
       <div class="prov-table-wrap">${renderRPTable(c, mesData[c])}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 
