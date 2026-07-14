@@ -1413,29 +1413,34 @@ function renderDonut(){
       const cp=arc.getCenterPoint();const big=pct>=9;
       const nm=CANAL_LABELS[c]||c,mgTxt=(mg>0?'Mg '+mg.toFixed(2)+' · ':'')+pct.toFixed(1)+'%';
       if(big){
-        cxt.textAlign='center';cxt.textBaseline='middle';let y=cp.y-lh;
-        cxt.fillStyle=colT;cxt.font='800 14.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(nm,cp.x,y);y+=lh;
-        cxt.font='800 13.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(fmt(val),cp.x,y);y+=lh;
-        cxt.font='800 12px Calibri,"Segoe UI",sans-serif';cxt.fillStyle=colT;cxt.fillText(mgTxt,cp.x,y);
+        cxt.textAlign='center';cxt.textBaseline='middle';
+        var G=18;
+        var rows=[{t:nm,f:'800 15px'},{t:fmt(val),f:'800 13.5px'}];
+        if(mg>0)rows.push({t:'Mg '+mg.toFixed(2),f:'700 12.5px'});
+        rows.push({t:pct.toFixed(1)+'%',f:'800 13px',extra:9});
+        var totalH=0;rows.forEach(function(R,ix){if(ix>0)totalH+=G+(R.extra||0);});
+        var yy=cp.y-totalH/2;cxt.fillStyle=colT;
+        rows.forEach(function(R,ix){if(ix>0)yy+=G+(R.extra||0);cxt.font=R.f+' Calibri,"Segoe UI",sans-serif';cxt.fillText(R.t,cp.x,yy);});
       }else{
         let dx=cp.x-arc.x,dy=cp.y-arc.y;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
         const R=(arc.outerRadius||60);
-        outside.push({col,colT,nm,val,pct,cx:arc.x,cy:arc.y,dx,dy,ex:arc.x+dx*R,ey:arc.y+dy*R,lx:arc.x+dx*(R+16),ty:arc.y+dy*(R+16)});
+        outside.push({col,colT,nm,val,pct,mg,cx:arc.x,cy:arc.y,dx,dy,ex:arc.x+dx*R,ey:arc.y+dy*R,lx:arc.x+dx*(R+22),ty:arc.y+dy*(R+22)});
       }
     });
-    // de-colisión vertical de etiquetas externas (porciones chicas)
-    const gap=24;[outside.filter(o=>o.dx>=0),outside.filter(o=>o.dx<0)].forEach(g=>{
-      g.sort((a,b)=>a.ty-b.ty);for(let k=1;k<g.length;k++){if(g[k].ty-g[k-1].ty<gap)g[k].ty=g[k-1].ty+gap;}
+    // de-colisión vertical de etiquetas externas (3 líneas c/u)
+    const gap=44,MINY=28;[outside.filter(o=>o.dx>=0),outside.filter(o=>o.dx<0)].forEach(g=>{
+      g.sort((a,b)=>a.ty-b.ty);if(g.length&&g[0].ty<MINY)g[0].ty=MINY;for(let k=1;k<g.length;k++){if(g[k].ty-g[k-1].ty<gap)g[k].ty=g[k-1].ty+gap;}
     });
-    outside.forEach(o=>{const right=o.dx>=0,lx=o.lx,ly=o.ty;
-      cxt.strokeStyle=o.col;cxt.lineWidth=1;cxt.beginPath();cxt.moveTo(o.ex,o.ey);cxt.lineTo(lx,ly);cxt.stroke();
-      cxt.textAlign=right?'left':'right';cxt.textBaseline='middle';const tx=lx+(right?3:-3);let y=ly-lh*0.5;
-      cxt.fillStyle=o.colT;cxt.font='800 12px Calibri,"Segoe UI",sans-serif';cxt.fillText(o.nm+' '+o.pct.toFixed(1)+'%',tx,y);y+=lh;
-      cxt.fillStyle='#3a3a38';cxt.font='700 11px Calibri,"Segoe UI",sans-serif';cxt.fillText(fmt(o.val),tx,y);
+    outside.forEach(o=>{const right=o.dx>=0,lx=o.lx;var lh2=13.5;var yy=o.ty-lh2;
+      cxt.strokeStyle=o.col;cxt.lineWidth=1.2;cxt.beginPath();cxt.moveTo(o.ex,o.ey);cxt.lineTo(lx,o.ty);cxt.stroke();
+      cxt.textAlign=right?'left':'right';cxt.textBaseline='middle';const tx=lx+(right?4:-4);
+      cxt.fillStyle=o.colT;cxt.font='800 12.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(o.nm+' '+o.pct.toFixed(1)+'%',tx,yy);yy+=lh2;
+      cxt.fillStyle='#3a3a38';cxt.font='700 11.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(fmt(o.val),tx,yy);yy+=lh2;
+      if(o.mg>0){cxt.fillStyle=o.colT;cxt.font='700 11px Calibri,"Segoe UI",sans-serif';cxt.fillText('Mg '+o.mg.toFixed(2),tx,yy);}
     });
     cxt.restore();
   }};
-  dnCh=new Chart(document.getElementById('cDN').getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:labels.map(c=>chTint(CH_LIGHT[c]||'#4472c4',0.74)),borderColor:labels.map(c=>CH_LIGHT[c]||'#4472c4'),borderWidth:2,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'0%',layout:{padding:{left:46,right:46,top:16,bottom:16}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${CANAL_LABELS[c.label]||c.label}: ${fmt(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}},plugins:[labelPlugin]});
+  dnCh=new Chart(document.getElementById('cDN').getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:labels.map(c=>chTint(CH_LIGHT[c]||'#4472c4',0.74)),borderColor:labels.map(c=>CH_LIGHT[c]||'#4472c4'),borderWidth:2,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'0%',layout:{padding:{left:70,right:70,top:34,bottom:34}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${CANAL_LABELS[c.label]||c.label}: ${fmt(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}},plugins:[labelPlugin]});
 }
 
 // ── RENDER FINANCIACIÓN ──
