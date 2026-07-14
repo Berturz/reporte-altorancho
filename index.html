@@ -1784,10 +1784,10 @@ function renderRPCompare(){
       <table class="prov-table rpcomp">
         <thead>
           <tr><th rowspan="2">Rubro</th><th rowspan="2">Proveedor</th><th colspan="2" style="text-align:center;background:#4472c4">Cantidad</th><th colspan="3" style="text-align:center;background:#2c2c2a">Facturación s/IVA</th><th rowspan="2" style="text-align:right">% '26</th></tr>
-          <tr><th style="text-align:right">2025</th><th style="text-align:right">2026</th><th style="text-align:right;background:#8a8577;color:#fff">2025 Aj.IPC</th><th style="text-align:right">2026</th><th style="text-align:right">Var. real</th></tr>
+          <tr><th style="text-align:right;color:#8a8880!important">2025</th><th style="text-align:right">2026</th><th style="text-align:right;background:#8a8577;color:#8a8880!important">2025 Aj.IPC</th><th style="text-align:right">2026</th><th style="text-align:right">Var. real</th></tr>
         </thead>
         <tbody>${body}
-          <tr class="cobr-total-row" style="font-size:14px"><td colspan="2">Total ${label}</td><td style="text-align:right">${tq25.toLocaleString('es-AR')}</td><td style="text-align:right;color:${col26}!important">${tq26.toLocaleString('es-AR')}</td><td style="text-align:right">${fmt(taj)}</td><td style="text-align:right;color:${col26}!important">${fmt(t26)}</td><td style="text-align:right">${gv(t26,taj)}</td><td style="text-align:right">100%</td></tr>
+          <tr class="cobr-total-row" style="font-size:14px"><td colspan="2">Total ${label}</td><td style="text-align:right;color:#8a8880!important">${tq25.toLocaleString('es-AR')}</td><td style="text-align:right;color:${col26}!important">${tq26.toLocaleString('es-AR')}</td><td style="text-align:right;color:#8a8880!important">${fmt(taj)}</td><td style="text-align:right;color:${col26}!important">${fmt(t26)}</td><td style="text-align:right">${gv(t26,taj)}</td><td style="text-align:right">100%</td></tr>
         </tbody></table></div>`;
   }
   let html=renderBlock('TODOS LOS CANALES',compute(null),true,null);
