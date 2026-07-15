@@ -628,6 +628,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div class="mchip act" id="fmAll" onclick="setFinMes('all')">Mes actual</div>
     <div id="finMonthChips"></div>
   </div>
+  <div id="finCostFin" style="display:none;gap:1.3rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1.3rem"></div>
   <div id="finResumen" style="margin-bottom:1.3rem"></div>
   <div id="finTop" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start"></div>
   <div id="finBot" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1.3rem"></div>
@@ -755,6 +756,7 @@ var RUBROPROV_D = {};
 var COBR_D = {};
 var VEND_D = {};
 var ORIGEN_D = {};
+var COSTFIN_D = {web:[], local:[]};
 </script>
 
 <!-- ════════════════════════════════════════════════
@@ -830,7 +832,7 @@ async function handleFile(file) {
     setProgress(20, '<span class="spin">&#8635;</span> Parseando...');
 
     // Leer solo la hoja necesaria, sin fórmulas, como array de arrays
-    const wb = XLSX.read(buf, { type:'array', cellDates:false, dense:true, sheets:['FACTURACIÓN 2026'], bookVBA:false });
+    const wb = XLSX.read(buf, { type:'array', cellDates:false, dense:true, sheets:['FACTURACIÓN 2026','Costos de Financiación'], bookVBA:false });
     const sheetName = 'FACTURACIÓN 2026';
     if (!wb.SheetNames.includes(sheetName)) {
       throw new Error(`Hoja "${sheetName}" no encontrada. Hojas disponibles: ${wb.SheetNames.join(', ')}`);
@@ -840,6 +842,27 @@ async function handleFile(file) {
 
     // Convertir a array de arrays (más rápido que to_json)
     const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null });
+
+    // Costos de Financiación: bloques WEB y LOCAL → Valor (col A) + Financiación Total (col S = índice 18)
+    const newCOSTFIN = {web:[], local:[]};
+    (function(){
+      const shCF = wb.Sheets['Costos de Financiación']; if(!shCF) return;
+      const rsCF = XLSX.utils.sheet_to_json(shCF, { header:1, raw:true, defval:null });
+      let target=null, collecting=false;
+      for(const r of rsCF){
+        if(!r) continue;
+        const a = r[0]!=null ? String(r[0]).trim() : '';
+        const au = a.toUpperCase();
+        if(au==='WEB'){ target=newCOSTFIN.web; collecting=false; continue; }
+        if(au==='LOCAL' || au==='LOCALES'){ target=newCOSTFIN.local; collecting=false; continue; }
+        if(!target) continue;
+        if(au==='VALOR'){ collecting=true; continue; }   // fila de encabezado: arranca la data
+        if(!collecting) continue;
+        if(!a){ target=null; collecting=false; continue; } // fila vacía corta el bloque
+        const tot = typeof r[18]==='number' ? r[18] : parseFloat(r[18]);
+        if(!isNaN(tot)) target.push([a, tot]);
+      }
+    })();
 
     setProgress(55, '<span class="spin">&#8635;</span> Agregando datos...');
 
@@ -1166,6 +1189,7 @@ async function handleFile(file) {
     TOPFC_D = newTOPFC;
     PROV_D = newPROV;
     ORIGEN_D = newORIGEN;
+    COSTFIN_D = newCOSTFIN;
 
     // Recalcular meses disponibles y actualizar chips
     const meses = [...new Set(Object.keys(FIN_D).map(d=>d.slice(0,7)))].sort();
@@ -1201,6 +1225,7 @@ async function handleFile(file) {
     buildRPMonthChips(); renderRP();
     renderCobr();
     renderVend();
+    try{ renderCostFin(); }catch(e){}
     try{ persistFact(file.name); }catch(e){}
 
   } catch(err) {
@@ -1218,6 +1243,23 @@ const zone = document.getElementById('uploadZone');
 zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('drag'); });
 zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
 zone.addEventListener('drop', e=>{ e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+// Cuadros WEB / Locales con la tabla de Costos de Financiación (Valor + Financiación total)
+function renderCostFin(){
+  var el=document.getElementById('finCostFin'); if(!el) return;
+  var cf=(typeof COSTFIN_D!=='undefined'&&COSTFIN_D)?COSTFIN_D:{web:[],local:[]};
+  var tint=(typeof chTint==='function')?chTint:function(h){return h;};
+  var box=function(titulo,color,rows){
+    if(!rows||!rows.length) return '';
+    var trs=rows.map(function(p){return '<tr><td>'+p[0]+'</td><td style="text-align:right;font-weight:700">'+(p[1]*100).toFixed(2)+'%</td></tr>';}).join('');
+    return '<div style="flex:1;min-width:280px">'
+      +'<div class="rp-canal-title" style="color:'+color+';border-bottom:2px solid '+tint(color,0.45)+';padding-bottom:.3rem"><i class="ti ti-credit-card" style="color:'+color+'"></i>'+titulo+'</div>'
+      +'<div class="prov-table-wrap"><table class="rp-table"><thead><tr><th>Valor</th><th style="text-align:right">Financiación total</th></tr></thead><tbody>'+trs+'</tbody></table></div>'
+      +'</div>';
+  };
+  var html=box('WEB','#7B6BC8',cf.web)+box('Locales','#4E9DAC',cf.local);
+  el.innerHTML=html;
+  el.style.display=html?'flex':'none';
+}
 </script>
 
 <!-- ════════════════════════════════════════════════
@@ -4242,17 +4284,17 @@ function idbOpen(){return new Promise(function(res,rej){try{var q=indexedDB.open
 function idbSet(k,v){return idbOpen().then(function(db){return new Promise(function(res,rej){var t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=function(){res(true);};t.onerror=function(){rej(t.error);};});}).catch(function(e){console.warn('idbSet',e);return false;});}
 function idbGet(k){return idbOpen().then(function(db){return new Promise(function(res){var t=db.transaction('kv','readonly');var r=t.objectStore('kv').get(k);r.onsuccess=function(){res(r.result||null);};r.onerror=function(){res(null);};});}).catch(function(){return null;});}
 function idbDel(k){return idbOpen().then(function(db){return new Promise(function(res){var t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=function(){res(true);};t.onerror=function(){res(false);};});}).catch(function(){return false;});}
-function persistFact(name){ try{ idbSet('fact',{ts:Date.now(),name:name||'',DATA_D:DATA_D,FIN_D:FIN_D,FIN_SUB:FIN_SUB,ORIG_D:ORIG_D,PROD_D:PROD_D,TOPFC_D:TOPFC_D,PROV_D:PROV_D,RUBROPROV_D:RUBROPROV_D,COBR_D:COBR_D,VEND_D:VEND_D,ORIGEN_D:ORIGEN_D}); }catch(e){console.warn(e);} }
+function persistFact(name){ try{ idbSet('fact',{ts:Date.now(),name:name||'',DATA_D:DATA_D,FIN_D:FIN_D,FIN_SUB:FIN_SUB,ORIG_D:ORIG_D,PROD_D:PROD_D,TOPFC_D:TOPFC_D,PROV_D:PROV_D,RUBROPROV_D:RUBROPROV_D,COBR_D:COBR_D,VEND_D:VEND_D,ORIGEN_D:ORIGEN_D,COSTFIN_D:COSTFIN_D}); }catch(e){console.warn(e);} }
 function persistSalidas(){ try{ idbSet('salidas',{ts:Date.now(),SALIDAS_B_D:SALIDAS_B_D,SALIDAS_AA_D:SALIDAS_AA_D,SALIDAS_EXTRA_D:SALIDAS_EXTRA_D}); }catch(e){console.warn(e);} }
 function persistIMPO(){ try{ idbSet('impo',{ts:Date.now(),IMPO_D:IMPO_D}); }catch(e){console.warn(e);} }
 function applyFactState(f){
-  DATA_D=f.DATA_D;FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;
+  DATA_D=f.DATA_D;FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;COSTFIN_D=f.COSTFIN_D||{web:[],local:[]};
   try{ var meses=Array.from(new Set(Object.keys(FIN_D).map(function(d){return d.slice(0,7);}))).sort(); buildMonthChips(meses); }catch(e){}
   sS=null;sE=null;picking=false;finMes='all';
   var ad=Object.keys(DATA_D).sort(); if(ad.length){cy=parseInt(ad[0].slice(0,4));cm=parseInt(ad[0].slice(5,7))-1;}
   try{buildCal();updDR();}catch(e){}
   try{ var rng=ad.length?(ad[0]+' \u2192 '+ad[ad.length-1]):''; var di=document.getElementById('dataInfo'); if(di) di.innerHTML='Tu \u00faltima actualizaci\u00f3n'+(f.name?(': <strong>'+f.name+'</strong>'):'')+' \u00b7 '+rng+' \u00b7 '+ad.length+' d\u00edas \u00b7 <a href="#" onclick="resetFactState();return false;" style="color:#1C7C8C">usar datos del archivo</a>'; var bd=document.getElementById('dataBadge'); if(bd){bd.className='ok-badge';bd.innerHTML='<i class="ti ti-device-floppy" style="font-size:10px"></i> Restaurado';} }catch(e){}
-  refreshAll();renderYTD();renderRPCompare();buildFactMonthChips();buildRPMonthChips();renderRP();renderCobr();renderVend();
+  refreshAll();renderYTD();renderRPCompare();buildFactMonthChips();buildRPMonthChips();renderRP();renderCobr();renderVend();try{renderCostFin();}catch(e){}
 }
 function applySalidasState(s){ SALIDAS_B_D=s.SALIDAS_B_D;SALIDAS_AA_D=s.SALIDAS_AA_D;SALIDAS_EXTRA_D=s.SALIDAS_EXTRA_D; salidasSS=null;salidasSE=null;salidasPicking=false; var ad=getSalidasDKEYS(); if(ad.length){var f=ad[ad.length-1];salidasCy=parseInt(f.slice(0,4));salidasCm=parseInt(f.slice(5,7))-1;} buildSalidasCal();updSalidasDRI();renderSalidas(); }
 function applyIMPOState(im){ IMPO_D=im.IMPO_D; renderIMPO(); }
@@ -4262,7 +4304,7 @@ function rsemBuildPlano(){
   var pad=function(n){return n<10?'0'+n:''+n;};var d=new Date();var fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   var snap={
-    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D')},
+    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D')},
@@ -4325,7 +4367,7 @@ var RSEM_TOKEN=null, RSEM_RT=null, RSEM_EMAIL=null;
 function rsemSnapObj(){
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   return {
-    fact:{DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D')},
+    fact:{DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D')},
