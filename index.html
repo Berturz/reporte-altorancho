@@ -1532,7 +1532,9 @@ function renderFC(){
     datasets=[{label:'FC s/IVA',data:tv,backgroundColor:chTint('#4472c4',0.58),borderColor:'#4472c4'}];
     legEl.innerHTML=swatch(chTint('#4472c4',0.58),'#4472c4','Facturación s/IVA')+mgNote;
   }else if(fv==='dia'){
-    const sh=dates.length>60?dates.slice(-60):dates;labels=sh.map(d=>d.slice(5));
+    const sh=dates.length>60?dates.slice(-60):dates;
+    var WD=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    labels=sh.map(function(d){return WD[new Date(d+'T00:00:00').getDay()]+' '+parseInt(d.slice(8,10),10);});
     var extra=sh.length<dates.length?' (últimos '+sh.length+')':'';
     if(fvCanal==='stack'){
       stacked=true;
