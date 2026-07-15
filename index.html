@@ -1272,8 +1272,10 @@ function renderCostFin(){
     return v.trim();
   }
   function group(rows){ var order=[],map={}; rows.forEach(function(p){var f=fam(p[0]); if(!map[f]){map[f]=[];order.push(f);} map[f].push(p);}); return order.map(function(f){return {fam:f,items:map[f]};}); }
-  function box(titulo,color,rows){
-    if(!rows||!rows.length) return '';
+  var norm=function(s){return String(s).trim().toLowerCase();};
+  function box(titulo,color,rows,excl){
+    rows=(rows||[]).filter(function(p){return excl.indexOf(norm(p[0]))<0;});
+    if(!rows.length) return '';
     var soft=tint(color,0.88);
     var body=group(rows).map(function(g){
       if(g.items.length===1){
@@ -1285,10 +1287,11 @@ function renderCostFin(){
       return '<details class="cf-det"><summary class="cf-sum" style="border-left:3px solid '+color+'"><span class="cf-fam">'+g.fam+'</span><span class="cf-badge" style="background:'+soft+';color:'+color+'">'+g.items.length+'</span></summary><div class="cf-subs">'+subs+'</div></details>';
     }).join('');
     return '<div style="flex:1;min-width:260px">'
-      +'<div class="rp-canal-title" style="color:'+color+';border-bottom:2px solid '+tint(color,0.45)+';padding-bottom:.3rem;margin-bottom:.5rem"><i class="ti ti-credit-card" style="color:'+color+'"></i>'+titulo+'</div>'
+      +'<div class="rp-canal-title" style="color:'+color+';border-bottom:2px solid '+tint(color,0.45)+';padding-bottom:.15rem"><i class="ti ti-credit-card" style="color:'+color+'"></i>'+titulo+'</div>'
+      +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .55rem">Tasas de financiación actuales</div>'
       +'<div class="cf-list">'+body+'</div></div>';
   }
-  var html=box('WEB','#7B6BC8',cf.web)+box('Locales','#4E9DAC',cf.local);
+  var html=box('WEB','#7B6BC8',cf.web,['debito','mercado credito'])+box('Locales','#4E9DAC',cf.local,['gocuotas']);
   el.innerHTML=html;
   el.style.display=html?'flex':'none';
 }
