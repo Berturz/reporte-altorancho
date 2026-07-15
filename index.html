@@ -1375,15 +1375,21 @@ function renderCalRef(){
   var head='<div style="background:#2c2c2a;color:#fff;text-align:center;font-weight:700;font-size:12px;padding:4px 0;border-radius:6px;margin-bottom:5px">'+MN[m]+' '+y+'</div>';
   var wd=['L','M','M','J','V','S','D'];
   var wdrow='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:2px">'+wd.map(function(d,i){return '<div style="text-align:center;font-size:9.5px;font-weight:700;color:'+(i>=5?'#d08a3c':'#8a8880')+'">'+d+'</div>';}).join('')+'</div>';
+  var lastDow=((new Date(y,m,days).getDay()+6)%7);
+  var total=firstMon+days+(6-lastDow);
   var cells='';
-  for(var i=0;i<firstMon;i++) cells+='<div></div>';
-  for(var d=1;d<=days;d++){
-    var ds=y+'-'+pad2(m+1)+'-'+pad2(d);
+  for(var n=0;n<total;n++){
+    var dt=new Date(y,m,1-firstMon+n);
+    var yy=dt.getFullYear(),mm=dt.getMonth(),dd=dt.getDate();
+    var ds=yy+'-'+pad2(mm+1)+'-'+pad2(dd);
     var sel=(ds>=a&&ds<=b);
-    var wknd=((new Date(y,m,d).getDay()+6)%7)>=5;
+    var oth=(mm!==m||yy!==y);
+    var wknd=((new Date(yy,mm,dd).getDay()+6)%7)>=5;
     var st='text-align:center;font-size:10.5px;padding:3px 0;border-radius:5px;';
-    st+= sel ? 'background:#4472c4;color:#fff;font-weight:700;' : 'color:'+(wknd?'#b8935a':'#4a4a4a')+';';
-    cells+='<div style="'+st+'">'+d+'</div>';
+    if(sel) st+='background:#4472c4;color:#fff;font-weight:700;';
+    else if(oth) st+='color:#d3d1c9;';
+    else st+='color:'+(wknd?'#b8935a':'#4a4a4a')+';';
+    cells+='<div style="'+st+'">'+dd+'</div>';
   }
   var grid='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">'+cells+'</div>';
   var foot= multiMes ? '<div style="font-size:9px;color:#8a8880;text-align:center;margin-top:5px;border-top:1px solid #eee;padding-top:4px">'+a.slice(8)+'/'+a.slice(5,7)+' → '+b.slice(8)+'/'+b.slice(5,7)+'</div>' : '';
