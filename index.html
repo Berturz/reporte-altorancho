@@ -429,6 +429,8 @@ h1,.sec-hdr,.st,.ct,.mv,.fin-pct,.dm,.fin-title,.dc .dm{font-family:Calibri,"Seg
 #ctrlStrip .cday{border-radius:6px!important;font-size:10.5px!important;color:#cbc9c1}
 #ctrlStrip .cday.hd{color:#3a3a38!important;font-weight:600!important}
 #ctrlStrip .cday.hd:hover{background:#eef2fb!important}
+#ctrlStrip .cday.oth{color:#d3d1c9!important}
+#ctrlStrip .cday.oth.hd{color:#b3b1a8!important;font-weight:500!important}
 #ctrlStrip .cday.rng{background:#dce7f8!important;color:#2e4c86!important}
 #ctrlStrip .cday.sel{background:#4472c4!important;color:#fff!important;font-weight:800!important;border-radius:7px!important}
 #ctrlStrip .cmode .ctab,#ctrlStrip #factMonthChips .ctab{border-radius:8px;font-weight:700;border-color:var(--brd)}
@@ -1324,10 +1326,15 @@ function buildCal(){
   grid.innerHTML='';
   ['L','M','M','J','V','S','D'].forEach((dn,idx)=>{const el=document.createElement('div');el.className='cdow'+(idx>=5?' cdow-wk':'');el.textContent=dn;grid.appendChild(el);});
   const first=(new Date(cy,cm,1).getDay()+6)%7,days=new Date(cy,cm+1,0).getDate();
-  for(let i=0;i<first;i++){const el=document.createElement('div');el.className='cday';grid.appendChild(el);}
+  const lastDow=(new Date(cy,cm,days).getDay()+6)%7;
+  const total=first+days+(6-lastDow); // semanas completas (incluye días de meses vecinos)
   let rA=sS,rB=sE||sS;if(rA&&rB&&rA>rB)[rA,rB]=[rB,rA];
-  for(let d=1;d<=days;d++){
-    const ds=dstr(cy,cm,d);const el=document.createElement('div');el.className='cday';el.textContent=d;
+  for(let n=0;n<total;n++){
+    const dt=new Date(cy,cm,1-first+n);
+    const yy=dt.getFullYear(),mm=dt.getMonth(),dd=dt.getDate();
+    const ds=dstr(yy,mm,dd);
+    const el=document.createElement('div');el.className='cday';el.textContent=dd;
+    if(mm!==cm||yy!==cy) el.classList.add('oth');
     if(DSET.has(ds)){el.classList.add('hd');el.addEventListener('click',()=>dayClick(ds));}
     if(rA&&ds===rA)el.classList.add('sel');if(rB&&ds===rB)el.classList.add('sel');
     if(rA&&rB&&ds>rA&&ds<rB)el.classList.add('rng');
