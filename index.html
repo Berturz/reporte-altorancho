@@ -628,6 +628,21 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div class="mchip act" id="fmAll" onclick="setFinMes('all')">Mes actual</div>
     <div id="finMonthChips"></div>
   </div>
+  <style>
+  #finCostFin .cf-list{font-size:12px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
+  #finCostFin .cf-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  #finCostFin .cf-single{padding:7px 10px;border-bottom:.5px solid var(--brd);font-weight:600}
+  #finCostFin .cf-sub{padding:5px 10px 5px 26px;border-bottom:.5px solid var(--brd)}
+  #finCostFin .cf-sub span{color:var(--txt2)}
+  #finCostFin .cf-det{border-bottom:.5px solid var(--brd)}
+  #finCostFin .cf-sum{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;list-style:none;font-weight:700;background:var(--bg2)}
+  #finCostFin .cf-sum::-webkit-details-marker{display:none}
+  #finCostFin .cf-sum::before{content:'▸';font-size:11px;color:var(--txt2);transition:transform .15s}
+  #finCostFin details[open]>.cf-sum::before{transform:rotate(90deg)}
+  #finCostFin .cf-fam{flex:1}
+  #finCostFin .cf-badge{font-size:10px;font-weight:700;border-radius:999px;padding:1px 8px}
+  #finCostFin .cf-list>*:last-child,#finCostFin .cf-subs .cf-row:last-child{border-bottom:0}
+  </style>
   <div id="finCostFin" style="display:none;gap:1.3rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1.3rem"></div>
   <div id="finResumen" style="margin-bottom:1.3rem"></div>
   <div id="finTop" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start"></div>
@@ -1248,14 +1263,31 @@ function renderCostFin(){
   var el=document.getElementById('finCostFin'); if(!el) return;
   var cf=(typeof COSTFIN_D!=='undefined'&&COSTFIN_D)?COSTFIN_D:{web:[],local:[]};
   var tint=(typeof chTint==='function')?chTint:function(h){return h;};
-  var box=function(titulo,color,rows){
+  var pct=function(t){return (t*100).toFixed(2)+'%';};
+  function fam(v){ var u=v.trim().toUpperCase();
+    if(u.indexOf('MERCADO PAGO')===0) return 'Mercado Pago';
+    if(u.indexOf('PAGONUBE')===0) return 'Pagonube';
+    if(u.indexOf('GOCUOTAS')===0) return 'Gocuotas';
+    if(u.indexOf('MERCADO CREDITO')===0||u.indexOf('MERCADO CRÉDITO')===0) return 'Mercado Crédito';
+    return v.trim();
+  }
+  function group(rows){ var order=[],map={}; rows.forEach(function(p){var f=fam(p[0]); if(!map[f]){map[f]=[];order.push(f);} map[f].push(p);}); return order.map(function(f){return {fam:f,items:map[f]};}); }
+  function box(titulo,color,rows){
     if(!rows||!rows.length) return '';
-    var trs=rows.map(function(p){return '<tr><td>'+p[0]+'</td><td style="text-align:right;font-weight:700">'+(p[1]*100).toFixed(2)+'%</td></tr>';}).join('');
-    return '<div style="flex:1;min-width:280px">'
-      +'<div class="rp-canal-title" style="color:'+color+';border-bottom:2px solid '+tint(color,0.45)+';padding-bottom:.3rem"><i class="ti ti-credit-card" style="color:'+color+'"></i>'+titulo+'</div>'
-      +'<div class="prov-table-wrap"><table class="rp-table"><thead><tr><th>Valor</th><th style="text-align:right">Financiación total</th></tr></thead><tbody>'+trs+'</tbody></table></div>'
-      +'</div>';
-  };
+    var soft=tint(color,0.88);
+    var body=group(rows).map(function(g){
+      if(g.items.length===1){
+        var p=g.items[0];
+        return '<div class="cf-row cf-single"><span>'+p[0]+'</span><b style="color:'+color+'">'+pct(p[1])+'</b></div>';
+      }
+      var subs=g.items.map(function(p){ var sub=p[0].slice(g.fam.length).trim()||'General';
+        return '<div class="cf-row cf-sub"><span>'+sub+'</span><b>'+pct(p[1])+'</b></div>'; }).join('');
+      return '<details class="cf-det"><summary class="cf-sum" style="border-left:3px solid '+color+'"><span class="cf-fam">'+g.fam+'</span><span class="cf-badge" style="background:'+soft+';color:'+color+'">'+g.items.length+'</span></summary><div class="cf-subs">'+subs+'</div></details>';
+    }).join('');
+    return '<div style="flex:1;min-width:260px">'
+      +'<div class="rp-canal-title" style="color:'+color+';border-bottom:2px solid '+tint(color,0.45)+';padding-bottom:.3rem;margin-bottom:.5rem"><i class="ti ti-credit-card" style="color:'+color+'"></i>'+titulo+'</div>'
+      +'<div class="cf-list">'+body+'</div></div>';
+  }
   var html=box('WEB','#7B6BC8',cf.web)+box('Locales','#4E9DAC',cf.local);
   el.innerHTML=html;
   el.style.display=html?'flex':'none';
