@@ -628,6 +628,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div class="mchip act" id="fmAll" onclick="setFinMes('all')">Mes actual</div>
     <div id="finMonthChips"></div>
   </div>
+  <div id="finResumen" style="margin-bottom:1.3rem"></div>
   <div id="finTop" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start"></div>
   <div id="finBot" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1.3rem"></div>
 </div>
@@ -1710,11 +1711,28 @@ function renderFin(){
     return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:16px 18px">'
       +'<div style="font-size:16px;font-weight:800;color:'+base+'">'+title+(sub?' <span style="font-size:12px;font-weight:600;opacity:.75">'+sub+'</span>':'')+'</div>'
       +'<div style="display:flex;gap:36px;align-items:flex-start;margin-top:10px">'+realBlock+asumBlock+'</div>'
-      +daHtml+pHtml
+      +pHtml
       +'<div style="border-top:1px solid rgba(0,0,0,.08);margin:13px 0 9px"></div>'
       +'<div style="font-size:12px;font-weight:700;color:'+base+'">Medios de pago <span style="font-weight:400;color:#8a8880">· Total '+fmt(totalMdp)+'</span></div>'
       +'<div style="position:relative;width:100%;height:210px"><canvas id="'+canvasId+'"></canvas></div></div>';
   }
+  document.getElementById('finResumen').innerHTML =
+    '<div style="font-size:12px;font-weight:700;color:#8a8880;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Costo de financiación acumulado · '+pLabel+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">'
+    +'<div style="background:'+TINT.may+';border-left:5px solid '+COL.may+';border-radius:12px;padding:13px 16px">'
+      +'<div style="font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+COL.may+'">Mayorista</div>'
+      +'<div style="font-size:30px;font-weight:800;color:'+COL.may+';line-height:1.05">'+pctC(lettPct)+'</div>'
+      +'<div style="font-size:11px;color:#8a8880">asumido '+pctC(CF_ASUMIDO.may)+'</div></div>'
+    +'<div style="background:'+TINT.min+';border-left:5px solid '+COL.min+';border-radius:12px;padding:13px 16px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
+        +'<div><div style="font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+COL.min+'">Minorista</div>'
+        +'<div style="font-size:30px;font-weight:800;color:'+COL.min+';line-height:1.05">'+pctC(arPct)+'</div>'
+        +'<div style="font-size:11px;color:#8a8880">asumido '+pctC(CF_ASUMIDO.min)+'</div></div>'
+        +'<div style="text-align:right;font-size:12.5px;font-weight:700;line-height:1.7">'
+          +'<div style="color:'+COL.web+'">Web · '+pctC(webPct)+'</div>'
+          +'<div style="color:'+COL.loc+'">Locales · '+pctC(locPct)+'</div></div>'
+      +'</div></div>'
+    +'</div>';
   document.getElementById('finTop').innerHTML =
     block('fvcMay',COL.may,TINT.may,'Mayorista','(Lett)',lettPct,CF_ASUMIDO.may,lettPrev,sumV(fa.ml))
     + block('fvcMin',COL.min,TINT.min,'Minorista','(Locales + Web)',arPct,CF_ASUMIDO.min,arPrev,sumV(fa.mr));
