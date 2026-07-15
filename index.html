@@ -3432,8 +3432,10 @@ renderCajas();
     </div>
   </div>
 
+  <!-- Calendario + tabla AA/B, lado a lado -->
+  <div style="display:flex;gap:.85rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:.85rem">
   <!-- Slicer de fecha propio: rango de Fecha de Pago -->
-  <div class="panel cal-wrap" style="max-width:300px;margin-bottom:.85rem">
+  <div class="panel cal-wrap" style="max-width:300px">
     <div class="pt">
       <span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Fecha de Pago</span>
       <button class="bl" onclick="clearSalidasD()">Limpiar</button>
@@ -3448,7 +3450,8 @@ renderCajas();
   </div>
 
   <!-- Tarjeta AA/B -->
-  <div class="prov-table-wrap" id="salidasAABWrap" style="margin-bottom:.85rem;max-width:420px"></div>
+  <div class="prov-table-wrap" id="salidasAABWrap" style="max-width:420px;flex:1;min-width:280px"></div>
+  </div>
 
   <!-- Torta principal -->
   <div class="cp" style="margin-bottom:.85rem">
