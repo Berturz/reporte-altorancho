@@ -1448,7 +1448,8 @@ function updMetrics(){
   if(!dates.length){ g.innerHTML=''; return; }
   var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var dk=getDKEYS();
-  var a=dates[0], b=dates[dates.length-1];
+  var a=sS||dates[0], b=sS?(sE||sS):dates[dates.length-1];
+  if(a>b){var _sw=a;a=b;b=_sw;}
   var cur=aggArr(dates);
   var p2=function(n){return n<10?'0'+n:''+n;};
   var ddmm=function(ds){return ds.slice(8,10)+'/'+ds.slice(5,7);};
@@ -1457,12 +1458,14 @@ function updMetrics(){
   var mgTxt=function(m){return m>0?m.toFixed(2).replace('.',','):'—';};
   var monthDays=dk.filter(function(d){return d.slice(0,7)===a.slice(0,7);});
   var isFullMonth=a.slice(0,7)===b.slice(0,7)&&monthDays.length&&a===monthDays[0]&&b===monthDays[monthDays.length-1];
+  var span=Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);
+  var aDow=(new Date(a+'T00:00:00').getDay()+6)%7;
   var tipo,desc,prevDates=null,prevLabel='';
-  if(!sS){ tipo='Facturación total'; desc='todo el período'; }
-  else if(calMode==='sem'){ tipo='Facturación semanal'; desc='del '+ddmm(a)+' al '+ddmm(b); var pa=shift(a,-7),pb=shift(a,-1); prevDates=dk.filter(function(d){return d>=pa&&d<=pb;}); prevLabel='Semana anterior · '+ddmm(pa)+' al '+ddmm(pb); }
+  if(!sS){ tipo='Facturación'; desc='todo el período'; }
   else if(a===b){ tipo='Facturación del día'; desc=larga(a); var pd=dk.filter(function(d){return d<a;}); prevDates=pd.length?[pd[pd.length-1]]:[]; prevLabel='Día anterior'+(prevDates.length?' · '+ddmm(prevDates[0]):''); }
-  else if(isFullMonth){ tipo='Facturación mensual'; desc=MN[parseInt(a.slice(5,7),10)-1]+' '+a.slice(0,4); var py=parseInt(a.slice(0,4),10),pmm=parseInt(a.slice(5,7),10)-1; if(pmm<1){pmm=12;py--;} var pmk=py+'-'+p2(pmm); prevDates=dk.filter(function(d){return d.slice(0,7)===pmk;}); prevLabel='Mes anterior'+(prevDates.length?' · '+MN[pmm-1]:''); }
-  else { tipo='Facturación del período'; desc='del '+ddmm(a)+' al '+ddmm(b); var pb2=shift(a,-1),pa2=shift(a,-dates.length); prevDates=dk.filter(function(d){return d>=pa2&&d<=pb2;}); prevLabel='Período anterior · '+ddmm(pa2)+' al '+ddmm(pb2); }
+  else if(isFullMonth){ tipo='Facturación mensual'; desc=MN[parseInt(a.slice(5,7),10)-1]+' '+a.slice(0,4); var py=parseInt(a.slice(0,4),10),pmm=parseInt(a.slice(5,7),10)-1; if(pmm<1){pmm=12;py--;} var pmk=py+'-'+p2(pmm); var lastDom=parseInt(b.slice(8,10),10); prevDates=dk.filter(function(d){return d.slice(0,7)===pmk&&parseInt(d.slice(8,10),10)<=lastDom;}); prevLabel='Mes anterior · '+MN[pmm-1]+(prevDates.length&&lastDom<28?' (1 al '+lastDom+')':''); }
+  else if(span===6&&aDow===0){ tipo='Facturación semanal'; desc='del '+ddmm(a)+' al '+ddmm(b); var pa=shift(a,-7),pb=shift(a,-1); prevDates=dk.filter(function(d){return d>=pa&&d<=pb;}); prevLabel='Semana anterior · '+ddmm(pa)+' al '+ddmm(pb); }
+  else { tipo='Facturación'; desc='del '+ddmm(a)+' al '+ddmm(b); var pb2=shift(a,-1),pa2=shift(a,-(span+1)); prevDates=dk.filter(function(d){return d>=pa2&&d<=pb2;}); prevLabel='Período anterior · '+ddmm(pa2)+' al '+ddmm(pb2); }
   var acumDates=dk.filter(function(d){return d.slice(0,7)===b.slice(0,7)&&d<=b;});
   var acum=aggArr(acumDates);
   var acumLabel='Acumulado '+MN[parseInt(b.slice(5,7),10)-1]+' · hasta '+ddmm(b);
