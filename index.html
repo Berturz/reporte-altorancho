@@ -593,6 +593,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <!-- SECCIÓN 1: FACTURACIÓN + MÁRGENES -->
 <div class="sec" id="secFact">
   <div class="sec-hdr"><i class="ti ti-chart-bar"></i>Facturación &amp; Márgenes<span class="sec-sub">· controlado por el calendario</span></div>
+  <div id="facFeriados" style="display:none;background:#fdf3e3;border:1px solid #e6c98a;border-left:4px solid #e08a2b;border-radius:10px;padding:9px 13px;margin-bottom:1rem;font-size:12.5px;color:#8a5a12;font-weight:600"></div>
   <div class="charts2" style="grid-template-columns:1fr 1.05fr;gap:1.3rem;align-items:start">
     <div id="mG"></div>
     <div class="cp">
@@ -1270,6 +1271,11 @@ const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Sep
 const CR={MUEBLES:'#4472c4',ILUMINACION:'#5a9ca8',BAZAR:'#3f8e68',DECO:'#6c5fa6',TEXTIL:'#7fb0d6',GIFTCARD:'#c8ab6f',BAÑO:'#7fa07a',LIBRERIA:'#8e6e9d',NAVIDAD:'#b5714a',BOLSAS:'#5a7a99',BIENESTAR:'#9bb8b4'};
 const CC={Web:'#3C3489',LBE:'#2A6B53',Lett:'#8B4630',LSI:'#993556',LND:'#5A9CA8',ALC:'#3E74C4'};
 const CANAL_LABELS={Web:'Web',LBE:'Belgrano',Lett:'Mayorista',LSI:'San Isidro',LND:'Nordelta',ALC:'Alcorta'};
+// Feriados (para marcar en el calendario y aclarar en el análisis). Extensible: agregar 'AAAA-MM-DD':{t:'...',c:'#color'}
+const HOLIDAYS={
+  '2026-07-09':{t:'Feriado',c:'#c0392b'},
+  '2026-07-10':{t:'Feriado no laborable',c:'#e08a2b'}
+};
 // versión más clara/brillante por canal (para cuadros con relleno claro + texto de color)
 const CH_LIGHT={Web:'#7B6BC8',LBE:'#3E9E6E',Lett:'#D07C34',LSI:'#C86487',LND:'#4E9DAC',ALC:'#5486C6'};
 function chTint(hex,p){hex=(hex||'#4472c4').replace('#','');const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);const m=c=>Math.round(c+(255-c)*p);return `rgb(${m(r)},${m(g)},${m(b)})`;}
@@ -1340,6 +1346,7 @@ function buildCal(){
     if(DSET.has(ds)){el.classList.add('hd');el.addEventListener('click',()=>dayClick(ds));}
     if(rA&&ds===rA)el.classList.add('sel');if(rB&&ds===rB)el.classList.add('sel');
     if(rA&&rB&&ds>rA&&ds<rB)el.classList.add('rng');
+    if(HOLIDAYS[ds]){el.style.boxShadow='inset 0 -3px 0 '+HOLIDAYS[ds].c;el.title=HOLIDAYS[ds].t;}
     grid.appendChild(el);
   }
 }
@@ -1390,7 +1397,9 @@ function renderCalRef(){
     if(sel) st+='background:#4472c4;color:#fff;font-weight:700;';
     else if(oth) st+='color:#d3d1c9;';
     else st+='color:'+(wknd?'#b8935a':'#4a4a4a')+';';
-    cells+='<div style="'+st+'">'+dd+'</div>';
+    var _fer=HOLIDAYS[ds];
+    if(_fer)st+='box-shadow:inset 0 -3px 0 '+_fer.c+';';
+    cells+='<div title="'+(_fer?_fer.t:'')+'" style="'+st+'">'+dd+'</div>';
   }
   var grid='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">'+cells+'</div>';
   var foot= multiMes ? '<div style="font-size:9px;color:#8a8880;text-align:center;margin-top:5px;border-top:1px solid #eee;padding-top:4px">'+a.slice(8)+'/'+a.slice(5,7)+' → '+b.slice(8)+'/'+b.slice(5,7)+'</div>' : '';
@@ -1484,6 +1493,15 @@ function updMetrics(){
     +'<div style="font-size:13px;color:#4472c4;margin-top:8px">Margen <span style="font-size:22px;font-weight:800;vertical-align:-2px">'+mgTxt(cur.mg)+'</span>'+mgDeltaHtml+'</div></div>';
   var acumHtml = '<div style="padding:10px 2px 2px"><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880;margin-bottom:3px">'+acumLabel+'</div><div style="font-size:22px;font-weight:700;color:#565b64">'+fmt(acum.tv)+'</div><div style="font-size:12px;font-style:italic;color:#a7a49a;margin-top:2px">Margen acumulado '+mgTxt(acum.mg)+'</div></div>';
   g.innerHTML = prevHtml + curHtml + acumHtml;
+  var fer=dates.filter(function(d){return HOLIDAYS[d];});
+  var fb=document.getElementById('facFeriados');
+  if(fb){
+    if(fer.length){
+      var WD=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+      fb.style.display='block';
+      fb.innerHTML='⚠ El período incluye '+(fer.length>1?'feriados':'un feriado')+': '+fer.map(function(d){return WD[new Date(d+'T00:00:00').getDay()]+' '+ddmm(d)+' <b>('+HOLIDAYS[d].t+')</b>';}).join(' · ')+' — tenelo en cuenta al leer la facturación.';
+    } else fb.style.display='none';
+  }
 }
 function sfv(v){fv=v;const bs=document.querySelectorAll('#fCtrl .btn');bs[0].classList.toggle('act',v==='mes');bs[1].classList.toggle('act',v==='dia');bs[2].classList.toggle('act',v==='canal');var sel=document.getElementById('fCanalSel');if(v==='dia'){buildFCanalSel();sel.style.display='flex';}else{sel.style.display='none';}if(fCh)fCh.destroy();renderFC();}
 function buildFCanalSel(){
@@ -1520,7 +1538,7 @@ function fcLblPlugin(mgData,stacked){
 function renderFC(){
   const dates=getRange();const ctx=document.getElementById('cFC').getContext('2d');
   const legEl=document.getElementById('fLeg');
-  let labels,datasets,mgData=null,stacked=false;
+  let labels,datasets,mgData=null,stacked=false,fcDayDates=null;
   var swatch=function(fill,brd,txt){return '<span class="li"><span class="ld" style="background:'+fill+';border:1.5px solid '+brd+'"></span>'+txt+'</span>';};
   var mgNote='<span class="li" style="color:#16305f;font-weight:700">Mg = margen (dentro de la barra)</span>';
   if(fv==='mes'){
@@ -1533,7 +1551,8 @@ function renderFC(){
   }else if(fv==='dia'){
     const sh=dates.length>60?dates.slice(-60):dates;
     var WD=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-    labels=sh.map(function(d){return WD[new Date(d+'T00:00:00').getDay()]+' '+parseInt(d.slice(8,10),10);});
+    labels=sh.map(function(d){return WD[new Date(d+'T00:00:00').getDay()]+' '+parseInt(d.slice(8,10),10)+(HOLIDAYS[d]?' ✷':'');});
+    fcDayDates=sh;
     var extra=sh.length<dates.length?' (últimos '+sh.length+')':'';
     if(fvCanal==='stack'){
       stacked=true;
@@ -1562,7 +1581,7 @@ function renderFC(){
   datasets.forEach(function(ds){if(ds.borderWidth==null)ds.borderWidth=1.5;if(ds.borderRadius==null)ds.borderRadius=4;if(ds.maxBarThickness==null)ds.maxBarThickness=110;if(ds.categoryPercentage==null)ds.categoryPercentage=0.8;if(ds.barPercentage==null)ds.barPercentage=0.92;ds.yAxisID='yL';ds.order=2;});
   fCh=new Chart(ctx,{type:'bar',data:{labels,datasets},plugins:[fcLblPlugin(mgData,stacked)],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:34}},
     plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(c){return (stacked?(c.dataset.label+': '):' FC: ')+ffl(c.raw);}}}},
-    scales:{x:{stacked:stacked,ticks:{autoSkip:true,maxRotation:45,font:{size:13.5,weight:'700'},color:function(c){try{var b=c.chart.data.datasets[0].borderColor;return Array.isArray(b)?(b[c.index]||'#333'):(b||'#333');}catch(e){return '#333';}}},grid:{display:false}},
+    scales:{x:{stacked:stacked,ticks:{autoSkip:true,maxRotation:45,font:{size:13.5,weight:'700'},color:function(c){try{if(fcDayDates&&HOLIDAYS[fcDayDates[c.index]])return HOLIDAYS[fcDayDates[c.index]].c;var b=c.chart.data.datasets[0].borderColor;return Array.isArray(b)?(b[c.index]||'#333'):(b||'#333');}catch(e){return '#333';}}},grid:{display:false}},
       yL:{stacked:stacked,position:'left',ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}}});
 }
 function renderDonut(){
