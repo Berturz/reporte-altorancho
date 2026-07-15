@@ -2887,28 +2887,8 @@ function renderVend(){
     <div id="cajasWeekChips"></div>
   </div>
 
-  <!-- Tarjetas resumen: A Liquidar / Líquido / Caja Blanca / Total ARS -->
-  <div class="mg4" id="cajasMetrics" style="margin-bottom:.85rem;grid-template-columns:repeat(5,minmax(0,1fr))"></div>
-
-  <!-- Dos donuts lado a lado: A Liquidar y Líquido -->
-  <div class="charts2" style="margin-bottom:.85rem;grid-template-columns:1fr">
-    <div class="cp">
-      <div class="st" style="color:#BA7517"><i class="ti ti-chart-pie"></i>A Liquidar</div>
-      <div class="leg" id="cajasDonutALeg"></div>
-      <div class="donut-wrap" style="height:250px;max-width:620px;margin:0 auto">
-        <canvas id="cCajasDonutA"></canvas>
-        <div class="dc"><div class="dm" id="cajasDonutAMain"></div><div class="ds2">A Liquidar</div></div>
-      </div>
-    </div>
-    <div class="cp">
-      <div class="st" style="color:#1D9E75"><i class="ti ti-chart-pie"></i>Líquido</div>
-      <div class="leg" id="cajasDonutLLeg"></div>
-      <div class="donut-wrap" style="height:250px;max-width:620px;margin:0 auto">
-        <canvas id="cCajasDonutL"></canvas>
-        <div class="dc"><div class="dm" id="cajasDonutLMain"></div><div class="ds2">Líquido</div></div>
-      </div>
-    </div>
-  </div>
+  <!-- Panel principal: 3 cajas (Líquido pesos / A liquidar / Líquido USD) con composición por línea -->
+  <div id="cajasPanel" style="margin-bottom:.9rem"></div>
 
   <!-- Tabla comparativa semana actual vs anterior -->
   <div class="orig-group-label" style="margin-bottom:.5rem"><span class="orig-dot" style="background:#1D9E75"></span>Variación semana a semana</div>
@@ -3012,6 +2992,91 @@ function renderCajasMetrics(){
     <div class="mc" style="border-left:3px solid #5a9ca8"><div class="ml2">Líquido US$</div><div class="mv">US$ ${liqUSD.toLocaleString('es-AR',{maximumFractionDigits:0})}</div><div class="ms">${liqUSDprev===null?'<span style="color:var(--txt2)">Sin comparativo</span>':variacion(liqUSD,liqUSDprev)}</div></div>
     <div class="mc" style="border-left:3px solid #888780"><div class="ml2">Caja AA</div><div class="mv">${fmtCajas(blanca.pesos)}</div><div class="ms">+ US$ ${blanca.usd.toLocaleString('es-AR',{maximumFractionDigits:0})}</div></div>
     <div class="mc" style="border-left:3px solid #4472c4"><div class="ml2">Total ARS</div><div class="mv">${fmtCajas(cur.total_ars)}</div><div class="ms">${variacion(cur.total_ars, prev?prev.total_ars:null)}</div></div>`;
+}
+
+function renderCajasPanel(){
+  const semanas = getCajasSemanas();
+  const idx = semanas.indexOf(cajasSemana);
+  const cur = CAJAS_D[cajasSemana];
+  const prev = idx>0 ? CAJAS_D[semanas[idx-1]] : null;
+  const el = document.getElementById('cajasPanel'); if(!el) return;
+  if(!cur){ el.innerHTML=''; return; }
+
+  function isUsdMon(m){ return m==='Dolares'||m==='Dólares'||m==='USD'; }
+  function usdLiq(c){ if(!c||!c.cuentas) return 0; let t=0; for(const k in c.cuentas){ const v=c.cuentas[k]; if(v && isUsdMon(v[1]) && (v[2]==='Liquido'||CAJAS_LIQUIDO_CUENTAS.indexOf(k)>=0)) t+=v[0]||0; } return t; }
+  const liqUSD = usdLiq(cur), liqUSDprev = prev?usdLiq(prev):null;
+
+  const fmtPesos = v=>'$ '+Math.round(v).toLocaleString('es-AR');
+  const fmtUsd   = v=>'USD '+Math.round(v).toLocaleString('es-AR');
+  const dpm  = s=>{const d=new Date(s+'T00:00:00');return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');};
+  const dpmy = s=>{const d=new Date(s+'T00:00:00');return dpm(s)+'/'+d.getFullYear();};
+  const cleanName = k=>k.replace(' -(',' (');
+
+  function vari(c,p){
+    if(p===null||p===undefined||p===0) return '<span style="color:#8a8880;font-size:11.5px">sin comparativo</span>';
+    const pct=(c-p)/Math.abs(p)*100, col=pct>=0?'#0f6e56':'#a83232', ar=pct>=0?'↑':'↓';
+    return '<span style="color:'+col+';font-weight:700">'+ar+' '+(pct>=0?'+':'−')+Math.abs(pct).toFixed(1).replace('.',',')+'%</span> <span style="color:#8a8880;font-size:11px">vs sem ant</span>';
+  }
+  function compPesos(cat){ return Object.entries(cur.cuentas).filter(([k,v])=> v[1]==='Pesos' && v[0]!==0 && (cat==='Liquido'? v[2]==='Liquido' : v[2]!=='Liquido')).map(([k,v])=>[k,v[0]]).sort((a,b)=>b[1]-a[1]); }
+  function compUsd(){ return Object.entries(cur.cuentas).filter(([k,v])=> isUsdMon(v[1]) && v[0]!==0 && (v[2]==='Liquido'||CAJAS_LIQUIDO_CUENTAS.indexOf(k)>=0)).map(([k,v])=>[k,v[0]]).sort((a,b)=>b[1]-a[1]); }
+
+  const cards=[
+    {t:'Líquido en pesos',   base:'#4472c4', bg:'#eef3fb', brd:'#b9cdec', val:cur.liquido,   prev:prev?prev.liquido:null,   fmt:fmtPesos, comp:compPesos('Liquido'), subEf:true},
+    {t:'A liquidar en pesos',base:'#BA7517', bg:'#f8efe0', brd:'#e6c893', val:cur.aliquidar, prev:prev?prev.aliquidar:null, fmt:fmtPesos, comp:compPesos('aliq'),    subEf:false},
+    {t:'Líquido en dólares', base:'#4E9DAC', bg:'#eaf4f5', brd:'#aed3d8', val:liqUSD,        prev:liqUSDprev,               fmt:fmtUsd,   comp:compUsd(),            subEf:false}
+  ];
+
+  const subEfHtml =
+    '<div style="padding:1px 10px 5px 26px">'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#8a8880;padding:2px 0"><span>↳ <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#5a9ca8;vertical-align:0px;margin:0 4px"></span>Caja B</span><span style="font-style:italic">Por definir</span></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#8a8880;padding:2px 0"><span>↳ <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#7f77dd;vertical-align:0px;margin:0 4px"></span>Caja AA</span><span style="font-style:italic">Por definir</span></div>'
+    +'</div>';
+
+  function rowHtml(name,val,total,maxV,base,i,isUsd){
+    const pct = total>0? val/total*100 : 0;
+    const barW = maxV>0? Math.max(2, val/maxV*100) : 0;
+    const shade = chTint(base, Math.min(0.5, i*0.12));
+    const rowBg = i%2===1 ? chTint(base,0.93) : 'transparent';
+    return '<div style="padding:8px 10px 9px;border-radius:8px;background:'+rowBg+'">'
+      +'<div style="border-left:4px solid '+shade+';padding-left:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
+          +'<span style="font-weight:800;font-size:13px;color:#2f2f33">'+cleanName(name)+'</span>'
+          +'<span style="font-weight:800;font-size:13px;color:'+base+'">'+pct.toFixed(1).replace('.',',')+'%</span>'
+        +'</div>'
+        +'<div style="font-size:14px;font-weight:700;color:'+base+';margin-top:1px">'+(isUsd?fmtUsd(val):fmtPesos(val))+'</div>'
+        +'<div style="height:6px;border-radius:4px;background:'+chTint(base,0.86)+';margin-top:6px;overflow:hidden"><div style="height:100%;border-radius:4px;background:'+shade+';width:'+barW+'%"></div></div>'
+      +'</div></div>';
+  }
+
+  var summaryHtml='', compHtml='';
+  cards.forEach(function(c){
+    const total = c.comp.reduce((s,e)=>s+e[1],0);
+    const maxV  = c.comp.reduce((m,e)=>Math.max(m,e[1]),0);
+    const isUsd = c.fmt===fmtUsd;
+    summaryHtml += '<div style="background:'+c.bg+';border:1.5px solid '+c.brd+';border-radius:14px;padding:15px 18px">'
+      +'<div style="font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:'+c.base+'">'+c.t+'</div>'
+      +'<div style="font-size:29px;font-weight:800;color:'+c.base+';line-height:1.2;margin:2px 0 4px">'+c.fmt(c.val)+'</div>'
+      +'<div style="font-size:12px">'+vari(c.val,c.prev)+'</div>'
+    +'</div>';
+    var rows='';
+    c.comp.forEach(function(e,i){
+      rows += rowHtml(e[0], e[1], total, maxV, c.base, i, isUsd);
+      if(c.subEf && e[0]==='Efectivo ($)') rows += subEfHtml;
+    });
+    if(!rows) rows='<div style="padding:16px;color:#8a8880;font-size:12px;text-align:center">Sin datos</div>';
+    compHtml += '<div>'
+      +'<div style="font-size:12px;font-weight:700;color:'+c.base+';margin:0 0 6px 2px">Composición · '+c.t+'</div>'
+      +'<div style="background:var(--bg);border:.5px solid var(--brd);border-radius:14px;padding:6px">'+rows+'</div>'
+    +'</div>';
+  });
+
+  el.innerHTML =
+    '<div style="margin-bottom:.9rem">'
+      +'<div style="font-size:21px;font-weight:800;color:var(--txt)">Cajas · al '+dpmy(cajasSemana)+'</div>'
+      +'<div style="font-size:12px;color:#8a8880;margin-top:2px">Líquido · A liquidar · USD · composición y variación'+(prev?' vs '+dpm(semanas[idx-1]):'')+'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.1rem">'+summaryHtml+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">'+compHtml+'</div>';
 }
 
 function renderCajasDonutGroup(canvasId, legId, mainId, cur, cuentasFiltro, totalKey){
@@ -3210,8 +3275,7 @@ function loadCajasManual(){
 
 function renderCajas(){
   if(!cajasSemana) return;
-  renderCajasMetrics();
-  renderCajasDonuts();
+  renderCajasPanel();
   renderCajasVarTables();
   renderCajasTable();
   loadCajasManual();
