@@ -3456,7 +3456,6 @@ renderCajas();
       <span><i class="ti ti-chart-pie"></i>Distribución de salidas por cuenta</span>
       <span class="mc" style="padding:.35rem .8rem;background:var(--bg2)"><span class="ml2">Total salidas</span><span class="mv" id="salidasDonutMain" style="font-size:19px;display:block">—</span></span>
     </div>
-    <div class="leg" id="salidasDonutLeg"></div>
     <div class="donut-wrap" style="height:540px">
       <canvas id="cSalidasDonut"></canvas>
     </div>
@@ -3735,10 +3734,6 @@ function renderSalidasDonut(agg){
   const total = data.reduce((a,b)=>a+b,0);
 
   document.getElementById('salidasDonutMain').textContent = fmtSalidas(total);
-  document.getElementById('salidasDonutLeg').innerHTML = entries.map(([k,v])=>{
-    const pct = total>0?(v/total*100):0;
-    return `<span class="li"><span class="ld" style="background:${SALIDAS_CAT_COLORS[k]}"></span>${SALIDAS_CAT_LABELS[k]} ${fflSalidas(v)} (${pct.toFixed(1)}%)</span>`;
-  }).join('');
 
   if(salidasDonutChart) salidasDonutChart.destroy();
   // Plugin: dibuja el dato de cada cuenta sobre su porción (sin depender del hover).
