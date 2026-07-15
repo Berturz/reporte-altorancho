@@ -3621,13 +3621,13 @@ var SALIDAS_EXTRA_D = {};
 const SALIDAS_CAT_LABELS = {
   Insumos:'Insumos', MDR:'MDR proveedor nacional', GastosFabrica:'Gastos Varios Fabrica/rolon',
   Honorarios:'Honorarios/formularios IMPO', MKT:'Varios MKT', GastosVarios:'Gastos Varios', CajaAA:'Caja AA',
-  Salarios:'Salarios', Sindicatos:'Sindicatos', Impo:'Impo', Impuestos:'Impuestos', PagoTarjeta:'Pago tarjeta',
+  Salarios:'Salarios', Sindicatos:'Sindicatos', Impo:'Impo', Impuestos:'Impuestos', CCSS:'Cargas Sociales', PagoTarjeta:'Pago tarjeta',
   Alquileres:'Alquileres', Envios:'Envíos'
 };
 const SALIDAS_CAT_COLORS = {
   Insumos:'#4472c4', GastosVarios:'#c8ab6f', MKT:'#8e6e9d', CajaAA:'#c8873c',
   MDR:'#5a9ca8', GastosFabrica:'#2c2c2a', Honorarios:'#5a7a99',
-  Salarios:'#3f8e68', Sindicatos:'#b5714a', Impo:'#7fb0d6', Impuestos:'#7fa07a', PagoTarjeta:'#9bb8b4',
+  Salarios:'#3f8e68', Sindicatos:'#b5714a', Impo:'#7fb0d6', Impuestos:'#7fa07a', CCSS:'#b07d2b', PagoTarjeta:'#9bb8b4',
   Alquileres:'#9c5b45', Envios:'#b0576f'
 };
 
@@ -3727,7 +3727,7 @@ function renderSalidasAAB(agg){
 }
 
 function renderSalidasDonut(agg){
-  const order = ['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','PagoTarjeta'];
+  const order = ['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','PagoTarjeta'];
   const entries = order.filter(k=>agg.cats[k]>0).map(k=>[k, agg.cats[k]]);
   const labels = entries.map(([k])=>SALIDAS_CAT_LABELS[k]);
   const data = entries.map(([,v])=>v);
@@ -3894,9 +3894,9 @@ const SALIDAS_CAT_ROUTE={
   Honorarios:['prov','HONORARIOS/FORMULARIOS IMPO'], MKT:['prov','VARIOS MKT'], GastosVarios:['prov','GASTOS VARIOS'],
   Alquileres:['prov','ALQUILERES'], Envios:['prov','ENVÍOS'], CajaAA:['caja',''],
   Salarios:['extra','Salarios'], Sindicatos:['extra','Sindicatos'], Impo:['extra','Impo'],
-  Impuestos:['extra','Impuestos'], PagoTarjeta:['extra','Pago tarjeta']
+  Impuestos:['extra','Impuestos'], CCSS:['extra','Cargas Sociales'], PagoTarjeta:['extra','Pago tarjeta']
 };
-const SALIDAS_ORDER=['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','PagoTarjeta'];
+const SALIDAS_ORDER=['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','PagoTarjeta'];
 function renderSalidasCards(agg){
   const entries=SALIDAS_ORDER.filter(k=>agg.cats[k]>0);
   if(!salidasSelCat || !entries.includes(salidasSelCat)) salidasSelCat=entries[0]||null;
@@ -4120,6 +4120,10 @@ async function handleSalidasFile(file) {
     (function(){ const rs=sheetRowsEx('Impuestos (B)'); for(let i=1;i<rs.length;i++){ const r=rs[i]; if(!r) continue;
       [0,5].forEach(base=>{ const mes=r[base], conc=r[base+1], imp=toNumEx(r[base+2]), f=excelDateToStrSalidas(r[base+3]);
         if(imp!==null&&f) extraAdd(f,'Impuestos','B',imp,((mes||'')+' '+(conc||'')).trim()); }); } })();
+    // Cargas sociales / CCSS (B): tercer bloque [10..13] (cols K-N) de la hoja Impuestos (B)
+    (function(){ const rs=sheetRowsEx('Impuestos (B)'); for(let i=1;i<rs.length;i++){ const r=rs[i]; if(!r) continue;
+      const mes=r[10], conc=r[11], imp=toNumEx(r[12]), f=excelDateToStrSalidas(r[13]);
+      if(imp!==null&&f) extraAdd(f,'CCSS','B',imp,((mes||'')+' '+(conc||'')).trim()); } })();
     // Pago tarjeta (B): [Mes, Importe, Fecha]
     (function(){ const rs=sheetRowsEx('Pago tarjeta (B)'); for(let i=1;i<rs.length;i++){ const r=rs[i]; if(!r) continue;
       const imp=toNumEx(r[1]), f=excelDateToStrSalidas(r[2]); if(imp!==null&&f) extraAdd(f,'PagoTarjeta','B',imp,String(r[0])); } })();
