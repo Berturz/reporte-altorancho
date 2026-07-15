@@ -654,8 +654,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   </div>
 
   <!-- LETT MAYORISTA -->
-  <div style="background:rgb(246,251,249);border:1px solid rgb(108,192,165);border-radius:14px;overflow:hidden">
-    <div style="background:rgb(210,236,227);color:#1D9E75;padding:9px 14px;font-weight:700;font-size:18px;display:flex;align-items:center;gap:7px">
+  <div style="background:rgb(253,250,247);border:1px solid rgb(224,170,123);border-radius:14px;overflow:hidden">
+    <div style="background:rgb(246,229,214);color:#D07C34;padding:9px 14px;font-weight:700;font-size:18px;display:flex;align-items:center;gap:7px">
       <i class="ti ti-building-store" style="font-size:16px"></i>LETT Mayorista <span style="font-weight:600;font-size:13px;opacity:.8">· Top 5 por cantidad</span>
     </div>
     <div id="top5LtWrap" class="top5-wrap" style="padding:12px 14px 14px"></div>
@@ -2539,9 +2539,9 @@ function renderRP(){
   document.getElementById('rpCanalBlocks').innerHTML = canales.map(c=>{
     const col = CH_LIGHT[RP_CANAL_CHKEY[c]] || '#4472c4';
     return `
-    <div class="rp-canal-block">
-      <div class="rp-canal-title" style="color:${col};border-bottom:2px solid ${chTint(col,0.45)};padding-bottom:.3rem"><i class="ti ti-${RP_CANAL_ICONS[c]||'building'}" style="color:${col}"></i>${RP_CANAL_LABELS[c]}</div>
-      <div class="prov-table-wrap">${renderRPTable(c, mesData[c])}</div>
+    <div class="rp-canal-block" style="background:${chTint(col,0.96)};border:1px solid ${chTint(col,0.35)};border-radius:14px;overflow:hidden">
+      <div style="background:${chTint(col,0.80)};color:${col};padding:9px 14px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:7px"><i class="ti ti-${RP_CANAL_ICONS[c]||'building'}" style="font-size:15px"></i>${RP_CANAL_LABELS[c]}</div>
+      <div class="prov-table-wrap" style="border:none!important;border-radius:0;background:transparent">${renderRPTable(c, mesData[c])}</div>
     </div>`;
   }).join('');
 }
