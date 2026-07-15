@@ -1702,43 +1702,37 @@ function renderFin(){
   const TINT={may:chTint('#8B4630',0.9),min:'#e9f1fc',web:chTint('#7B6BC8',0.9),loc:chTint('#4E9DAC',0.9)};
   const pctC=function(v){return (v*100).toFixed(2).replace('.',',')+'%';};
   const pp=function(x){return Math.abs(x*100).toFixed(2).replace('.',',')+' pp';};
-  function block(canvasId,base,tint,title,sub,real,asumido,prev,totalMdp){
-    var da=asumido!=null?(real-asumido):null, dp=prev!=null?(real-prev):null;
-    var realBlock='<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:'+base+'">Real</div><div style="font-size:34px;font-weight:800;color:'+base+';line-height:1.05">'+pctC(real)+'</div></div>';
+  function resTile(base,tint,title,sub,real,asumido,prev,rightHtml){
+    var dp=prev!=null?(real-prev):null;
     var asumBlock=asumido!=null?'<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880">Asumido</div><div style="font-size:30px;font-weight:800;color:#8a8880;line-height:1.15">'+pctC(asumido)+'</div></div>':'';
-    var daHtml=da!=null?'<div style="margin-top:9px;font-size:12.5px;font-weight:700;color:'+(da<=0?'#2a6b53':'#c0392b')+'">'+(da<=0?'▼ ':'▲ +')+pp(da)+' · '+(da<=0?'por debajo del asumido':'por encima del asumido')+'</div>':'';
-    var pHtml=prev!=null?'<div style="margin-top:4px;font-size:11.5px;font-style:italic;color:#8a8880">Mes anterior: '+pctC(prev)+' · '+(dp<=0?'▼ ':'▲ +')+pp(dp)+' este mes</div>':'';
+    var pHtml=prev!=null?'<div style="margin-top:7px;font-size:11.5px;font-style:italic;color:#8a8880">Mes anterior: '+pctC(prev)+' · '+(dp<=0?'▼ ':'▲ +')+pp(dp)+' este mes</div>':'';
+    return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:15px 18px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+        +'<div><div style="font-size:15px;font-weight:800;color:'+base+'">'+title+(sub?' <span style="font-size:12px;font-weight:600;opacity:.75">'+sub+'</span>':'')+'</div>'
+          +'<div style="display:flex;gap:34px;align-items:flex-start;margin-top:9px">'
+            +'<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:'+base+'">Real</div><div style="font-size:34px;font-weight:800;color:'+base+';line-height:1.05">'+pctC(real)+'</div></div>'
+            +asumBlock+'</div>'+pHtml+'</div>'
+        +(rightHtml||'')
+      +'</div></div>';
+  }
+  function block(canvasId,base,tint,groupLabel,totalMdp){
     return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:16px 18px">'
-      +'<div style="font-size:16px;font-weight:800;color:'+base+'">'+title+(sub?' <span style="font-size:12px;font-weight:600;opacity:.75">'+sub+'</span>':'')+'</div>'
-      +'<div style="display:flex;gap:36px;align-items:flex-start;margin-top:10px">'+realBlock+asumBlock+'</div>'
-      +pHtml
-      +'<div style="border-top:1px solid rgba(0,0,0,.08);margin:13px 0 9px"></div>'
-      +'<div style="font-size:12px;font-weight:700;color:'+base+'">Medios de pago <span style="font-weight:400;color:#8a8880">· Total '+fmt(totalMdp)+'</span></div>'
-      +'<div style="position:relative;width:100%;height:210px"><canvas id="'+canvasId+'"></canvas></div></div>';
+      +'<div style="font-size:15px;font-weight:800;color:'+base+'">Medios de pago <span style="font-size:12px;font-weight:600;color:#8a8880">· '+groupLabel+' · Total '+fmt(totalMdp)+'</span></div>'
+      +'<div style="position:relative;width:100%;height:225px;margin-top:6px"><canvas id="'+canvasId+'"></canvas></div></div>';
   }
   document.getElementById('finResumen').innerHTML =
-    '<div style="font-size:12px;font-weight:700;color:#8a8880;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Costo de financiación acumulado · '+pLabel+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">'
-    +'<div style="background:'+TINT.may+';border-left:5px solid '+COL.may+';border-radius:12px;padding:13px 16px">'
-      +'<div style="font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+COL.may+'">Mayorista</div>'
-      +'<div style="font-size:30px;font-weight:800;color:'+COL.may+';line-height:1.05">'+pctC(lettPct)+'</div>'
-      +'<div style="font-size:11px;color:#8a8880">asumido '+pctC(CF_ASUMIDO.may)+'</div></div>'
-    +'<div style="background:'+TINT.min+';border-left:5px solid '+COL.min+';border-radius:12px;padding:13px 16px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
-        +'<div><div style="font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+COL.min+'">Minorista</div>'
-        +'<div style="font-size:30px;font-weight:800;color:'+COL.min+';line-height:1.05">'+pctC(arPct)+'</div>'
-        +'<div style="font-size:11px;color:#8a8880">asumido '+pctC(CF_ASUMIDO.min)+'</div></div>'
-        +'<div style="text-align:right;font-size:12.5px;font-weight:700;line-height:1.7">'
-          +'<div style="color:'+COL.web+'">Web · '+pctC(webPct)+'</div>'
-          +'<div style="color:'+COL.loc+'">Locales · '+pctC(locPct)+'</div></div>'
-      +'</div></div>'
+    '<div style="font-size:12px;font-weight:700;color:#8a8880;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Costo de financiación · '+pLabel+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start">'
+    + resTile(COL.may,TINT.may,'Mayorista','(Lett)',lettPct,CF_ASUMIDO.may,lettPrev,'')
+    + resTile(COL.min,TINT.min,'Minorista','(Locales + Web)',arPct,CF_ASUMIDO.min,arPrev,
+        '<div style="text-align:right;font-size:13px;font-weight:700;line-height:1.9;white-space:nowrap"><div style="color:'+COL.web+'">Web · '+pctC(webPct)+'</div><div style="color:'+COL.loc+'">Locales · '+pctC(locPct)+'</div></div>')
     +'</div>';
   document.getElementById('finTop').innerHTML =
-    block('fvcMay',COL.may,TINT.may,'Mayorista','(Lett)',lettPct,CF_ASUMIDO.may,lettPrev,sumV(fa.ml))
-    + block('fvcMin',COL.min,TINT.min,'Minorista','(Locales + Web)',arPct,CF_ASUMIDO.min,arPrev,sumV(fa.mr));
+    block('fvcMay',COL.may,TINT.may,'Mayorista (Lett)',sumV(fa.ml))
+    + block('fvcMin',COL.min,TINT.min,'Minorista (Locales + Web)',sumV(fa.mr));
   document.getElementById('finBot').innerHTML =
-    block('fvcWeb',COL.web,TINT.web,'Web','',webPct,null,null,sumV(fw.mr))
-    + block('fvcLoc',COL.loc,TINT.loc,'Locales','(Alcorta · San Isidro · Belgrano · Nordelta)',locPct,null,null,sumV(fl.mr));
+    block('fvcWeb',COL.web,TINT.web,'Web',sumV(fw.mr))
+    + block('fvcLoc',COL.loc,TINT.loc,'Locales (Alcorta · San Isidro · Belgrano · Nordelta)',sumV(fl.mr));
   makeVBarChart('fvcMay',mlE,COL.may);
   makeVBarChart('fvcMin',mrE,COL.min);
   makeVBarChart('fvcWeb',wE,COL.web);
