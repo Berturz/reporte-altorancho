@@ -3911,16 +3911,25 @@ const SALIDAS_CAT_ROUTE={
   Impuestos:['extra','Impuestos'], CCSS:['extra','Cargas Sociales'], PagoTarjeta:['extra','Pago tarjeta']
 };
 const SALIDAS_ORDER=['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','PagoTarjeta'];
+// Desglose por moneda de "Pago tarjeta" (la hoja no trae el detalle $/USD).
+// VALORES MANUALES: actualizar cuando cambie el período.
+const SALIDAS_PAGOTARJETA_SPLIT = { pesos: 7773595.54, usd: 3814.74 };
 function renderSalidasCards(agg){
   const entries=SALIDAS_ORDER.filter(k=>agg.cats[k]>0);
   if(!salidasSelCat || !entries.includes(salidasSelCat)) salidasSelCat=entries[0]||null;
   const tot=entries.reduce((s,k)=>s+agg.cats[k],0);
   document.getElementById('salidasCards').innerHTML=entries.map(k=>{
     const v=agg.cats[k], pct=tot>0?(v/tot*100):0, act=k===salidasSelCat;
+    const extra = k==='PagoTarjeta' ? `
+      <div style="margin-top:.4rem;border-top:1px dashed var(--brd);padding-top:.35rem;display:flex;flex-direction:column;gap:3px">
+        <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--txt2)"><span>Pesos</span><span style="font-weight:700;color:var(--petrol,#2c2c2a)">${fmtSalidas(SALIDAS_PAGOTARJETA_SPLIT.pesos)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--txt2)"><span>Dólares</span><span style="font-weight:700;color:var(--petrol,#2c2c2a)">US$ ${SALIDAS_PAGOTARJETA_SPLIT.usd.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+      </div>` : '';
     return `<div class="salcard${act?' act':''}" onclick="selectSalidasCat('${k}')">
       <div class="salcard-lbl"><span class="salcard-dot" style="background:${SALIDAS_CAT_COLORS[k]}"></span>${SALIDAS_CAT_LABELS[k]}</div>
       <div class="salcard-val">${fmtSalidas(v)}</div>
       <div class="salcard-pct">${pct.toFixed(1)}% del total</div>
+      ${extra}
     </div>`;
   }).join('') || '<div class="prov-empty">Sin salidas en el período</div>';
 }
