@@ -3757,22 +3757,38 @@ function renderSalidasDonut(agg){
         (Math.cos(ang)>=0?Rgt:Lft).push(o);});
       ctx.save();
       const place=(arr,side)=>{
-        arr.sort((a,b)=>a.y-b.y); const gap=30;
+        arr.sort((a,b)=>a.y-b.y); const gap=40;
         for(let k=1;k<arr.length;k++){if(arr[k].y-arr[k-1].y<gap)arr[k].y=arr[k-1].y+gap;}
         const elbowX=side==='r'?cx+R+18:cx-R-18;
         const labelX=side==='r'?cx+R+34:cx-R-34;
+        const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
         arr.forEach(o=>{
+          const line1=fmtSalidas(o.val)+'   '+o.pct.toFixed(1)+'%';
+          const t=o.text.length>26?o.text.slice(0,25)+'…':o.text;
+          ctx.font='bold 13.5px -apple-system,sans-serif'; const w1=ctx.measureText(line1).width;
+          ctx.font='11.5px -apple-system,sans-serif'; const w2=ctx.measureText(t).width;
+          const padX=10, cardW=Math.max(w1,w2)+padX*2, cardH=34, rad=8;
+          const cardX=side==='r'?labelX+4:labelX-4-cardW, cardY=o.y-cardH/2;
+          // línea guía hasta el borde de la tarjeta
+          const lineEnd=side==='r'?cardX:cardX+cardW;
           ctx.strokeStyle=o.color; ctx.lineWidth=1.3;
           ctx.beginPath(); ctx.moveTo(o.ax,o.ay);
           ctx.lineTo(cx+Math.cos(o.ang)*(R+12),cy+Math.sin(o.ang)*(R+12));
-          ctx.lineTo(elbowX,o.y); ctx.lineTo(labelX,o.y); ctx.stroke();
+          ctx.lineTo(elbowX,o.y); ctx.lineTo(lineEnd,o.y); ctx.stroke();
           ctx.fillStyle=o.color; ctx.beginPath(); ctx.arc(o.ax,o.ay,3,0,7); ctx.fill();
-          const tx=side==='r'?labelX+6:labelX-6; ctx.textAlign=side==='r'?'left':'right'; ctx.textBaseline='middle';
-          ctx.font='bold 13.5px -apple-system,sans-serif'; ctx.fillStyle='#12333a';
-          ctx.fillText(fmtSalidas(o.val)+'   '+o.pct.toFixed(1)+'%', tx, o.y-8);
-          ctx.font='11.5px -apple-system,sans-serif'; ctx.fillStyle='#4a5c62';
-          const t=o.text.length>26?o.text.slice(0,25)+'…':o.text;
-          ctx.fillText(t, tx, o.y+9);
+          // tarjeta con el color de la porción/guía
+          ctx.save();
+          ctx.shadowColor='rgba(0,0,0,.14)'; ctx.shadowBlur=5; ctx.shadowOffsetY=1;
+          rr(cardX,cardY,cardW,cardH,rad); ctx.fillStyle=o.color; ctx.fill();
+          ctx.restore();
+          // color del texto según luminancia del color (blanco o negro)
+          const hex=(o.color||'#4472c4').replace('#',''); const cr=parseInt(hex.slice(0,2),16),cg=parseInt(hex.slice(2,4),16),cb=parseInt(hex.slice(4,6),16);
+          const lum=0.299*cr+0.587*cg+0.114*cb, txtC=lum>150?'#2c2c2a':'#ffffff', subC=lum>150?'rgba(44,44,42,.75)':'rgba(255,255,255,.85)';
+          const textX=cardX+padX; ctx.textAlign='left'; ctx.textBaseline='middle';
+          ctx.font='bold 13.5px -apple-system,sans-serif'; ctx.fillStyle=txtC;
+          ctx.fillText(line1, textX, o.y-7);
+          ctx.font='11.5px -apple-system,sans-serif'; ctx.fillStyle=subC;
+          ctx.fillText(t, textX, o.y+9);
         });
       };
       place(Rgt,'r'); place(Lft,'l'); ctx.restore();
