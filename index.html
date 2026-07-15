@@ -1335,10 +1335,7 @@ function renderCalRef(){
     document.body.appendChild(box);
   }
   box.removeAttribute('data-page');
-  var ph=document.querySelector('.page-hdr');
-  var topPx=(ph?Math.round(ph.getBoundingClientRect().bottom):86)+6;
-  if(topPx<52) topPx=52;
-  box.style.cssText='position:fixed;top:'+topPx+'px;right:14px;z-index:70;background:#fff;border:1px solid #e0ded7;border-radius:12px;box-shadow:0 6px 22px rgba(44,44,42,.16);padding:8px 10px 9px;width:190px;font-family:Calibri,\'Segoe UI\',sans-serif;display:block';
+  box.style.cssText='position:fixed;top:12px;right:14px;z-index:70;background:#fff;border:1px solid #e0ded7;border-radius:12px;box-shadow:0 6px 22px rgba(44,44,42,.16);padding:8px 10px 9px;width:186px;font-family:Calibri,\'Segoe UI\',sans-serif;display:block';
   var a=sS,b=sE||sS; if(a>b){var t=a;a=b;b=t;}
   var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var y=parseInt(a.slice(0,4)), m=parseInt(a.slice(5,7))-1;
