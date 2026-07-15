@@ -1473,12 +1473,13 @@ function updMetrics(){
   var pct=(prev&&prev.tv)?((cur.tv-prev.tv)/prev.tv*100):null;
   var prevHtml = prev ? ('<div style="padding:2px 2px 10px"><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880;margin-bottom:3px">'+prevLabel+'</div><div style="font-size:22px;font-weight:700;color:#8a8880">'+fmt(prev.tv)+'</div><div style="font-size:12px;font-style:italic;color:#a7a49a;margin-top:2px">Margen '+mgTxt(prev.mg)+'</div></div>') : '';
   var pctHtml = (pct!=null) ? ('<div style="text-align:right;white-space:nowrap"><div style="font-size:19px;font-weight:800;color:'+(pct>=0?'#2a6b53':'#c0392b')+'">'+(pct>=0?'▲ +':'▼ ')+pct.toFixed(1).replace('.',',')+'%</div><div style="font-size:11px;font-style:italic;color:#8a8880">vs anterior</div></div>') : '';
+  var mgDeltaHtml = (prev&&prev.mg>0&&cur.mg>0) ? (function(){var dd=cur.mg-prev.mg;return '<span style="font-size:12.5px;font-weight:700;margin-left:9px;color:'+(dd>=0?'#2a6b53':'#c0392b')+'">'+(dd>=0?'▲ +':'▼ ')+Math.abs(dd).toFixed(2).replace('.',',')+'</span>';})() : '';
   var curHtml = '<div style="background:#e8f0fe;border-left:5px solid #4472c4;border-radius:12px;padding:15px 18px;margin:2px 0">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
     +'<div><div style="font-size:14px;font-weight:800;color:#2e4c86;text-transform:uppercase;letter-spacing:.02em">'+tipo+'</div><div style="font-size:12.5px;font-weight:600;color:#4472c4;margin-top:2px">'+desc+'</div></div>'
     + pctHtml + '</div>'
     +'<div style="font-size:34px;font-weight:800;color:#2e4c86;line-height:1.05;margin-top:12px">'+fmt(cur.tv)+'</div>'
-    +'<div style="font-size:13px;color:#4472c4;margin-top:8px">Margen general <span style="font-size:22px;font-weight:800;vertical-align:-2px">'+mgTxt(cur.mg)+'</span></div></div>';
+    +'<div style="font-size:13px;color:#4472c4;margin-top:8px">Margen <span style="font-size:22px;font-weight:800;vertical-align:-2px">'+mgTxt(cur.mg)+'</span>'+mgDeltaHtml+'</div></div>';
   var acumHtml = '<div style="padding:10px 2px 2px"><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880;margin-bottom:3px">'+acumLabel+'</div><div style="font-size:22px;font-weight:700;color:#565b64">'+fmt(acum.tv)+'</div><div style="font-size:12px;font-style:italic;color:#a7a49a;margin-top:2px">Margen acumulado '+mgTxt(acum.mg)+'</div></div>';
   g.innerHTML = prevHtml + curHtml + acumHtml;
 }
@@ -1523,9 +1524,9 @@ function renderDonut(){
       const cp=arc.getCenterPoint();const nm=CANAL_LABELS[c]||c;
       if(pct>=INSIDE_MIN){
         cxt.textAlign='center';cxt.textBaseline='middle';var G=14;
-        var rows=[{t:nm,f:'800 14px'},{t:fmt(val),f:'800 13px'}];
-        if(mg>0)rows.push({t:'Mg '+mg.toFixed(2),f:'700 12px'});
-        rows.push({t:pct.toFixed(1)+'%',f:'800 12.5px'});
+        var rows=[{t:nm,f:'800 14px'},{t:fmt(val),f:'800 14.5px'}];
+        if(mg>0)rows.push({t:'Mg '+mg.toFixed(2),f:'700 11.5px'});
+        rows.push({t:pct.toFixed(1)+'%',f:'600 10.5px'});
         var totalH=(rows.length-1)*G,maxW=0;
         rows.forEach(function(R){cxt.font=R.f+' Calibri,"Segoe UI",sans-serif';maxW=Math.max(maxW,cxt.measureText(R.t).width);});
         var yy=cp.y-totalH/2;cxt.fillStyle=colT;
@@ -1534,7 +1535,7 @@ function renderDonut(){
       }else{
         let dx=cp.x-arc.x,dy=cp.y-arc.y;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
         const R=(arc.outerRadius||60);
-        outside.push({col,colT,nm,val,pct,mg,dx,dy,ex:arc.x+dx*R,ey:arc.y+dy*R,lx:arc.x+dx*(R+22),ty:arc.y+dy*(R+22)});
+        outside.push({col,colT,nm,val,pct,mg,dx,dy,ex:arc.x+dx*R,ey:arc.y+dy*R,lx:arc.x+dx*(R+32),ty:arc.y+dy*(R+32)});
       }
     });
     // de-colisión externas (3 líneas): topes superior/inferior dentro del canvas, ambos lados
@@ -1547,10 +1548,10 @@ function renderDonut(){
     });
     outside.forEach(o=>{const right=o.dx>=0,lx=o.lx;var lh2=13.5;var yy=o.ty-lh2;
       cxt.strokeStyle=o.col;cxt.lineWidth=1.2;cxt.beginPath();cxt.moveTo(o.ex,o.ey);cxt.lineTo(lx,o.ty);cxt.stroke();
-      cxt.textAlign=right?'left':'right';cxt.textBaseline='middle';const tx=lx+(right?4:-4);
-      cxt.fillStyle=o.colT;cxt.font='800 12.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(o.nm+' '+o.pct.toFixed(1)+'%',tx,yy);yy+=lh2;
-      cxt.fillStyle='#3a3a38';cxt.font='700 11.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(fmt(o.val),tx,yy);yy+=lh2;
-      if(o.mg>0){cxt.fillStyle=o.colT;cxt.font='700 11px Calibri,"Segoe UI",sans-serif';cxt.fillText('Mg '+o.mg.toFixed(2),tx,yy);}
+      cxt.textAlign=right?'left':'right';cxt.textBaseline='middle';const tx=lx+(right?7:-7);
+      cxt.fillStyle=o.colT;cxt.font='800 12.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(o.nm,tx,yy);yy+=lh2;
+      cxt.fillStyle='#3a3a38';cxt.font='800 13px Calibri,"Segoe UI",sans-serif';cxt.fillText(fmt(o.val),tx,yy);yy+=lh2;
+      cxt.fillStyle='#6e6d67';cxt.font='600 10.5px Calibri,"Segoe UI",sans-serif';cxt.fillText((o.mg>0?'Mg '+o.mg.toFixed(2)+' · ':'')+o.pct.toFixed(1)+'%',tx,yy);
     });
     cxt.restore();
   }};
