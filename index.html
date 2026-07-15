@@ -1318,11 +1318,51 @@ function dayClick(ds){
   else{if(!picking||!sS){sS=ds;sE=null;picking=true;}else{if(ds===sS){sS=null;sE=null;picking=false;}else{sE=ds;picking=false;}}}
   buildCal();updDR();refreshFC();
 }
-function updDR(){const el=document.getElementById('dRI');if(!sS&&!sE){el.textContent='Mostrando todo el período';return;}let a=sS,b=sE||sS;if(a>b)[a,b]=[b,a];el.textContent=a===b?`Día: ${a}`:`${a} → ${b} (${getRange().length} días)`;}
+function updDR(){try{renderCalRef();}catch(e){}const el=document.getElementById('dRI');if(!sS&&!sE){el.textContent='Mostrando todo el período';return;}let a=sS,b=sE||sS;if(a>b)[a,b]=[b,a];el.textContent=a===b?`Día: ${a}`:`${a} → ${b} (${getRange().length} días)`;}
 function clearD(){sS=null;sE=null;picking=false;buildCal();updDR();refreshFC();}
 function setCalMode(m){calMode=m;document.getElementById('mDia').classList.toggle('act',m==='dia');document.getElementById('mSem').classList.toggle('act',m==='sem');sS=null;sE=null;picking=false;buildCal();updDR();refreshFC();}
 function pm(){cm--;if(cm<0){cm=11;cy--;}buildCal();}
 function nm(){cm++;if(cm>11){cm=0;cy++;}buildCal();}
+// Mini-calendario de referencia (arriba a la derecha) — muestra el mes con las fechas vistas resaltadas.
+// Solo en solapas controladas por el calendario y cuando hay un rango seleccionado.
+function renderCalRef(){
+  var CAL_PAGES={fact:1,origen:1,prod:1,prov:1,cobr:1,vend:1};
+  var cur=window.__rsemPage||'';
+  var box=document.getElementById('calRef');
+  if(!sS || !CAL_PAGES[cur]){ if(box) box.style.display='none'; return; }
+  if(!box){
+    box=document.createElement('div'); box.id='calRef';
+    document.body.appendChild(box);
+  }
+  box.removeAttribute('data-page');
+  var ph=document.querySelector('.page-hdr');
+  var topPx=(ph?Math.round(ph.getBoundingClientRect().bottom):86)+6;
+  if(topPx<52) topPx=52;
+  box.style.cssText='position:fixed;top:'+topPx+'px;right:14px;z-index:70;background:#fff;border:1px solid #e0ded7;border-radius:12px;box-shadow:0 6px 22px rgba(44,44,42,.16);padding:8px 10px 9px;width:190px;font-family:Calibri,\'Segoe UI\',sans-serif;display:block';
+  var a=sS,b=sE||sS; if(a>b){var t=a;a=b;b=t;}
+  var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var y=parseInt(a.slice(0,4)), m=parseInt(a.slice(5,7))-1;
+  var firstMon=(new Date(y,m,1).getDay()+6)%7;
+  var days=new Date(y,m+1,0).getDate();
+  var multiMes=a.slice(0,7)!==b.slice(0,7);
+  var pad2=function(n){return n<10?'0'+n:''+n;};
+  var head='<div style="background:#2c2c2a;color:#fff;text-align:center;font-weight:700;font-size:12px;padding:4px 0;border-radius:6px;margin-bottom:5px">'+MN[m]+' '+y+'</div>';
+  var wd=['L','M','M','J','V','S','D'];
+  var wdrow='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:2px">'+wd.map(function(d,i){return '<div style="text-align:center;font-size:9.5px;font-weight:700;color:'+(i>=5?'#d08a3c':'#8a8880')+'">'+d+'</div>';}).join('')+'</div>';
+  var cells='';
+  for(var i=0;i<firstMon;i++) cells+='<div></div>';
+  for(var d=1;d<=days;d++){
+    var ds=y+'-'+pad2(m+1)+'-'+pad2(d);
+    var sel=(ds>=a&&ds<=b);
+    var wknd=((new Date(y,m,d).getDay()+6)%7)>=5;
+    var st='text-align:center;font-size:10.5px;padding:3px 0;border-radius:5px;';
+    st+= sel ? 'background:#4472c4;color:#fff;font-weight:700;' : 'color:'+(wknd?'#b8935a':'#4a4a4a')+';';
+    cells+='<div style="'+st+'">'+d+'</div>';
+  }
+  var grid='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">'+cells+'</div>';
+  var foot= multiMes ? '<div style="font-size:9px;color:#8a8880;text-align:center;margin-top:5px;border-top:1px solid #eee;padding-top:4px">'+a.slice(8)+'/'+a.slice(5,7)+' → '+b.slice(8)+'/'+b.slice(5,7)+'</div>' : '';
+  box.innerHTML=head+wdrow+grid+foot;
+}
 
 // ── RUBROS ──
 function buildRubros(){
@@ -3901,6 +3941,7 @@ function assignPages(){var cur=null;var ch=document.body.children;for(var i=0;i<
   if(cur)el.setAttribute('data-page',cur);}
   _pagesReady=true;}
 function showTab(page,btn){if(!_pagesReady)assignPages();
+  window.__rsemPage=page; try{renderCalRef();}catch(e){}
   var els=document.querySelectorAll('[data-page]');
   for(var i=0;i<els.length;i++){els[i].style.display=(els[i].getAttribute('data-page')===page)?'':'none';}
   var bs=document.querySelectorAll('.tabnav-btn');for(var j=0;j<bs.length;j++)bs[j].classList.remove('act');
