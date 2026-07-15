@@ -628,8 +628,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div class="mchip act" id="fmAll" onclick="setFinMes('all')">Mes actual</div>
     <div id="finMonthChips"></div>
   </div>
-  <div class="fin-res4" id="finRes4"></div>
-  <div class="fin4" id="finRow"></div>
+  <div id="finTop" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start"></div>
+  <div id="finBot" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1.3rem"></div>
 </div>
 
 
@@ -1439,16 +1439,20 @@ function getFinDates(){
   }
   return allDays.filter(d=>d.startsWith(finMes));
 }
-function aggFin(){
+function finDatesForMonth(mk){return Object.keys(FIN_D).sort().filter(d=>d.startsWith(mk));}
+function finPrevMonthKey(mk){var y=parseInt(mk.slice(0,4),10),m=parseInt(mk.slice(5,7),10)-1;if(m<1){m=12;y--;}return y+'-'+(m<10?'0'+m:''+m);}
+function aggFin(dates){
+  dates=dates||getFinDates();
   let ll=0,cl=0,dl=0,la=0,ma=0,da=0;const ml={},mr={};
-  for(const d of getFinDates()){const v=FIN_D[d]||{};ll+=v.ll||0;cl+=v.cl||0;dl+=v.dl||0;la+=v.la||0;ma+=v.ma||0;da+=v.da||0;
+  for(const d of dates){const v=FIN_D[d]||{};ll+=v.ll||0;cl+=v.cl||0;dl+=v.dl||0;la+=v.la||0;ma+=v.ma||0;da+=v.da||0;
     for(const[k,val]of Object.entries(v.ml||{}))ml[k]=(ml[k]||0)+val;
     for(const[k,val]of Object.entries(v.mr||{}))mr[k]=(mr[k]||0)+val;}
-  return{ll,cl,dl,la,ma,da,ml,mr,dias:getFinDates().length};
+  return{ll,cl,dl,la,ma,da,ml,mr,dias:dates.length};
 }
-function aggFinSub(key){
+function aggFinSub(key,dates){
+  dates=dates||getFinDates();
   let la=0,ma=0,da=0;const mr={};
-  for(const d of getFinDates()){const v=(FIN_SUB[d]||{})[key]||{};la+=v.la||0;ma+=v.ma||0;da+=v.da||0;
+  for(const d of dates){const v=(FIN_SUB[d]||{})[key]||{};la+=v.la||0;ma+=v.ma||0;da+=v.da||0;
     for(const[k,val]of Object.entries(v.mr||{}))mr[k]=(mr[k]||0)+val;}
   return{la,ma,da,mr};
 }
@@ -1667,56 +1671,60 @@ function renderFinCard(cid,pct,bkItems,mdpEntries,colorMap,pLabel,badgeClass,tit
   requestAnimationFrame(()=>makeBarChart('ch_'+cid, mdpEntries, colorMap));
 }
 
+const CF_ASUMIDO={may:0.08, min:0.22};
+function makeVBarChart(canvasId, entries, base){
+  if(charts[canvasId])charts[canvasId].destroy();
+  const el=document.getElementById(canvasId); if(!el)return;
+  const total=entries.reduce((s,[,v])=>s+v,0);
+  const pctData=entries.map(([,v])=>total>0?+(v/total*100).toFixed(2):0);
+  const raw=entries.map(([,v])=>v);
+  charts[canvasId]=new Chart(el.getContext('2d'),{type:'bar',
+    data:{labels:entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN')),datasets:[{data:pctData,rawData:raw,backgroundColor:chTint(base,0.58),borderColor:base,borderWidth:1.5,borderRadius:4,maxBarThickness:64}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw.toFixed(1).replace('.',',')+'%  ('+fmt(c.dataset.rawData[c.dataIndex])+')';}}}},
+      scales:{x:{ticks:{font:{size:10,weight:'700'},color:base,maxRotation:35,minRotation:0},grid:{display:false}},y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}},
+    plugins:[{id:'vlbl',afterDatasetsDraw:function(ch){var m=ch.getDatasetMeta(0),dd=ch.data.datasets[0],cx=ch.ctx;cx.save();cx.font='800 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle=base;cx.textAlign='center';cx.textBaseline='bottom';m.data.forEach(function(b,i){var v=dd.data[i];if(v==null)return;cx.fillText(v.toFixed(1).replace('.',',')+'%',b.x,b.y-4);});cx.restore();}}]});
+}
 function renderFin(){
   const pLabel=MES_LABEL[finMes]||finMes;
-  const fa=aggFin();
-  const fw=aggFinSub('w');
-  const fl=aggFinSub('lc');
-  const lettPct=fa.ll>0?(fa.cl+fa.dl)/fa.ll:0;
-  const arPct  =fa.la>0?(fa.ma+fa.da)/fa.la:0;
-  const webPct =fw.la>0?(fw.ma+fw.da)/fw.la:0;
-  const locPct =fl.la>0?(fl.ma+fl.da)/fl.la:0;
-
-  document.getElementById('finRes4').innerHTML=`
-    <div class="mc"><div class="ml2"><i class="ti ti-building-store" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>LETT · ${pLabel}</div><div class="mv">${fmtP(lettPct)}</div><div class="ms">Lista: ${fmt(fa.ll)}</div></div>
-    <div class="mc"><div class="ml2"><i class="ti ti-shopping-bag" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>AR Total · ${pLabel}</div><div class="mv">${fmtP(arPct)}</div><div class="ms">Lista: ${fmt(fa.la)}</div></div>
-    <div class="mc"><div class="ml2"><i class="ti ti-device-laptop" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>Web · ${pLabel}</div><div class="mv">${fmtP(webPct)}</div><div class="ms">Lista: ${fmt(fw.la)}</div></div>
-    <div class="mc"><div class="ml2"><i class="ti ti-map-pin" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>Locales · ${pLabel}</div><div class="mv">${fmtP(locPct)}</div><div class="ms">Lista: ${fmt(fl.la)}</div></div>`;
-
-  const mlE=Object.entries(fa.ml).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]).slice(0,6);
-  const mrE=Object.entries(fa.mr).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]).slice(0,14);
-  const wE =Object.entries(fw.mr).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]).slice(0,14);
-  const lE =Object.entries(fl.mr).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]).slice(0,12);
-
-  document.getElementById('finRow').innerHTML=`
-    <div class="fin-card" id="fc_lett"></div>
-    <div class="fin-card" id="fc_ar"></div>
-    <div class="fin-card" id="fc_web"></div>
-    <div class="fin-card" id="fc_loc"></div>`;
-
-  renderFinCard('fc_lett',lettPct,[
-    ['Cheque diferido',fa.cl,fa.ll>0?fa.cl/fa.ll:0],
-    ['CDP Lett',fa.dl,fa.ll>0?fa.dl/fa.ll:0],
-    ['Precio lista',fa.ll,1]],mlE,C_LETT,pLabel,'b-lett',
-    '<i class="ti ti-building-store" style="font-size:11px;vertical-align:-1px;margin-right:4px"></i>Financiación LETT','Mayorista');
-
-  renderFinCard('fc_ar',arPct,[
-    ['MDP WebLocal',fa.ma,fa.la>0?fa.ma/fa.la:0],
-    ['CDP AR',fa.da,fa.la>0?fa.da/fa.la:0],
-    ['Precio lista',fa.la,1]],mrE,C_AR,pLabel,'b-ar',
-    '<i class="ti ti-shopping-bag" style="font-size:11px;vertical-align:-1px;margin-right:4px"></i>Financiación AR Total','Minorista');
-
-  renderFinCard('fc_web',webPct,[
-    ['MDP Web',fw.ma,fw.la>0?fw.ma/fw.la:0],
-    ['CDP',fw.da,fw.la>0?fw.da/fw.la:0],
-    ['Precio lista',fw.la,1]],wE,C_AR,pLabel,'b-web',
-    '<i class="ti ti-device-laptop" style="font-size:11px;vertical-align:-1px;margin-right:4px"></i>Financiación Web','Solo Web');
-
-  renderFinCard('fc_loc',locPct,[
-    ['MDP Locales',fl.ma,fl.la>0?fl.ma/fl.la:0],
-    ['CDP',fl.da,fl.la>0?fl.da/fl.la:0],
-    ['Precio lista',fl.la,1]],lE,C_AR,pLabel,'b-loc',
-    '<i class="ti ti-map-pin" style="font-size:11px;vertical-align:-1px;margin-right:4px"></i>Financiación Locales','ALC + SI + BE + ND');
+  const curDates=getFinDates();
+  const curMk=curDates.length?curDates[0].slice(0,7):null;
+  const prevDates=curMk?finDatesForMonth(finPrevMonthKey(curMk)):[];
+  const fa=aggFin(curDates), fw=aggFinSub('w',curDates), fl=aggFinSub('lc',curDates), faP=aggFin(prevDates);
+  const lettPct=fa.ll>0?(fa.cl+fa.dl)/fa.ll:0, arPct=fa.la>0?(fa.ma+fa.da)/fa.la:0;
+  const webPct=fw.la>0?(fw.ma+fw.da)/fw.la:0, locPct=fl.la>0?(fl.ma+fl.da)/fl.la:0;
+  const lettPrev=faP.ll>0?(faP.cl+faP.dl)/faP.ll:null, arPrev=faP.la>0?(faP.ma+faP.da)/faP.la:null;
+  const topE=function(o){return Object.entries(o).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]).slice(0,8);};
+  const sumV=function(o){return Object.values(o).reduce((a,b)=>a+b,0);};
+  const mlE=topE(fa.ml), mrE=topE(fa.mr), wE=topE(fw.mr), lE=topE(fl.mr);
+  const COL={may:'#8B4630',min:'#4472c4',web:'#7B6BC8',loc:'#4E9DAC'};
+  const TINT={may:chTint('#8B4630',0.9),min:'#e9f1fc',web:chTint('#7B6BC8',0.9),loc:chTint('#4E9DAC',0.9)};
+  const pctC=function(v){return (v*100).toFixed(2).replace('.',',')+'%';};
+  const pp=function(x){return Math.abs(x*100).toFixed(2).replace('.',',')+' pp';};
+  function block(canvasId,base,tint,title,sub,real,asumido,prev,totalMdp){
+    var da=asumido!=null?(real-asumido):null, dp=prev!=null?(real-prev):null;
+    var realBlock='<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:'+base+'">Real</div><div style="font-size:34px;font-weight:800;color:'+base+';line-height:1.05">'+pctC(real)+'</div></div>';
+    var asumBlock=asumido!=null?'<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880">Asumido</div><div style="font-size:30px;font-weight:800;color:#8a8880;line-height:1.15">'+pctC(asumido)+'</div></div>':'';
+    var daHtml=da!=null?'<div style="margin-top:9px;font-size:12.5px;font-weight:700;color:'+(da<=0?'#2a6b53':'#c0392b')+'">'+(da<=0?'▼ ':'▲ +')+pp(da)+' · '+(da<=0?'por debajo del asumido':'por encima del asumido')+'</div>':'';
+    var pHtml=prev!=null?'<div style="margin-top:4px;font-size:11.5px;font-style:italic;color:#8a8880">Mes anterior: '+pctC(prev)+' · '+(dp<=0?'▼ ':'▲ +')+pp(dp)+' este mes</div>':'';
+    return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:16px 18px">'
+      +'<div style="font-size:16px;font-weight:800;color:'+base+'">'+title+(sub?' <span style="font-size:12px;font-weight:600;opacity:.75">'+sub+'</span>':'')+'</div>'
+      +'<div style="display:flex;gap:36px;align-items:flex-start;margin-top:10px">'+realBlock+asumBlock+'</div>'
+      +daHtml+pHtml
+      +'<div style="border-top:1px solid rgba(0,0,0,.08);margin:13px 0 9px"></div>'
+      +'<div style="font-size:12px;font-weight:700;color:'+base+'">Medios de pago <span style="font-weight:400;color:#8a8880">· Total '+fmt(totalMdp)+'</span></div>'
+      +'<div style="position:relative;width:100%;height:210px"><canvas id="'+canvasId+'"></canvas></div></div>';
+  }
+  document.getElementById('finTop').innerHTML =
+    block('fvcMay',COL.may,TINT.may,'Mayorista','(Lett)',lettPct,CF_ASUMIDO.may,lettPrev,sumV(fa.ml))
+    + block('fvcMin',COL.min,TINT.min,'Minorista','(Locales + Web)',arPct,CF_ASUMIDO.min,arPrev,sumV(fa.mr));
+  document.getElementById('finBot').innerHTML =
+    block('fvcWeb',COL.web,TINT.web,'Web','',webPct,null,null,sumV(fw.mr))
+    + block('fvcLoc',COL.loc,TINT.loc,'Locales','(Alcorta · San Isidro · Belgrano · Nordelta)',locPct,null,null,sumV(fl.mr));
+  makeVBarChart('fvcMay',mlE,COL.may);
+  makeVBarChart('fvcMin',mrE,COL.min);
+  makeVBarChart('fvcWeb',wE,COL.web);
+  makeVBarChart('fvcLoc',lE,COL.loc);
 }
 
 
