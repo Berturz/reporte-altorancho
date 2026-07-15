@@ -2492,6 +2492,8 @@ function setRPMes(m){
 
 function renderRPTable(canalKey, dataObj, col){
   const th = col ? ` style="background:${col}!important;border-color:${col}!important"` : '';
+  const totRow = col ? ` style="background:${chTint(col,0.86)}!important"` : '';
+  const totTd  = col ? ` style="color:${col}!important;border-top:1.5px solid ${col}!important"` : '';
   const cats = RP_CAT_ORDER.filter(c=>dataObj[c]);
   if(!cats.length) return '<div class="prov-empty">Sin datos para este canal en el período</div>';
   let totVentas=0, totFC=0, totQty=0;
@@ -2521,9 +2523,9 @@ function renderRPTable(canalKey, dataObj, col){
     </tr></thead>
     <tbody>
       ${rowsHTML}
-      <tr class="rp-total-row">
-        <td>Total</td><td></td><td>${totVentas}</td><td>${ffl(totalTicket)}</td>
-        <td>${totQty.toLocaleString('es-AR')}</td><td>${ffl(totFC)}</td><td>100%</td>
+      <tr class="rp-total-row"${totRow}>
+        <td${totTd}>Total</td><td${totTd}></td><td${totTd}>${totVentas}</td><td${totTd}>${ffl(totalTicket)}</td>
+        <td${totTd}>${totQty.toLocaleString('es-AR')}</td><td${totTd}>${ffl(totFC)}</td><td${totTd}>100%</td>
       </tr>
     </tbody>
   </table>`;
