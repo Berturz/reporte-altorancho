@@ -415,6 +415,27 @@ h1,.sec-hdr,.st,.ct,.mv,.fin-pct,.dm,.fin-title,.dc .dm{font-family:Calibri,"Seg
 .fin-pct{color:var(--blue-navy)}
 .dm{color:var(--txt)}
 .fin-badge.b-ar,.origen-badge.o-ar,.chip.on,.ctab.act{color:var(--blue-navy)}
+/* ===== Restyle calendario selector + filtros (estilo deck) ===== */
+#ctrlStrip .panel{border:1px solid var(--brd)!important;box-shadow:0 4px 14px rgba(44,44,42,.06);border-radius:14px}
+#ctrlStrip .pt{color:#2c2c2a!important;font-weight:800!important;font-size:11px!important}
+#ctrlStrip .bl{color:#4472c4;text-decoration:none;font-weight:600}
+#ctrlStrip .bl:hover{text-decoration:underline}
+#ctrlStrip .cnav{background:#2c2c2a;border-radius:9px;padding:3px 6px;margin-bottom:.5rem}
+#ctrlStrip .ct{color:#fff!important;font-weight:800!important;font-size:12.5px!important;letter-spacing:.4px}
+#ctrlStrip .cbtn{background:rgba(255,255,255,.16)!important;border:none!important;color:#fff!important;border-radius:7px;width:22px!important;height:22px!important}
+#ctrlStrip .cbtn:hover{background:rgba(255,255,255,.32)!important}
+#ctrlStrip .cdow{font-weight:800!important;color:#a7a49a!important;font-size:9.5px!important;text-transform:uppercase}
+#ctrlStrip .cdow-wk{color:#d08a3c!important}
+#ctrlStrip .cday{border-radius:6px!important;font-size:10.5px!important;color:#cbc9c1}
+#ctrlStrip .cday.hd{color:#3a3a38!important;font-weight:600!important}
+#ctrlStrip .cday.hd:hover{background:#eef2fb!important}
+#ctrlStrip .cday.rng{background:#dce7f8!important;color:#2e4c86!important}
+#ctrlStrip .cday.sel{background:#4472c4!important;color:#fff!important;font-weight:800!important;border-radius:7px!important}
+#ctrlStrip .cmode .ctab,#ctrlStrip #factMonthChips .ctab{border-radius:8px;font-weight:700;border-color:var(--brd)}
+#ctrlStrip .cmode .ctab.act,#ctrlStrip #factMonthChips .ctab.act{background:#4472c4!important;color:#fff!important;border-color:#4472c4!important}
+#ctrlStrip .dri{color:#4472c4!important;font-weight:700!important}
+#ctrlStrip .chips .chip{border-radius:9px;font-weight:700;font-size:11px;padding:3px 9px;border:1px solid var(--brd)}
+#ctrlStrip .chips .chip.on{background:#eef2fb;border-color:#b9c9ea;color:#2e4c86}
 /* ===== YTD hero → tarjeta clara ===== */
 #secYTD{background:var(--bg)!important;border:1px solid var(--brd)!important;color:var(--txt)!important;box-shadow:0 4px 16px rgba(44,44,42,.06)!important}
 #secYTD::after{display:none!important}
@@ -1301,8 +1322,8 @@ function buildCal(){
   const grid=document.getElementById('cG');
   document.getElementById('cT').textContent=MNAMES[cm]+' '+cy;
   grid.innerHTML='';
-  ['D','L','M','M','J','V','S'].forEach(dn=>{const el=document.createElement('div');el.className='cdow';el.textContent=dn;grid.appendChild(el);});
-  const first=new Date(cy,cm,1).getDay(),days=new Date(cy,cm+1,0).getDate();
+  ['L','M','M','J','V','S','D'].forEach((dn,idx)=>{const el=document.createElement('div');el.className='cdow'+(idx>=5?' cdow-wk':'');el.textContent=dn;grid.appendChild(el);});
+  const first=(new Date(cy,cm,1).getDay()+6)%7,days=new Date(cy,cm+1,0).getDate();
   for(let i=0;i<first;i++){const el=document.createElement('div');el.className='cday';grid.appendChild(el);}
   let rA=sS,rB=sE||sS;if(rA&&rB&&rA>rB)[rA,rB]=[rB,rA];
   for(let d=1;d<=days;d++){
