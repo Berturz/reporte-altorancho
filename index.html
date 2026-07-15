@@ -4052,6 +4052,11 @@ async function handleSalidasFile(file) {
     const idxSubtotal = headerB.indexOf('Líneas de factura/Subtotal');
     const idxEmpresa = headerB.indexOf('Líneas de factura/Empresa');
     const idxEtiqueta = headerB.indexOf('Líneas de factura/Etiqueta');
+    // Columna "AA/B": marca cada fila como AA o B. Las filas CINTE se cuentan como AA
+    // (junto con las Cajas AA). Búsqueda del encabezado tolerante a espacios/mayúsculas.
+    const normH = s => String(s==null?'':s).toLowerCase().replace(/\s+/g,'');
+    const idxAAB = headerB.findIndex(h => normH(h)==='aa/b');
+    const cinteRows = []; // filas de la hoja (B) marcadas CINTE -> se reclasifican a AA
 
     const newB = {};
     for (let ri=1; ri<rowsB.length; ri++){
@@ -4063,6 +4068,9 @@ async function handleSalidasFile(file) {
       const subtotal = typeof row[idxSubtotal]==='number' ? row[idxSubtotal] : parseFloat(row[idxSubtotal])||0;
       const empresa = row[idxEmpresa] ? String(row[idxEmpresa]).trim() : '';
       const etiqueta = row[idxEtiqueta] ? String(row[idxEtiqueta]).trim() : '(Sin etiqueta)';
+      // Si la columna AA/B contiene CINTE, esta salida es AA: no suma a B, se acumula para AA.
+      const aab = idxAAB>=0 && row[idxAAB]!=null ? String(row[idxAAB]).trim().toUpperCase() : '';
+      if(aab.indexOf('CINTE')>=0){ cinteRows.push({fecha, imp:subtotal, emp:empresa, etq:etiqueta}); continue; }
       const cat = CUENTA_CAT_MAP[cuenta] || 'GastosVarios';
 
       if(!newB[fecha]) newB[fecha] = {cats:{}, emp:{}};
@@ -4100,6 +4108,17 @@ async function handleSalidasFile(file) {
       if(!newAA[fecha].cuenta_an[cuentaAn]) newAA[fecha].cuenta_an[cuentaAn] = [0, {}];
       newAA[fecha].cuenta_an[cuentaAn][0] += importe;
       newAA[fecha].cuenta_an[cuentaAn][1][desc] = (newAA[fecha].cuenta_an[cuentaAn][1][desc]||0) + importe;
+    }
+
+    // Reclasificar las salidas CINTE (venían de la hoja "Salida Semanal (B)") como AA,
+    // sumándolas junto con las Cajas AA (total AA + detalle bajo "CINTE").
+    for(const c of cinteRows){
+      if(!newAA[c.fecha]) newAA[c.fecha] = {total:0, cuenta_an:{}};
+      newAA[c.fecha].total += c.imp;
+      if(!newAA[c.fecha].cuenta_an['CINTE']) newAA[c.fecha].cuenta_an['CINTE'] = [0, {}];
+      newAA[c.fecha].cuenta_an['CINTE'][0] += c.imp;
+      const d = c.emp || c.etq || 'CINTE';
+      newAA[c.fecha].cuenta_an['CINTE'][1][d] = (newAA[c.fecha].cuenta_an['CINTE'][1][d]||0) + c.imp;
     }
 
     // ── Hojas extra: Salarios / Sindicatos / Impo / Impuestos / Pago tarjeta ──
