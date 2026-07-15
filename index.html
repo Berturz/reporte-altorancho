@@ -593,18 +593,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <!-- SECCIÓN 1: FACTURACIÓN + MÁRGENES -->
 <div class="sec" id="secFact">
   <div class="sec-hdr"><i class="ti ti-chart-bar"></i>Facturación &amp; Márgenes<span class="sec-sub">· controlado por el calendario</span></div>
-  <div class="mg4" id="mG"></div>
-  <div class="charts2" style="grid-template-columns:1fr">
-    <div class="cp">
-      <div class="st"><i class="ti ti-trending-up"></i>Facturación s/IVA + margen</div>
-      <div class="ctrls" id="fCtrl">
-        <button class="btn act" onclick="sfv('mes')">Mensual</button>
-        <button class="btn" onclick="sfv('dia')">Diario</button>
-        <button class="btn" onclick="sfv('canal')">Por canal</button>
-      </div>
-      <div class="leg" id="fLeg" style="justify-content:center"></div>
-      <div style="position:relative;width:100%;height:300px"><canvas id="cFC"></canvas></div>
-    </div>
+  <div class="charts2" style="grid-template-columns:1fr 1.05fr;gap:1.3rem;align-items:start">
+    <div id="mG"></div>
     <div class="cp">
       <div class="st"><i class="ti ti-chart-pie"></i>Participación por canal</div>
       <div class="leg" id="dLeg"></div>
@@ -613,6 +603,16 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
         <div class="dc"><div class="dm" id="dMain"></div><div class="ds2">Total</div></div>
       </div>
     </div>
+  </div>
+  <div class="cp" style="margin-top:1.3rem">
+    <div class="st"><i class="ti ti-trending-up"></i>Facturación s/IVA + margen <span class="sec-sub" style="font-weight:400">· detalle por mes / día / canal</span></div>
+    <div class="ctrls" id="fCtrl">
+      <button class="btn act" onclick="sfv('mes')">Mensual</button>
+      <button class="btn" onclick="sfv('dia')">Diario</button>
+      <button class="btn" onclick="sfv('canal')">Por canal</button>
+    </div>
+    <div class="leg" id="fLeg" style="justify-content:center"></div>
+    <div style="position:relative;width:100%;height:300px"><canvas id="cFC"></canvas></div>
   </div>
 </div>
 
@@ -1443,11 +1443,41 @@ function aggFinSub(key){
 
 // ── RENDER FC+MG ──
 function updMetrics(){
-  const dates=getRange();const{fc,cmv,tv,mg}=aggArr(dates);
-  const mc=mg>=2.2?'#0f6e56':'#854f0b';
-  document.getElementById('mG').innerHTML=`
-    <div class="mc"><div class="ml2">Facturación s/IVA</div><div class="mv">${fmt(tv)}</div><div class="ms">${dates.length} días</div></div>
-    <div class="mc"><div class="ml2">Margen</div><div class="mv" style="color:${mc}">${mg>0?mg.toFixed(2):'—'}</div></div>`;
+  var g=document.getElementById('mG'); if(!g) return;
+  var dates=getRange();
+  if(!dates.length){ g.innerHTML=''; return; }
+  var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var dk=getDKEYS();
+  var a=dates[0], b=dates[dates.length-1];
+  var cur=aggArr(dates);
+  var p2=function(n){return n<10?'0'+n:''+n;};
+  var ddmm=function(ds){return ds.slice(8,10)+'/'+ds.slice(5,7);};
+  var shift=function(ds,n){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());};
+  var larga=function(ds){return parseInt(ds.slice(8,10),10)+' de '+MN[parseInt(ds.slice(5,7),10)-1].toLowerCase()+' de '+ds.slice(0,4);};
+  var mgTxt=function(m){return m>0?m.toFixed(2).replace('.',','):'—';};
+  var monthDays=dk.filter(function(d){return d.slice(0,7)===a.slice(0,7);});
+  var isFullMonth=a.slice(0,7)===b.slice(0,7)&&monthDays.length&&a===monthDays[0]&&b===monthDays[monthDays.length-1];
+  var tipo,desc,prevDates=null,prevLabel='';
+  if(!sS){ tipo='Facturación total'; desc='todo el período'; }
+  else if(calMode==='sem'){ tipo='Facturación semanal'; desc='del '+ddmm(a)+' al '+ddmm(b); var pa=shift(a,-7),pb=shift(a,-1); prevDates=dk.filter(function(d){return d>=pa&&d<=pb;}); prevLabel='Semana anterior · '+ddmm(pa)+' al '+ddmm(pb); }
+  else if(a===b){ tipo='Facturación del día'; desc=larga(a); var pd=dk.filter(function(d){return d<a;}); prevDates=pd.length?[pd[pd.length-1]]:[]; prevLabel='Día anterior'+(prevDates.length?' · '+ddmm(prevDates[0]):''); }
+  else if(isFullMonth){ tipo='Facturación mensual'; desc=MN[parseInt(a.slice(5,7),10)-1]+' '+a.slice(0,4); var py=parseInt(a.slice(0,4),10),pmm=parseInt(a.slice(5,7),10)-1; if(pmm<1){pmm=12;py--;} var pmk=py+'-'+p2(pmm); prevDates=dk.filter(function(d){return d.slice(0,7)===pmk;}); prevLabel='Mes anterior'+(prevDates.length?' · '+MN[pmm-1]:''); }
+  else { tipo='Facturación del período'; desc='del '+ddmm(a)+' al '+ddmm(b); var pb2=shift(a,-1),pa2=shift(a,-dates.length); prevDates=dk.filter(function(d){return d>=pa2&&d<=pb2;}); prevLabel='Período anterior · '+ddmm(pa2)+' al '+ddmm(pb2); }
+  var acumDates=dk.filter(function(d){return d.slice(0,7)===b.slice(0,7)&&d<=b;});
+  var acum=aggArr(acumDates);
+  var acumLabel='Acumulado '+MN[parseInt(b.slice(5,7),10)-1]+' · hasta '+ddmm(b);
+  var prev=(prevDates&&prevDates.length)?aggArr(prevDates):null;
+  var pct=(prev&&prev.tv)?((cur.tv-prev.tv)/prev.tv*100):null;
+  var prevHtml = prev ? ('<div style="padding:2px 2px 10px"><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880;margin-bottom:3px">'+prevLabel+'</div><div style="font-size:22px;font-weight:700;color:#8a8880">'+fmt(prev.tv)+'</div><div style="font-size:12px;font-style:italic;color:#a7a49a;margin-top:2px">Margen '+mgTxt(prev.mg)+'</div></div>') : '';
+  var pctHtml = (pct!=null) ? ('<div style="text-align:right;white-space:nowrap"><div style="font-size:19px;font-weight:800;color:'+(pct>=0?'#2a6b53':'#c0392b')+'">'+(pct>=0?'▲ +':'▼ ')+pct.toFixed(1).replace('.',',')+'%</div><div style="font-size:11px;font-style:italic;color:#8a8880">vs anterior</div></div>') : '';
+  var curHtml = '<div style="background:#e8f0fe;border-left:5px solid #4472c4;border-radius:12px;padding:15px 18px;margin:2px 0">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
+    +'<div><div style="font-size:14px;font-weight:800;color:#2e4c86;text-transform:uppercase;letter-spacing:.02em">'+tipo+'</div><div style="font-size:12.5px;font-weight:600;color:#4472c4;margin-top:2px">'+desc+'</div></div>'
+    + pctHtml + '</div>'
+    +'<div style="font-size:34px;font-weight:800;color:#2e4c86;line-height:1.05;margin-top:12px">'+fmt(cur.tv)+'</div>'
+    +'<div style="font-size:13px;color:#4472c4;margin-top:8px">Margen general <span style="font-size:22px;font-weight:800;vertical-align:-2px">'+mgTxt(cur.mg)+'</span></div></div>';
+  var acumHtml = '<div style="padding:10px 2px 2px"><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880;margin-bottom:3px">'+acumLabel+'</div><div style="font-size:22px;font-weight:700;color:#565b64">'+fmt(acum.tv)+'</div><div style="font-size:12px;font-style:italic;color:#a7a49a;margin-top:2px">Margen acumulado '+mgTxt(acum.mg)+'</div></div>';
+  g.innerHTML = prevHtml + curHtml + acumHtml;
 }
 function sfv(v){fv=v;const bs=document.querySelectorAll('#fCtrl .btn');bs[0].classList.toggle('act',v==='mes');bs[1].classList.toggle('act',v==='dia');bs[2].classList.toggle('act',v==='canal');if(fCh)fCh.destroy();renderFC();}
 function renderFC(){
