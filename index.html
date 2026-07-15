@@ -2490,7 +2490,8 @@ function setRPMes(m){
   renderRP();
 }
 
-function renderRPTable(canalKey, dataObj){
+function renderRPTable(canalKey, dataObj, col){
+  const th = col ? ` style="background:${col}!important;border-color:${col}!important"` : '';
   const cats = RP_CAT_ORDER.filter(c=>dataObj[c]);
   if(!cats.length) return '<div class="prov-empty">Sin datos para este canal en el período</div>';
   let totVentas=0, totFC=0, totQty=0;
@@ -2515,8 +2516,8 @@ function renderRPTable(canalKey, dataObj){
   const totalTicket = totVentas>0 ? totFC/totVentas : 0;
   return `<table class="rp-table">
     <thead><tr>
-      <th>Rubro</th><th>Proveedor</th><th>Cant. ventas</th><th>Ticket prom.</th>
-      <th>Cantidad</th><th>Facturación s/IVA</th><th>%</th>
+      <th${th}>Rubro</th><th${th}>Proveedor</th><th${th}>Cant. ventas</th><th${th}>Ticket prom.</th>
+      <th${th}>Cantidad</th><th${th}>Facturación s/IVA</th><th${th}>%</th>
     </tr></thead>
     <tbody>
       ${rowsHTML}
@@ -2541,7 +2542,7 @@ function renderRP(){
     return `
     <div class="rp-canal-block" style="background:${chTint(col,0.96)};border:1px solid ${chTint(col,0.35)};border-radius:14px;overflow:hidden">
       <div style="background:${chTint(col,0.80)};color:${col};padding:9px 14px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:7px"><i class="ti ti-${RP_CANAL_ICONS[c]||'building'}" style="font-size:15px"></i>${RP_CANAL_LABELS[c]}</div>
-      <div class="prov-table-wrap" style="border:none!important;border-radius:0;background:transparent">${renderRPTable(c, mesData[c])}</div>
+      <div class="prov-table-wrap" style="border:none!important;border-radius:0;background:transparent">${renderRPTable(c, mesData[c], col)}</div>
     </div>`;
   }).join('');
 }
