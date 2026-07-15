@@ -1703,23 +1703,22 @@ function renderFin(){
   const pctC=function(v){return (v*100).toFixed(2).replace('.',',')+'%';};
   const pp=function(x){return Math.abs(x*100).toFixed(2).replace('.',',')+' pp';};
   function miniCard(base,label,real){
-    return '<div style="flex:1;min-width:0;background:'+chTint(base,0.84)+';border:1px solid '+chTint(base,0.45)+';border-left:4px solid '+base+';border-radius:10px;padding:9px 13px">'
+    return '<div style="background:'+chTint(base,0.84)+';border:1px solid '+chTint(base,0.45)+';border-left:4px solid '+base+';border-radius:10px;padding:8px 13px">'
       +'<div style="font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+base+'">'+label+'</div>'
       +'<div style="font-size:23px;font-weight:800;color:'+base+';line-height:1.1">'+pctC(real)+'</div>'
       +'<div style="font-size:9.5px;color:#8a8880">acumulado del mes</div></div>';
   }
-  function resTile(base,tint,title,sub,real,asumido,prev,belowHtml){
+  function resTile(base,tint,title,sub,real,asumido,prev,rightHtml){
     var dp=prev!=null?(real-prev):null;
     var asumBlock=asumido!=null?'<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8880">Asumido</div><div style="font-size:30px;font-weight:800;color:#8a8880;line-height:1.15">'+pctC(asumido)+'</div></div>':'';
     var pHtml=prev!=null?'<div style="margin-top:7px;font-size:11.5px;font-style:italic;color:#8a8880">Mes anterior: '+pctC(prev)+' · '+(dp<=0?'▼ ':'▲ +')+pp(dp)+' este mes</div>':'';
-    return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:15px 18px">'
+    var main='<div style="flex:1;min-width:0">'
       +'<div style="font-size:15px;font-weight:800;color:'+base+'">'+title+(sub?' <span style="font-size:12px;font-weight:600;opacity:.75">'+sub+'</span>':'')+'</div>'
       +'<div style="display:flex;gap:34px;align-items:flex-start;margin-top:9px">'
         +'<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:'+base+'">Real</div><div style="font-size:34px;font-weight:800;color:'+base+';line-height:1.05">'+pctC(real)+'</div><div style="font-size:9.5px;color:#8a8880">acumulado del mes</div></div>'
-        +asumBlock+'</div>'
-      +pHtml
-      +(belowHtml||'')
-      +'</div>';
+        +asumBlock+'</div>'+pHtml+'</div>';
+    var right=rightHtml?'<div style="flex:none;width:152px;display:flex;flex-direction:column;gap:8px;justify-content:center">'+rightHtml+'</div>':'';
+    return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:15px 18px"><div style="display:flex;gap:16px;align-items:stretch">'+main+right+'</div></div>';
   }
   function block(canvasId,base,tint,groupLabel,totalMdp,titlePct){
     var head;
@@ -1736,10 +1735,10 @@ function renderFin(){
   }
   document.getElementById('finResumen').innerHTML =
     '<div style="font-size:12px;font-weight:700;color:#8a8880;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Costo de financiación · '+pLabel+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:stretch">'
     + resTile(COL.may,TINT.may,'Mayorista','(Lett)',lettPct,CF_ASUMIDO.may,lettPrev,'')
     + resTile(COL.min,TINT.min,'Minorista','(Locales + Web)',arPct,CF_ASUMIDO.min,arPrev,
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:'+COL.min+';margin:13px 0 6px">Se divide en</div><div style="display:flex;gap:10px">'+miniCard(COL.web,'Web',webPct)+miniCard(COL.loc,'Locales',locPct)+'</div>')
+        miniCard(COL.web,'Web',webPct)+miniCard(COL.loc,'Locales',locPct))
     +'</div>';
   document.getElementById('finTop').innerHTML =
     block('fvcMay',COL.may,TINT.may,'Mayorista (Lett)',sumV(fa.ml))
