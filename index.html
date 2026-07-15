@@ -4056,6 +4056,7 @@ async function handleSalidasFile(file) {
     // (junto con las Cajas AA). Búsqueda del encabezado tolerante a espacios/mayúsculas.
     const normH = s => String(s==null?'':s).toLowerCase().replace(/\s+/g,'');
     const idxAAB = headerB.findIndex(h => normH(h)==='aa/b');
+    const idxNumero = headerB.indexOf('Líneas de factura/Número');
     const cinteRows = []; // filas de la hoja (B) marcadas CINTE -> se reclasifican a AA
 
     const newB = {};
@@ -4068,9 +4069,9 @@ async function handleSalidasFile(file) {
       const subtotal = typeof row[idxSubtotal]==='number' ? row[idxSubtotal] : parseFloat(row[idxSubtotal])||0;
       const empresa = row[idxEmpresa] ? String(row[idxEmpresa]).trim() : '';
       const etiqueta = row[idxEtiqueta] ? String(row[idxEtiqueta]).trim() : '(Sin etiqueta)';
-      // Si la columna AA/B contiene CINTE, esta salida es AA: no suma a B, se acumula para AA.
-      const aab = idxAAB>=0 && row[idxAAB]!=null ? String(row[idxAAB]).trim().toUpperCase() : '';
-      if(aab.indexOf('CINTE')>=0){ cinteRows.push({fecha, imp:subtotal, emp:empresa, etq:etiqueta}); continue; }
+      // Es CINTE (y por lo tanto AA) si la columna AA/B o el Número contienen "CINTE".
+      const aabTxt = ((idxAAB>=0 && row[idxAAB]!=null ? row[idxAAB] : '')+' '+(idxNumero>=0 && row[idxNumero]!=null ? row[idxNumero] : '')).toString().toUpperCase();
+      if(aabTxt.indexOf('CINTE')>=0){ cinteRows.push({fecha, imp:subtotal, emp:empresa, etq:etiqueta}); continue; }
       const cat = CUENTA_CAT_MAP[cuenta] || 'GastosVarios';
 
       if(!newB[fecha]) newB[fecha] = {cats:{}, emp:{}};
