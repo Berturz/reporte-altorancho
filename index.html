@@ -2111,12 +2111,12 @@ function makeOrigVBar(canvasId, origObj){
   const bd=entries.map(([o])=>C_ORIG[o]||'#888');
   charts[canvasId]=new Chart(el.getContext('2d'),{type:'bar',
     data:{labels:entries.map(([o])=>o),datasets:[{data:pctData,rawData:raw,mgData:mgData,backgroundColor:bg,borderColor:bd,borderWidth:1.5,borderRadius:4,maxBarThickness:70}]},
-    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:26}},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var mg=c.dataset.mgData[c.dataIndex];return c.raw.toFixed(1).replace('.',',')+'%  ('+fmt(c.dataset.rawData[c.dataIndex])+')  ·  Margen '+(mg>0?mg.toFixed(2):'—');}}}},
       scales:{x:{ticks:{font:{size:10,weight:'700'},color:'#555'},grid:{display:false}},y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}},
     plugins:[{id:'ovlbl',afterDatasetsDraw:function(ch){var m=ch.getDatasetMeta(0),dd=ch.data.datasets[0],cx=ch.ctx;cx.save();cx.textAlign='center';m.data.forEach(function(b,i){var v=dd.data[i];if(v==null)return;
-      cx.font='800 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle=dd.borderColor[i];cx.textBaseline='bottom';cx.fillText(v.toFixed(1).replace('.',',')+'%',b.x,b.y-14);
-      var mg=dd.mgData[i];if(mg>0){cx.font='700 9px Calibri,"Segoe UI",sans-serif';cx.fillStyle=mg>=2.2?'#0f6e56':'#854f0b';cx.fillText(mg.toFixed(2)+'x',b.x,b.y-3);}
+      cx.font='800 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle=dd.borderColor[i];cx.textBaseline='bottom';cx.fillText(v.toFixed(1).replace('.',',')+'%',b.x,b.y-4);
+      var mg=dd.mgData[i];if(mg>0){var bh=ch.scales.y.bottom-b.y;cx.font='800 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle=mg>=2.2?'#0f6e56':'#854f0b';cx.textBaseline='middle';cx.fillText(mg.toFixed(2),b.x,b.y+Math.min(bh/2,15));}
     });cx.restore();}}]});
 }
 
@@ -2135,9 +2135,9 @@ function renderOrig(){
   function block(canvasId,base,tint,groupLabel,sub,d){
     var mg=d.cmv>0?d.fc/d.cmv:0;var mc=mg>=2.2?'#0f6e56':'#854f0b';
     return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:16px 18px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">'
+      +'<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 14px">'
         +'<div style="font-size:16px;font-weight:800;color:'+base+'">'+groupLabel+(sub?' <span style="font-size:12px;font-weight:600;opacity:.75">'+sub+'</span>':'')+'</div>'
-        +'<div style="text-align:right;flex:none"><div style="font-size:18px;font-weight:800;color:'+base+';line-height:1">'+fmt(d.tv)+'</div><div style="font-size:9.5px;color:#8a8880">facturación s/IVA · margen <span style="color:'+mc+';font-weight:700">'+(mg>0?mg.toFixed(2):'—')+'</span></div></div>'
+        +'<div style="font-size:16px;font-weight:700;color:'+base+'">'+fmt(d.tv)+' <span style="font-size:9.5px;font-weight:600;color:#8a8880">s/IVA · margen <span style="color:'+mc+';font-weight:700">'+(mg>0?mg.toFixed(2):'—')+'</span></span></div>'
       +'</div>'
       +'<div class="leg" style="margin:9px 0 2px">'+legHtml(d)+'</div>'
       +'<div style="position:relative;width:100%;height:225px"><canvas id="'+canvasId+'"></canvas></div></div>';
