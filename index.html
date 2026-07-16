@@ -2970,6 +2970,9 @@ function renderVend(){
   <!-- Panel principal: 3 cajas (Líquido pesos / A liquidar / Líquido USD) con composición por línea -->
   <div id="cajasPanel" style="margin-bottom:.9rem"></div>
 
+  <!-- Rentabilidad de inversiones vs inflación (hoja "Rentabilidad % Inversiones") -->
+  <div id="cajasRentab" style="margin-bottom:.9rem"></div>
+
   <!-- Tabla comparativa semana actual vs anterior -->
   <div class="orig-group-label" style="margin-bottom:.5rem"><span class="orig-dot" style="background:#1D9E75"></span>Variación semana a semana</div>
   <div class="charts2" style="margin-bottom:.85rem">
@@ -3005,6 +3008,8 @@ function renderVend(){
 // ════════════════════════════════════════════════
 var CAJAS_D = {};
 var AR_MAYORISTA_D = {};
+var RENTAB_D = {meses:[]};
+var rentabMesSel = null, rentabChart = null;
 
 const CAJAS_CUENTA_COLORS = {
   'Efectivo ($)':'#4472c4','Efectivo (USD)':'#5a9ca8','MP a Liquidar':'#7fb0d6',
@@ -3354,6 +3359,7 @@ function loadCajasManual(){
 }
 
 function renderCajas(){
+  try{ renderRentab(); }catch(e){}
   if(!cajasSemana) return;
   renderCajasPanel();
   renderCajasVarTables();
@@ -3361,6 +3367,48 @@ function renderCajas(){
   loadCajasManual();
   renderArMayoristaTable();
   loadArMayoristaManual();
+}
+
+// ── Rentabilidad de inversiones vs inflación (gráfico + desplegable de meses) ──
+function setRentabMes(m){ rentabMesSel=m; renderRentab(); }
+function rentabDetCard(name, nom, real, color){
+  var pf=function(v){return v==null?'—':(v*100).toFixed(2)+'%';};
+  var realHtml = real==null ? '' : '<div style="font-size:10.5px;color:var(--txt2);margin-top:2px">real '+pf(real)+'</div>';
+  return '<div style="flex:1;min-width:115px;border-left:3px solid '+color+';background:var(--bg2);border-radius:8px;padding:7px 10px">'
+    +'<div style="font-size:11px;color:var(--txt2);font-weight:600">'+name+'</div>'
+    +'<div style="font-size:17px;font-weight:700;color:'+color+'">'+pf(nom)+'</div>'+realHtml+'</div>';
+}
+function renderRentab(){
+  var el=document.getElementById('cajasRentab'); if(!el) return;
+  var R=(typeof RENTAB_D!=='undefined'&&RENTAB_D&&RENTAB_D.meses)?RENTAB_D.meses:[];
+  if(!R.length){ el.style.display='none'; el.innerHTML=''; if(rentabChart){rentabChart.destroy();rentabChart=null;} return; }
+  el.style.display='';
+  if(!rentabMesSel || !R.some(function(m){return m.mes===rentabMesSel;})) rentabMesSel=R[R.length-1].mes;
+  var sel=R.find(function(m){return m.mes===rentabMesSel;})||R[R.length-1];
+  var opts=R.map(function(m){return '<option value="'+m.mes+'"'+(m.mes===rentabMesSel?' selected':'')+'>'+m.label+'</option>';}).join('');
+  var col={fima:'#4472c4',cocos:'#1D9E75',balanz:'#BA7517',infl:'#D85A30'};
+  var det='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.5rem">'
+    +rentabDetCard('Fondo FIMA',sel.fima,sel.fimaReal,col.fima)
+    +rentabDetCard('Cocos',sel.cocos,sel.cocosReal,col.cocos)
+    +rentabDetCard('Balanz',sel.balanz,sel.balanzReal,col.balanz)
+    +rentabDetCard('Inflación INDEC',sel.inflacion,null,col.infl)+'</div>';
+  el.innerHTML='<div class="cp">'
+    +'<div class="st" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+      +'<span><i class="ti ti-chart-line"></i>Rentabilidad de inversiones vs inflación</span>'
+      +'<select onchange="setRentabMes(this.value)" style="font-size:12px;padding:4px 8px;border-radius:8px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt)">'+opts+'</select>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .6rem">'+sel.label+' · % nominal y real (descontada la inflación)</div>'
+    +det+'<div style="position:relative;height:210px"><canvas id="cRentab"></canvas></div></div>';
+  var labels=R.map(function(m){return m.label;});
+  var mk=function(lbl,key,c){return {label:lbl,data:R.map(function(m){return m[key]==null?null:+(m[key]*100).toFixed(2);}),backgroundColor:c,borderRadius:4,maxBarThickness:26};};
+  if(rentabChart) rentabChart.destroy();
+  rentabChart=new Chart(document.getElementById('cRentab').getContext('2d'),{ type:'bar',
+    data:{labels:labels,datasets:[mk('Fondo FIMA','fima',col.fima),mk('Cocos','cocos',col.cocos),mk('Balanz','balanz',col.balanz),mk('Inflación INDEC','inflacion',col.infl)]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.raw==null?'—':c.raw.toFixed(2)+'%');}}}},
+      scales:{y:{ticks:{callback:function(v){return v+'%';},font:{size:10}}},x:{ticks:{font:{size:10}}}}}
+  });
 }
 
 // ── PROCESADOR DE ARCHIVO CAJAS (independiente del Excel de Facturación) ──
@@ -3452,7 +3500,27 @@ async function handleCajasFile(file) {
       for(const fk in newARMAY) newARMAY[fk].total=Math.round(newARMAY[fk].total*100)/100;
     }
 
+    // ── Rentabilidad % Inversiones (hoja "Rentabilidad % Inversiones") ──
+    // Desde la fila 5 (índice 4): A=Mes, B=Fondo FIMA, C=Cocos, D=Balanz, E=Inflación INDEC, F=FIMA real, G=Cocos real, H=Balanz real
+    const newRENTAB = {meses:[]};
+    if (wb.SheetNames.includes('Rentabilidad % Inversiones')) {
+      const rowsR = XLSX.utils.sheet_to_json(wb.Sheets['Rentabilidad % Inversiones'], { header:1, raw:true, defval:null });
+      const numR = v => (typeof v==='number' ? v : (v==null||v===''? null : (isNaN(parseFloat(v))?null:parseFloat(v))));
+      const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      for (let ri=4; ri<rowsR.length; ri++){
+        const r=rowsR[ri]; if(!r || r[0]==null || r[0]==='') continue;
+        const f=excelDateToStrCajas(r[0]); if(!f) continue;
+        const fima=numR(r[1]), cocos=numR(r[2]), balanz=numR(r[3]);
+        if(fima==null && cocos==null && balanz==null) continue; // mes sin datos aún
+        const mi=parseInt(f.slice(5,7))-1, yy=f.slice(2,4);
+        newRENTAB.meses.push({ mes:f.slice(0,7), label:(MESES[mi]||'')+'-'+yy,
+          fima:fima, cocos:cocos, balanz:balanz, inflacion:numR(r[4]),
+          fimaReal:numR(r[5]), cocosReal:numR(r[6]), balanzReal:numR(r[7]) });
+      }
+    }
+
     CAJAS_D = newCAJAS;
+    RENTAB_D = newRENTAB;
     if (Object.keys(newARMAY).length) AR_MAYORISTA_D = newARMAY;
     cajasSemana = null;
     buildCajasWeekChips();
@@ -4342,7 +4410,7 @@ function rsemBuildPlano(){
     fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
-    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D')},
+    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
   };
@@ -4350,6 +4418,7 @@ function rsemBuildPlano(){
     +'try{if(s.notas){if(s.notas.arMayoristaNotas)localStorage.setItem("arMayoristaNotas",s.notas.arMayoristaNotas);if(s.notas.cajasNotas)localStorage.setItem("cajasNotas",s.notas.cajasNotas);}}catch(e){}'
     +'try{if(s.cajas&&s.cajas.CAJAS_D&&typeof CAJAS_D!=="undefined")CAJAS_D=s.cajas.CAJAS_D;}catch(e){}'
     +'try{if(s.cajas&&s.cajas.AR_MAYORISTA_D&&typeof AR_MAYORISTA_D!=="undefined")AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}'
+    +'try{if(s.cajas&&s.cajas.RENTAB_D&&typeof RENTAB_D!=="undefined")RENTAB_D=s.cajas.RENTAB_D;}catch(e){}'
     +'try{if(s.fotos){Object.assign(prodImgCache,s.fotos);Object.assign(prodImgUser,s.fotos);}}catch(e){}'
     +'try{if(s.fact&&s.fact.DATA_D)applyFactState(s.fact);}catch(e){}'
     +'try{if(s.salidas&&s.salidas.SALIDAS_B_D)applySalidasState(s.salidas);}catch(e){}'
@@ -4405,7 +4474,7 @@ function rsemSnapObj(){
     fact:{DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
-    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D')},
+    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
     hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
@@ -4417,6 +4486,7 @@ function rsemApplySnap(s){
   try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;}}catch(e){}
   try{if(s.cajas&&s.cajas.CAJAS_D)CAJAS_D=s.cajas.CAJAS_D;}catch(e){}
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
+  try{if(s.cajas&&s.cajas.RENTAB_D)RENTAB_D=s.cajas.RENTAB_D;}catch(e){}
   try{if(s.fotos){Object.assign(prodImgCache,s.fotos);Object.assign(prodImgUser,s.fotos);}}catch(e){}
   try{if(s.fact&&s.fact.DATA_D)applyFactState(s.fact);}catch(e){}
   try{if(s.salidas&&s.salidas.SALIDAS_B_D)applySalidasState(s.salidas);}catch(e){}
