@@ -3648,7 +3648,7 @@ renderCajas();
   #secStock .stk-table thead tr.stk-sub th{color:var(--txt);background:var(--bg2);font-weight:700}
   #secStock .stk-table tbody td{padding:.35rem .6rem;text-align:right;border-bottom:.5px solid var(--brd);white-space:nowrap}
   #secStock .stk-table tbody td:first-child{text-align:left}
-  #secStock .stk-ori td{font-weight:700;background:var(--bg2)}
+  #secStock .stk-ori td{font-weight:700}
   #secStock .stk-rub td:first-child{padding-left:1.6rem;color:var(--txt2);font-size:11px}
   #secStock .stk-tot td{font-weight:800;border-top:1.5px solid var(--brd2);background:var(--bg3)}
   </style>
@@ -3683,6 +3683,7 @@ var STOCK_D = { fecha:null, estados:[], origenes:[], stock:{}, ventas:{}, ventas
 var stockSelEstado = null, stockSelMes = null;
 var STOCK_ESTADO_COL = {'ACTIVO':'#1D9E75','DISCONTINUO':'#c8873c'};
 var STOCK_PAL = ['#4472c4','#8e6e9d','#5a9ca8','#b0576f','#BA7517'];
+var STOCK_ORI_COL = {'Importado':'#4472c4','Fábrica':'#c8873c','Proveedor Nacional':'#1D9E75'};
 function stockEstadoColor(e,i){ return STOCK_ESTADO_COL[String(e).toUpperCase()] || STOCK_PAL[i % STOCK_PAL.length]; }
 function stockCap(s){ s=String(s||'').toLowerCase(); return s.charAt(0).toUpperCase()+s.slice(1); }
 function fUSDstock(v){ return 'USD '+Math.round(v||0).toLocaleString('es-AR'); }
@@ -3790,7 +3791,8 @@ function renderStockCompare(cmpEl, S, estado, vmes){
   var rows='';
   oList.forEach(function(ori){
     var so=(st.origenes&&st.origenes[ori])||{val:0,cant:0,rubros:{}}; var vo=(vt.origenes&&vt.origenes[ori])||{val:0,cant:0,rubros:{}};
-    rows+='<tr class="stk-ori"><td>'+ori+'</td><td>'+fCantStock(so.cant)+'</td><td>'+fUSDstock(so.val)+'</td><td>'+fCantStock(vo.cant)+'</td><td>'+fUSDstock(vo.val)+'</td></tr>';
+    var oc=STOCK_ORI_COL[ori]||'#7a7a7a', obg=(typeof chTint==='function')?chTint(oc,0.82):'var(--bg2)';
+    rows+='<tr class="stk-ori" style="background:'+obg+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+fCantStock(so.cant)+'</td><td>'+fUSDstock(so.val)+'</td><td>'+fCantStock(vo.cant)+'</td><td>'+fUSDstock(vo.val)+'</td></tr>';
     var rset={}; Object.keys(so.rubros||{}).forEach(function(x){rset[x]=1;}); Object.keys(vo.rubros||{}).forEach(function(x){rset[x]=1;});
     Object.keys(rset).sort().forEach(function(rub){
       var sr=so.rubros[rub]||{cant:0,val:0}; var vr=vo.rubros[rub]||{cant:0,val:0};
