@@ -2974,10 +2974,18 @@ function renderVend(){
   <div id="cajasRentab" style="margin-bottom:.9rem"></div>
 
   <!-- Tabla comparativa semana actual vs anterior -->
+  <style>
+  .cajas-var-table{width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
+  .cajas-var-table thead th{color:#fff;font-weight:600;text-align:right;padding:.45rem .6rem;font-size:11px;white-space:nowrap}
+  .cajas-var-table thead th:first-child{text-align:left}
+  .cajas-var-table tbody td{padding:.45rem .6rem;text-align:right;border-bottom:.5px solid var(--brd);white-space:nowrap}
+  .cajas-var-table tbody td:first-child{text-align:left;font-weight:600}
+  .cajas-var-table tbody tr:last-child td{font-weight:700;background:var(--bg2)}
+  </style>
   <div class="orig-group-label" style="margin-bottom:.5rem"><span class="orig-dot" style="background:#1D9E75"></span>Variación semana a semana</div>
-  <div class="charts2" style="margin-bottom:.85rem">
-    <div class="prov-table-wrap" id="cajasVarARSWrap"></div>
-    <div class="prov-table-wrap" id="cajasVarUSDWrap"></div>
+  <div class="charts2" style="margin-bottom:.85rem;align-items:start">
+    <div id="cajasVarARSWrap"></div>
+    <div id="cajasVarUSDWrap"></div>
   </div>
 
   <!-- Tabla detalle por cuenta -->
@@ -3237,19 +3245,19 @@ function renderCajasDonuts(){
   });
 }
 
-function renderCajasVarTable(wrapId, labelActual, labelAnterior, rows, headerTipo){
+function renderCajasVarTable(wrapId, labelActual, labelAnterior, rows, headerTipo, color){
   const rowsHTML = rows.map(r=>{
-    const color = r.diff>=0 ? '#0f6e56' : '#a83232';
+    const c = r.diff>=0 ? '#0f6e56' : '#a83232';
     return `<tr>
       <td>${r.label}</td>
-      <td style="text-align:right">${r.fmt(r.prevVal)}</td>
-      <td style="text-align:right">${r.fmt(r.curVal)}</td>
-      <td style="text-align:right;color:${color};font-weight:600">${r.pct>=0?'+':''}${r.pct.toFixed(1)}%</td>
+      <td>${r.fmt(r.prevVal)}</td>
+      <td>${r.fmt(r.curVal)}</td>
+      <td style="color:${c};font-weight:700">${r.pct>=0?'+':''}${r.pct.toFixed(1)}%</td>
     </tr>`;
   }).join('');
   document.getElementById(wrapId).innerHTML = `
-    <table class="rp-table">
-      <thead><tr><th>${headerTipo}</th><th>${labelAnterior}</th><th>${labelActual}</th><th>Variación%</th></tr></thead>
+    <table class="cajas-var-table">
+      <thead><tr style="background:${color||'#1D9E75'}"><th>${headerTipo}</th><th>${labelAnterior}</th><th>${labelActual}</th><th>Variación%</th></tr></thead>
       <tbody>${rowsHTML}</tbody>
     </table>`;
 }
@@ -3274,13 +3282,13 @@ function renderCajasVarTables(){
     {label:'Líquido', curVal:cur.liquido, prevVal:prev.liquido, diff:cur.liquido-prev.liquido, pct: prev.liquido!==0?(cur.liquido-prev.liquido)/Math.abs(prev.liquido)*100:0, fmt:fflCajas},
     {label:'Total ARS', curVal:cur.total_ars, prevVal:prev.total_ars, diff:cur.total_ars-prev.total_ars, pct: prev.total_ars!==0?(cur.total_ars-prev.total_ars)/Math.abs(prev.total_ars)*100:0, fmt:fflCajas},
   ];
-  renderCajasVarTable('cajasVarARSWrap', labelActual, labelAnterior, rowsARS, '($)');
+  renderCajasVarTable('cajasVarARSWrap', labelActual, labelAnterior, rowsARS, '($)', '#1D9E75');
 
   const fmtUsd = v=>`US$ ${v.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
   const rowsUSD = [
     {label:'Total USD', curVal:cur.total_usd, prevVal:prev.total_usd, diff:cur.total_usd-prev.total_usd, pct: prev.total_usd!==0?(cur.total_usd-prev.total_usd)/Math.abs(prev.total_usd)*100:0, fmt:fmtUsd},
   ];
-  renderCajasVarTable('cajasVarUSDWrap', labelActual, labelAnterior, rowsUSD, '(USD)');
+  renderCajasVarTable('cajasVarUSDWrap', labelActual, labelAnterior, rowsUSD, '(USD)', '#4472c4');
 }
 
 function renderCajasTable(){
