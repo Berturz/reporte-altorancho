@@ -3040,18 +3040,15 @@ function dmyCajas(s){const d=new Date(s+'T00:00:00');return `${String(d.getDate(
 function buildCajasWeekChips(){
   const semanas = getCajasSemanas();
   if(!cajasSemana || !semanas.includes(cajasSemana)) cajasSemana = semanas[semanas.length-1] || null;
-  document.getElementById('cajasWeekChips').innerHTML = semanas.map(s=>{
-    const d = new Date(s+'T00:00:00');
-    const label = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
-    return `<div class="mchip ${s===cajasSemana?'act':''}" id="cjw_${s}" onclick="setCajasSemana('${s}')" style="${s===cajasSemana?'background:#1D9E75':''}">${label}</div>`;
-  }).join('');
+  const fmt = s => { const d=new Date(s+'T00:00:00'); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
+  // Desplegable de semanas (antes eran chips: con muchas semanas se hacía eterno). Última seleccionada por defecto.
+  const opts = semanas.map(s=>`<option value="${s}"${s===cajasSemana?' selected':''}>${fmt(s)}</option>`).join('');
+  document.getElementById('cajasWeekChips').innerHTML = semanas.length
+    ? `<select onchange="setCajasSemana(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);min-width:160px;cursor:pointer">${opts}</select>`
+    : '';
 }
 function setCajasSemana(s){
   cajasSemana = s;
-  getCajasSemanas().forEach(k=>{
-    const el = document.getElementById('cjw_'+k);
-    if(el){ el.classList.toggle('act', k===s); el.style.background = k===s ? '#1D9E75' : ''; }
-  });
   renderCajas();
 }
 
