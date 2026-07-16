@@ -3645,6 +3645,7 @@ renderCajas();
   #secStock .stk-table{width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
   #secStock .stk-table thead th{color:#fff;font-weight:700;text-align:right;padding:.4rem .6rem;font-size:11px;white-space:nowrap}
   #secStock .stk-table thead th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
+  #secStock .stk-table thead tr.stk-sub th{color:var(--txt);background:var(--bg2);font-weight:700}
   #secStock .stk-table tbody td{padding:.35rem .6rem;text-align:right;border-bottom:.5px solid var(--brd);white-space:nowrap}
   #secStock .stk-table tbody td:first-child{text-align:left}
   #secStock .stk-ori td{font-weight:700;background:var(--bg2)}
@@ -3800,7 +3801,7 @@ function renderStockCompare(cmpEl, S, estado, vmes){
     +'<div class="st" style="color:'+col+'"><i class="ti ti-arrows-left-right"></i>'+stockCap(estado)+' · Stock vs Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div>'
     +'<div class="prov-table-wrap"><table class="stk-table">'
       +'<thead><tr><th></th><th colspan="2" style="background:'+col+'">STOCK</th><th colspan="2" style="background:#2c2c2a">VENTAS</th></tr>'
-      +'<tr><th>Origen / Rubro</th><th>Cant.</th><th>USD</th><th>Cant.</th><th>USD</th></tr></thead>'
+      +'<tr class="stk-sub"><th>Origen / Rubro</th><th>Cant.</th><th>USD</th><th>Cant.</th><th>USD</th></tr></thead>'
       +'<tbody>'+rows
       +'<tr class="stk-tot"><td>Total '+stockCap(estado)+'</td><td>'+fCantStock(st.cant)+'</td><td>'+fUSDstock(st.val)+'</td><td>'+fCantStock(vt.cant)+'</td><td>'+fUSDstock(vt.val)+'</td></tr>'
       +'</tbody></table></div></div>';
