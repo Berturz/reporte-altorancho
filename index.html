@@ -762,6 +762,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
      ════════════════════════════════════════════════ -->
 <script>
 var DATA_D = {};
+var VENTAS_D = {}; // [dia][canal] = {v:cantidad de comprobantes, q:unidades} — para ticket promedio diario
 var FIN_D = {};
 var FIN_SUB = {};
 var ORIG_D = {};
@@ -886,6 +887,7 @@ async function handleFile(file) {
     await new Promise(r => setTimeout(r, 0));
 
     const newDATA = {};
+    const newVENTAS = {}; // [dia][canal] = {set:Set(comprobantes), q:unidades}
     const newORIG = {};
     const newPROD = {};
     const newTOPFC = {};
@@ -952,6 +954,14 @@ async function handleFile(file) {
         newDATA[dia][rubro][canal].tv  += tv;
         newDATA[dia][rubro][canal].fc  += fc;
         newDATA[dia][rubro][canal].cmv += cmv;
+        // VENTAS_D: comprobantes únicos (no NC/reversión) + unidades por día/canal
+        const idRepD = row[COL.IDREP] ? String(row[COL.IDREP]).trim() : null;
+        if (idRepD && !/Reversión de:/i.test(idRepD) && !idRepD.startsWith('A-NC') && !idRepD.startsWith('NC')) {
+          if (!newVENTAS[dia]) newVENTAS[dia] = {};
+          if (!newVENTAS[dia][canal]) newVENTAS[dia][canal] = {set:new Set(), q:0};
+          newVENTAS[dia][canal].set.add(idRepD);
+          newVENTAS[dia][canal].q += qty2;
+        }
       }
 
       // ── ORIG_D: clasificación origen por día / canal ──
@@ -1184,6 +1194,9 @@ async function handleFile(file) {
 
     // Reemplazar datos globales
     DATA_D = newDATA;
+    const finalVENTAS = {};
+    for (const dia in newVENTAS){ finalVENTAS[dia] = {}; for (const c in newVENTAS[dia]){ finalVENTAS[dia][c] = {v:newVENTAS[dia][c].set.size, q:newVENTAS[dia][c].q}; } }
+    VENTAS_D = finalVENTAS;
     FIN_D  = newFIN;
     FIN_SUB= newSUB;
     ORIG_D = newORIG;
@@ -1576,10 +1589,25 @@ function fcLblPlugin(mgData,stacked){
     cx.restore();
   }};
 }
+// Dibuja bajo cada día (Diario · local puntual): cantidad de ventas y ticket promedio
+function fcDayStatsPlugin(stats){
+  return {id:'fcDayStats',afterDraw:function(ch){
+    var meta=ch.getDatasetMeta(0); if(!meta||!meta.data) return;
+    var cx=ch.ctx; var yBase=ch.scales.x.bottom; cx.save(); cx.textAlign='center';
+    meta.data.forEach(function(bar,i){
+      var n=stats.ventas[i], tk=stats.ticket[i];
+      if(n==null && tk==null) return;
+      cx.font='700 10px Calibri,"Segoe UI",sans-serif'; cx.fillStyle='#8a8880'; cx.textBaseline='alphabetic';
+      cx.fillText((n!=null?n:'—')+(n===1?' vta':' vtas'), bar.x, yBase+12);
+      if(tk!=null){ cx.font='800 11.5px Calibri,"Segoe UI",sans-serif'; cx.fillStyle=stats.color; cx.fillText('$'+fmt(tk), bar.x, yBase+27); }
+    });
+    cx.restore();
+  }};
+}
 function renderFC(){
   const dates=getRange();const ctx=document.getElementById('cFC').getContext('2d');
   const legEl=document.getElementById('fLeg');
-  let labels,datasets,mgData=null,stacked=false,fcDayDates=null;
+  let labels,datasets,mgData=null,stacked=false,fcDayDates=null,dayStats=null;
   var swatch=function(fill,brd,txt){return '<span class="li"><span class="ld" style="background:'+fill+';border:1.5px solid '+brd+'"></span>'+txt+'</span>';};
   var mgNote='<span class="li" style="color:#16305f;font-weight:700">Mg = margen (dentro de la barra)</span>';
   if(fv==='mes'){
@@ -1605,6 +1633,9 @@ function renderFC(){
       mgData=sh.map(function(d){var a=aggDCfull(d,c);return a.cmv!==0?parseFloat((a.fc/a.cmv).toFixed(4)):null;});
       datasets=[{label:CANAL_LABELS[c]||c,data:tv,backgroundColor:chTint(CH_LIGHT[c]||'#4472c4',0.58),borderColor:CH_LIGHT[c]||'#4472c4'}];
       legEl.innerHTML=swatch(chTint(CH_LIGHT[c]||'#4472c4',0.58),CH_LIGHT[c]||'#4472c4',(CANAL_LABELS[c]||c)+extra)+mgNote;
+      // ventas (comprobantes) y ticket promedio por día para este local
+      var vArr=sh.map(function(d){var x=(VENTAS_D[d]||{})[c];return x&&x.v?x.v:null;});
+      dayStats={color:CH_LIGHT[c]||'#4472c4',ventas:vArr,ticket:tv.map(function(v,i){return (vArr[i]&&v!=null)?v/vArr[i]:null;})};
     }else{
       var tv=sh.map(function(d){return aggD(d).tv;});
       mgData=sh.map(function(d){var a=aggD(d);return a.cmv!==0?parseFloat((a.fc/a.cmv).toFixed(4)):null;});
@@ -1620,7 +1651,10 @@ function renderFC(){
     legEl.innerHTML=chKeys.map(c=>swatch(chTint(CH_LIGHT[c]||'#4472c4',0.58),CH_LIGHT[c]||'#4472c4',CANAL_LABELS[c]||c)).join('');
   }
   datasets.forEach(function(ds){if(ds.borderWidth==null)ds.borderWidth=1.5;if(ds.borderRadius==null)ds.borderRadius=4;if(ds.maxBarThickness==null)ds.maxBarThickness=110;if(ds.categoryPercentage==null)ds.categoryPercentage=0.8;if(ds.barPercentage==null)ds.barPercentage=0.92;ds.yAxisID='yL';ds.order=2;});
-  fCh=new Chart(ctx,{type:'bar',data:{labels,datasets},plugins:[fcLblPlugin(mgData,stacked)],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:34}},
+  const showDayStats = dayStats && dayStats.ventas.some(function(x){return x!=null;}) && labels.length<=16;
+  const fcPlugins=[fcLblPlugin(mgData,stacked)];
+  if(showDayStats) fcPlugins.push(fcDayStatsPlugin(dayStats));
+  fCh=new Chart(ctx,{type:'bar',data:{labels,datasets},plugins:fcPlugins,options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:34,bottom:showDayStats?44:0}},
     plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(c){return (stacked?(c.dataset.label+': '):' FC: ')+ffl(c.raw);}}}},
     scales:{x:{stacked:stacked,ticks:{autoSkip:true,maxRotation:45,font:{size:13.5,weight:'700'},color:function(c){try{if(fcDayDates&&HOLIDAYS[fcDayDates[c.index]])return HOLIDAYS[fcDayDates[c.index]].c;var b=c.chart.data.datasets[0].borderColor;return Array.isArray(b)?(b[c.index]||'#333'):(b||'#333');}catch(e){return '#333';}}},grid:{display:false}},
       yL:{stacked:stacked,position:'left',ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}}});
@@ -4567,11 +4601,11 @@ function idbOpen(){return new Promise(function(res,rej){try{var q=indexedDB.open
 function idbSet(k,v){return idbOpen().then(function(db){return new Promise(function(res,rej){var t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=function(){res(true);};t.onerror=function(){rej(t.error);};});}).catch(function(e){console.warn('idbSet',e);return false;});}
 function idbGet(k){return idbOpen().then(function(db){return new Promise(function(res){var t=db.transaction('kv','readonly');var r=t.objectStore('kv').get(k);r.onsuccess=function(){res(r.result||null);};r.onerror=function(){res(null);};});}).catch(function(){return null;});}
 function idbDel(k){return idbOpen().then(function(db){return new Promise(function(res){var t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=function(){res(true);};t.onerror=function(){res(false);};});}).catch(function(){return false;});}
-function persistFact(name){ try{ idbSet('fact',{ts:Date.now(),name:name||'',DATA_D:DATA_D,FIN_D:FIN_D,FIN_SUB:FIN_SUB,ORIG_D:ORIG_D,PROD_D:PROD_D,TOPFC_D:TOPFC_D,PROV_D:PROV_D,RUBROPROV_D:RUBROPROV_D,COBR_D:COBR_D,VEND_D:VEND_D,ORIGEN_D:ORIGEN_D,COSTFIN_D:COSTFIN_D}); }catch(e){console.warn(e);} }
+function persistFact(name){ try{ idbSet('fact',{ts:Date.now(),name:name||'',DATA_D:DATA_D,VENTAS_D:VENTAS_D,FIN_D:FIN_D,FIN_SUB:FIN_SUB,ORIG_D:ORIG_D,PROD_D:PROD_D,TOPFC_D:TOPFC_D,PROV_D:PROV_D,RUBROPROV_D:RUBROPROV_D,COBR_D:COBR_D,VEND_D:VEND_D,ORIGEN_D:ORIGEN_D,COSTFIN_D:COSTFIN_D}); }catch(e){console.warn(e);} }
 function persistSalidas(){ try{ idbSet('salidas',{ts:Date.now(),SALIDAS_B_D:SALIDAS_B_D,SALIDAS_AA_D:SALIDAS_AA_D,SALIDAS_EXTRA_D:SALIDAS_EXTRA_D}); }catch(e){console.warn(e);} }
 function persistIMPO(){ try{ idbSet('impo',{ts:Date.now(),IMPO_D:IMPO_D}); }catch(e){console.warn(e);} }
 function applyFactState(f){
-  DATA_D=f.DATA_D;FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;COSTFIN_D=f.COSTFIN_D||{web:[],local:[]};
+  DATA_D=f.DATA_D;VENTAS_D=f.VENTAS_D||{};FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;COSTFIN_D=f.COSTFIN_D||{web:[],local:[]};
   try{ var meses=Array.from(new Set(Object.keys(FIN_D).map(function(d){return d.slice(0,7);}))).sort(); buildMonthChips(meses); }catch(e){}
   sS=null;sE=null;picking=false;finMes='all';
   var ad=Object.keys(DATA_D).sort(); if(ad.length){cy=parseInt(ad[0].slice(0,4));cm=parseInt(ad[0].slice(5,7))-1;}
@@ -4587,7 +4621,7 @@ function rsemBuildPlano(){
   var pad=function(n){return n<10?'0'+n:''+n;};var d=new Date();var fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   var snap={
-    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
+    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
@@ -4654,7 +4688,7 @@ var RSEM_TOKEN=null, RSEM_RT=null, RSEM_EMAIL=null;
 function rsemSnapObj(){
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   return {
-    fact:{DATA_D:g('DATA_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
+    fact:{DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
