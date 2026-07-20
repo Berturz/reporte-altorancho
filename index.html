@@ -538,6 +538,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <button onclick="showTab('stock',this)" class="tabnav-btn">Stock MTM</button>
   <button onclick="showTab('impo',this)" class="tabnav-btn">IMPO</button>
 </nav>
+<div id="periodoBar" style="padding:12px 2px 0"></div>
 <!-- SECCIÓN 0: COMPARATIVA YTD 2025 vs 2026 -->
 <div class="sec" id="secYTD">
   <div class="sec-hdr"><i class="ti ti-chart-histogram"></i>Comparativa YTD · 2025 vs 2026 <span class="sec-sub">· facturación Total s/IVA acumulada al cierre</span></div>
@@ -1405,7 +1406,7 @@ function dayClick(ds){
   else{if(!picking||!sS){sS=ds;sE=null;picking=true;}else{if(ds===sS){sS=null;sE=null;picking=false;}else{sE=ds;picking=false;}}}
   buildCal();updDR();refreshFC();
 }
-function updDR(){try{renderCalRef();}catch(e){}const el=document.getElementById('dRI');if(!sS&&!sE){el.textContent='Mostrando todo el período';return;}let a=sS,b=sE||sS;if(a>b)[a,b]=[b,a];el.textContent=a===b?`Día: ${a}`:`${a} → ${b} (${getRange().length} días)`;}
+function updDR(){try{renderCalRef();}catch(e){}try{updPeriodoBar();}catch(e){}const el=document.getElementById('dRI');if(!sS&&!sE){el.textContent='Mostrando todo el período';return;}let a=sS,b=sE||sS;if(a>b)[a,b]=[b,a];el.textContent=a===b?`Día: ${a}`:`${a} → ${b} (${getRange().length} días)`;}
 function clearD(){sS=null;sE=null;picking=false;buildCal();updDR();refreshFC();}
 function setCalMode(m){calMode=m;document.getElementById('mDia').classList.toggle('act',m==='dia');document.getElementById('mSem').classList.toggle('act',m==='sem');sS=null;sE=null;picking=false;buildCal();updDR();refreshFC();}
 function pm(){cm--;if(cm<0){cm=11;cy--;}buildCal();}
@@ -1466,6 +1467,7 @@ function raAll(v){RUBROS.forEach(r=>{if(v)aR.add(r);else aR.delete(r);document.g
 // ── SELECTOR MES FIN ──
 function setFinMes(m){
   finMes=m;
+  try{updPeriodoBar();}catch(e){}
   document.getElementById('fmAll').classList.toggle('act',m==='all');
   getAvailableMeses().forEach(k=>{const el=document.getElementById('fm_'+k);if(el)el.classList.toggle('act',m===k);});
   refreshFin();
@@ -2016,7 +2018,7 @@ function renderCmpChips(){
   const el=document.getElementById('cmpChips'); if(!el)return;
   el.innerHTML=['YTD',...av].map(v=>{const lbl=v==='YTD'?'YTD':MN[parseInt(v)-1];return `<button class="cmp-chip${cmpSel===v?' act':''}" onclick="setCmp('${v}')">${lbl}</button>`;}).join('');
 }
-function setCmp(v){cmpSel=v;renderYTD();renderRPCompare();}
+function setCmp(v){cmpSel=v;try{updPeriodoBar();}catch(e){}renderYTD();renderRPCompare();}
 const IPC_IDX={"2025-01": 7864.1257, "2025-02": 8052.9927, "2025-03": 8353.3158, "2025-04": 8585.6078, "2025-05": 8714.4871, "2025-06": 8855.5681, "2025-07": 9023.973, "2025-08": 9193.2441, "2025-09": 9384.0922, "2025-10": 9603.8623, "2025-11": 9841.3581, "2025-12": 10121.3715, "2026-01": 10413.0309, "2026-02": 10714.6255, "2026-03": 11077.0608, "2026-04": 11363.0904, "2026-05": 11607.3937, "2026-06": 11851.149};
 const IPC_ESTIM={"2026-06": true};
 function ipcFactor(mm){const a=IPC_IDX["2025-"+mm],b=IPC_IDX["2026-"+mm];return (a&&b)?b/a:1.324;}
@@ -3084,6 +3086,7 @@ function buildCajasWeekChips(){
 }
 function setCajasSemana(s){
   cajasSemana = s;
+  try{updPeriodoBar();}catch(e){}
   renderCajas();
 }
 
@@ -4038,6 +4041,7 @@ function salidasDayClick(ds){
   buildSalidasCal(); updSalidasDRI(); renderSalidas();
 }
 function updSalidasDRI(){
+  try{updPeriodoBar();}catch(e){}
   const el = document.getElementById('salidasDRI');
   if(!salidasSS && !salidasSE){ el.textContent='Mostrando todo el período'; return; }
   let a=salidasSS, b=salidasSE||salidasSS; if(a>b)[a,b]=[b,a];
@@ -4585,8 +4589,33 @@ function assignPages(){var cur=null;var ch=document.body.children;for(var i=0;i<
   if(mk)cur=mk;
   if(cur)el.setAttribute('data-page',cur);}
   _pagesReady=true;}
+function updPeriodoBar(){
+  var bar=document.getElementById('periodoBar'); if(!bar) return;
+  var page=window.__rsemPage||'comp';
+  var CALPAGES={fact:1,origen:1,prod:1,prov:1,cobr:1,vend:1};
+  var blue={bg:'#E6F1FB',fg:'#185FA5'}, amber={bg:'#FAEEDA',fg:'#854F0B'};
+  var MM=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  function fmtDMY(s){var d=new Date(s+'T00:00:00');return d.getDate()+' '+MM[d.getMonth()]+' '+d.getFullYear();}
+  var icon, txt, col, tag='';
+  if(CALPAGES[page]){
+    col=blue; icon='ti-calendar-event'; tag='  ·  sigue el calendario';
+    try{
+      if(typeof sS==='undefined'||(!sS&&!sE)){ txt='Todo el período cargado'; icon='ti-calendar'; }
+      else { var a=sS,b=sE||sS; if(a>b){var t=a;a=b;b=t;} if(a===b){txt='Día: '+fmtDMY(a);} else {var n=(typeof getRange==='function')?getRange().length:0; txt=fmtDMY(a)+' al '+fmtDMY(b)+(n?' · '+n+' días':'');} }
+    }catch(e){ txt='—'; }
+    txt='Período: '+txt;
+  } else if(page==='fin'){ col=amber; icon='ti-calendar-month'; var fl=(typeof MES_LABEL!=='undefined'&&MES_LABEL[finMes])?MES_LABEL[finMes]:(finMes==='all'?'mes actual':finMes); txt='Mes: '+fl; }
+  else if(page==='comp'){ col=amber; icon='ti-calendar-stats'; txt=(cmpSel==='YTD')?'Acumulado YTD 2026':('Mes: '+((typeof MN!=='undefined'&&MN[parseInt(cmpSel)-1])||cmpSel)+' 2026'); }
+  else if(page==='cajas'){ col=amber; icon='ti-calendar-week'; var cw=(typeof cajasSemana!=='undefined'&&cajasSemana)?cajasSemana.split('-').reverse().join('/'):'—'; txt='Semana: '+cw; }
+  else if(page==='stock'){ col=amber; icon='ti-calendar-month'; txt='Análisis mensual · mes a mes'; }
+  else if(page==='salidas'){ col=amber; icon='ti-calendar-event'; try{ if(typeof salidasSS!=='undefined'&&(salidasSS||salidasSE)){var a=salidasSS,b=salidasSE||salidasSS; if(a>b){var t=a;a=b;b=t;} txt='Período: '+(a===b?fmtDMY(a):fmtDMY(a)+' al '+fmtDMY(b));} else {txt='Todo el período cargado';} }catch(e){ txt='Período propio'; } }
+  else if(page==='impo'){ col=amber; icon='ti-calendar-month'; txt='Importaciones'; }
+  else { bar.style.display='none'; return; }
+  bar.style.display='';
+  bar.innerHTML='<span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 13px;border-radius:999px;background:'+col.bg+';color:'+col.fg+'"><i class="ti '+icon+'" style="font-size:15px"></i>'+txt+tag+'</span>';
+}
 function showTab(page,btn){if(!_pagesReady)assignPages();
-  window.__rsemPage=page; try{renderCalRef();}catch(e){}
+  window.__rsemPage=page; try{renderCalRef();}catch(e){} try{updPeriodoBar();}catch(e){}
   var els=document.querySelectorAll('[data-page]');
   for(var i=0;i<els.length;i++){els[i].style.display=(els[i].getAttribute('data-page')===page)?'':'none';}
   var bs=document.querySelectorAll('.tabnav-btn');for(var j=0;j<bs.length;j++)bs[j].classList.remove('act');
