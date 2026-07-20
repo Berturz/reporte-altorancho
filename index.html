@@ -3851,7 +3851,7 @@ function renderStockCompare(cmpEl, S, estado, vmes){
 <!-- ════════════════════════════════════════════════ -->
 <!-- SECCIÓN LOGÍSTICA -->
 <!-- ════════════════════════════════════════════════ -->
-<div class="sec" id="secLogistica" style="margin-top:1.2rem;border-top:3px solid #2f7ea3">
+<div class="sec" id="secLogistica" style="margin-top:1.2rem;border-top:3px solid #7A5CA6">
   <style>
   #secLogistica .log-table{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
   #secLogistica .log-table th{padding:.5rem .7rem;font-size:11px;font-weight:700;color:#fff;text-align:right;white-space:nowrap}
@@ -3859,23 +3859,23 @@ function renderStockCompare(cmpEl, S, estado, vmes){
   #secLogistica .log-table td{padding:.5rem .7rem;text-align:right;border-bottom:.5px solid var(--brd);white-space:nowrap}
   #secLogistica .log-table td:first-child{text-align:left;font-weight:600}
   #secLogistica .log-table tr.log-tot td{font-weight:800;border-top:1.5px solid var(--brd2);background:var(--bg3)}
-  #secLogistica .log-stat{background:var(--bg2);border-radius:10px;padding:9px 12px;border-left:3px solid #2f7ea3}
+  #secLogistica .log-stat{background:var(--bg2);border-radius:10px;padding:9px 12px;border-left:3px solid #7A5CA6}
   #secLogistica .log-stat .l{font-size:10.5px;color:var(--txt2);font-weight:600;line-height:1.25}
   #secLogistica .log-stat .v{font-size:18px;font-weight:700;color:var(--petrol,#2c2c2a);margin-top:2px}
   </style>
   <div class="page-hdr" style="border-bottom:.5px solid var(--brd);margin-bottom:.9rem;padding-top:0">
     <div class="page-hdr-left">
-      <h1><i class="ti ti-truck-delivery" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:#2f7ea3"></i>Logística <span class="ok-badge" id="logBadge"><i class="ti ti-check" style="font-size:10px"></i> Datos embebidos</span></h1>
+      <h1><i class="ti ti-truck-delivery" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:#7A5CA6"></i>Logística <span class="ok-badge" id="logBadge"><i class="ti ti-check" style="font-size:10px"></i> Datos embebidos</span></h1>
       <p>Resultado de envíos por mes · flete propio, externo y terciarizados</p>
     </div>
     <div style="min-width:280px">
-      <div class="upload-zone" id="logUploadZone" style="border-color:#2f7ea3">
+      <div class="upload-zone" id="logUploadZone" style="border-color:#7A5CA6">
         <input type="file" accept=".xlsx,.xls" id="logFileInput" onchange="handleLogFile(this.files[0])">
-        <i class="ti ti-file-spreadsheet upload-icon" style="color:#2f7ea3"></i>
+        <i class="ti ti-file-spreadsheet upload-icon" style="color:#7A5CA6"></i>
         <div class="upload-txt"><strong>Actualizar Logística</strong><span>Archivo con solapas por mes</span></div>
         <div class="upload-status" id="logUploadStatus"></div>
       </div>
-      <div class="progress-bar" id="logProgressBar"><div class="progress-fill" id="logProgressFill" style="width:0%;background:#2f7ea3"></div></div>
+      <div class="progress-bar" id="logProgressBar"><div class="progress-fill" id="logProgressFill" style="width:0%;background:#7A5CA6"></div></div>
     </div>
   </div>
   <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.9rem;flex-wrap:wrap">
@@ -3953,8 +3953,8 @@ async function handleLogFile(file){
     document.getElementById('logBadge').className='ok-badge';
     document.getElementById('logBadge').innerHTML='<i class="ti ti-check" style="font-size:10px"></i> Excel actualizado';
     try{ document.getElementById('logUploadZone').querySelector('.upload-txt span').textContent='Archivo: '+file.name+' · '+meses.length+' meses'; }catch(e){}
-    setLogProgress(100,'<i class="ti ti-check" style="color:#2f7ea3"></i> Listo');
-    setTimeout(function(){document.getElementById('logProgressBar').classList.remove('show'); document.getElementById('logUploadStatus').innerHTML='<i class="ti ti-check" style="color:#2f7ea3"></i> Actualizado';},1200);
+    setLogProgress(100,'<i class="ti ti-check" style="color:#7A5CA6"></i> Listo');
+    setTimeout(function(){document.getElementById('logProgressBar').classList.remove('show'); document.getElementById('logUploadStatus').innerHTML='<i class="ti ti-check" style="color:#7A5CA6"></i> Actualizado';},1200);
   }catch(err){ setLogProgress(100,'<span style="color:#c0392b">&#9888; '+err.message+'</span>'); console.error(err); }
   finally{ zone.style.pointerEvents=''; }
 }
@@ -3968,13 +3968,21 @@ function renderLog(){
   var mw=document.getElementById('logMesWrap'), ct=document.getElementById('logContent'); if(!ct) return;
   var M=(LOG_D&&LOG_D.meses)?LOG_D.meses:[];
   if(!M.length){ ct.innerHTML='<div class="prov-empty">Subí el archivo de Logística para ver el resultado por mes.</div>'; if(mw)mw.innerHTML=''; return; }
-  if(!logSelMes || !M.some(function(m){return m.key===logSelMes;})) logSelMes=M[M.length-1].key;
-  if(mw) mw.innerHTML='<select onchange="setLogMes(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+M.map(function(m){return '<option value="'+m.key+'"'+(m.key===logSelMes?' selected':'')+'>'+m.label+'</option>';}).join('')+'</select>';
-  var sel=M.find(function(m){return m.key===logSelMes;})||M[M.length-1]; var d=sel.d;
+  var MESNOM=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  function logScore(dd){ var n=0; ['totIng','totEgr','ingCobrados','egrFijos','egrVariables','totalSinBonif','montoMinimo','idxBonif','idxCobrado','pctNeg','valPromReal','cantCobrados','cantExterno'].forEach(function(k){ if(dd[k]!=null)n++; }); return n+(dd.terc?dd.terc.length:0); }
+  // Mejor solapa por mes (year-month); si hay varias para el mismo mes, la que tenga más datos
+  var byMonth={}; M.forEach(function(m){ var sc=logScore(m.d); if(!byMonth[m.sort]||sc>byMonth[m.sort].sc) byMonth[m.sort]={d:m.d,sc:sc}; });
+  // Desplegable fijo: Marzo → Diciembre 2026 (los meses sin datos aparecen marcados)
+  var FIXED=[]; for(var mm=3;mm<=12;mm++){ var k='2026-'+String(mm).padStart(2,'0'); FIXED.push({key:k,label:MESNOM[mm-1]+' 2026',has:!!byMonth[k]}); }
+  if(!logSelMes || !FIXED.some(function(f){return f.key===logSelMes;})){ var wd=FIXED.filter(function(f){return f.has;}); logSelMes = wd.length?wd[wd.length-1].key:FIXED[0].key; }
+  if(mw) mw.innerHTML='<select onchange="setLogMes(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+FIXED.map(function(f){return '<option value="'+f.key+'"'+(f.key===logSelMes?' selected':'')+'>'+f.label+(f.has?'':' — sin datos')+'</option>';}).join('')+'</select>';
+  var selEntry=byMonth[logSelMes];
+  if(!selEntry){ ct.innerHTML='<div class="prov-empty" style="padding:1.2rem">Sin datos cargados para este mes todavía.</div>'; return; }
+  var d=selEntry.d;
   var difC=(d.totDif!=null&&d.totDif<0)?'#c0392b':'#0f6e56';
   var stat=function(l,v,color){return '<div class="log-stat"'+(color?' style="border-left-color:'+color+'"':'')+'><div class="l">'+l+'</div><div class="v">'+v+'</div></div>';};
   var tabla='<div class="cp" style="margin-bottom:.9rem"><div class="st"><i class="ti ti-arrows-left-right"></i>Resultado de envíos · Ingreso vs Egreso</div>'
-    +'<table class="log-table"><thead><tr><th></th><th style="background:#1D9E75">Ingreso</th><th style="background:#2c2c2a">Egreso</th><th style="background:#5a7a99">Diferencia</th></tr></thead><tbody>'
+    +'<table class="log-table"><thead><tr><th></th><th style="background:#1D9E75">Ingreso</th><th style="background:#2c2c2a">Egreso</th><th style="background:#7A5CA6">Diferencia</th></tr></thead><tbody>'
     +'<tr><td>Envíos cobrados</td><td>'+fARSlog(d.ingCobrados)+'</td><td></td><td></td></tr>'
     +'<tr><td>Total flete</td><td></td><td>'+fARSlog(d.egrFijos)+'</td><td></td></tr>'
     +'<tr><td>Total variables</td><td></td><td>'+fARSlog(d.egrVariables)+'</td><td></td></tr>'
@@ -3982,14 +3990,14 @@ function renderLog(){
     +'<tr class="log-tot"><td>Total</td><td>'+fARSlog(d.totIng)+'</td><td>'+fARSlog(d.totEgr)+'</td><td style="color:'+difC+'">'+fARSlog(d.totDif)+'</td></tr>'
     +'</tbody></table>'
     +'<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem">'
-      +'<div class="log-stat" style="flex:1;min-width:220px;border-left-color:#c8873c;background:#fdf3e3"><div class="l">Total si no se hubiesen bonificado envíos</div><div class="v">'+fARSlog(d.totalSinBonif)+'</div></div>'
-      +'<div class="log-stat" style="flex:1;min-width:220px;border-left-color:#c8873c;background:#fdf3e3"><div class="l">Monto mínimo de compra para diferencia = 0</div><div class="v">'+fARSlog(d.montoMinimo)+'</div></div>'
+      +'<div class="log-stat" style="flex:1;min-width:220px;border-left-color:#7A5CA6;background:#f0ecf7"><div class="l">Total si no se hubiesen bonificado envíos</div><div class="v">'+fARSlog(d.totalSinBonif)+'</div></div>'
+      +'<div class="log-stat" style="flex:1;min-width:220px;border-left-color:#7A5CA6;background:#f0ecf7"><div class="l">Monto mínimo de compra para diferencia = 0</div><div class="v">'+fARSlog(d.montoMinimo)+'</div></div>'
     +'</div></div>';
   var indices='<div class="cp" style="margin-bottom:.9rem"><div class="st"><i class="ti ti-percentage"></i>Índices</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem">'
     +stat('Facturación envíos bonificados vs monto bonificado', fPctLog(d.idxBonif))
     +stat('Facturación envíos cobrados vs monto cobrado', fPctLog(d.idxCobrado))
-    +stat('% de la facturación web que representa el monto negativo', fPctLog(d.pctNeg), (d.pctNeg!=null&&d.pctNeg<0)?'#c0392b':'#2f7ea3')
+    +stat('% de la facturación web que representa el monto negativo', fPctLog(d.pctNeg), (d.pctNeg!=null&&d.pctNeg<0)?'#c0392b':'#7A5CA6')
     +stat('Valor promedio de envío WEB facturado real', fARSlog(d.valPromReal))
     +stat('Valor promedio de envíos WEB (bonif. + cobrados) sobre el total', fARSlog(d.valPromTotal))
     +stat('Envíos adicionales (considerando sin bonificar)', fIntLog(d.enviosAdic))
@@ -4001,12 +4009,12 @@ function renderLog(){
         +'<div class="log-stat" style="flex:1;min-width:150px;border-left-color:#c8873c"><div class="l">Pedidos bonificados</div><div class="v">'+fIntLog(d.cantBonif)+'</div><div style="font-size:11px;color:var(--txt2);margin-top:2px">Costo prom. '+fARSlog(d.costoBonif)+'</div></div>'
       +'</div></div>'
     +'<div class="cp"><div class="st"><i class="ti ti-truck"></i>Flete externo</div>'
-      +'<div class="log-stat" style="border-left-color:#5a9ca8"><div class="l">Pedidos web</div><div class="v">'+fIntLog(d.cantExterno)+'</div><div style="font-size:11px;color:var(--txt2);margin-top:2px">Costo prom. '+fARSlog(d.costoExterno)+'</div></div>'
+      +'<div class="log-stat" style="border-left-color:#7A5CA6"><div class="l">Pedidos web</div><div class="v">'+fIntLog(d.cantExterno)+'</div><div style="font-size:11px;color:var(--txt2);margin-top:2px">Costo prom. '+fARSlog(d.costoExterno)+'</div></div>'
     +'</div></div>';
   var terc='';
   if(d.terc&&d.terc.length){
     terc='<div class="cp"><div class="st"><i class="ti ti-building-warehouse"></i>Terciarizados (externos)</div>'
-      +'<table class="log-table"><thead><tr><th>Transporte</th><th style="background:#1D9E75">Facturado</th><th style="background:#2c2c2a">Cobrado</th><th style="background:#5a7a99">Diferencia</th></tr></thead><tbody>'
+      +'<table class="log-table"><thead><tr><th>Transporte</th><th style="background:#1D9E75">Facturado</th><th style="background:#2c2c2a">Cobrado</th><th style="background:#7A5CA6">Diferencia</th></tr></thead><tbody>'
       +d.terc.map(function(t){var dc=(t.dif!=null&&t.dif<0)?'#c0392b':'#0f6e56'; return '<tr><td>'+t.nombre+'</td><td>'+fARSlog(t.fact)+'</td><td>'+fARSlog(t.cob)+'</td><td style="color:'+dc+'">'+fARSlog(t.dif)+'</td></tr>';}).join('')
       +'</tbody></table></div>';
   }
