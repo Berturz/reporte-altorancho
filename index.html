@@ -3931,21 +3931,20 @@ async function handleLogFile(file){
     setLogProgress(40,'<span class="spin">&#8635;</span> Parseando...');
     var wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true});
     var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    var byKey={};
+    var meses=[];
     wb.SheetNames.forEach(function(sn){
       var low=nrmLog(sn); var mi=-1;
       for(var k=0;k<12;k++){ if(low.indexOf(MES[k])>=0){ mi=k; break; } }
       if(mi<0) return;
-      var ym=low.match(/20\d{2}/); var y2=low.match(/\b(\d{2})\b/);
+      var ym=low.match(/20\d{2}/); var y2=low.match(/(\d{2})\b/);
       var yr= ym?ym[0]:(y2?('20'+y2[1]):'2026');
       var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
       var d=parseLogSheet(rows);
       if(d.totIng==null && d.totEgr==null && !d.terc.length) return; // solapa sin el cuadro
-      var key=yr+'-'+String(mi+1).padStart(2,'0');
-      var entry={ key:key, label:(MES[mi].charAt(0).toUpperCase()+MES[mi].slice(1))+' '+yr, sheet:sn, d:d, y4:/20\d{2}/.test(sn) };
-      if(!byKey[key] || (entry.y4 && !byKey[key].y4)) byKey[key]=entry; // preferir solapa con año de 4 dígitos
+      // Sin deduplicar: cada solapa de mes es su propia entrada, etiquetada con el nombre real
+      meses.push({ key:sn, sort:yr+'-'+String(mi+1).padStart(2,'0'), label:sn, sheet:sn, d:d });
     });
-    var meses=Object.keys(byKey).sort().map(function(k){return byKey[k];});
+    meses.sort(function(a,b){ return a.sort<b.sort?-1:(a.sort>b.sort?1:(a.label<b.label?-1:1)); });
     LOG_D={ meses:meses };
     logSelMes=null;
     setLogProgress(92,'<span class="spin">&#8635;</span> Actualizando...');
