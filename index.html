@@ -537,6 +537,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <button onclick="showTab('cajas',this)" class="tabnav-btn">Cajas</button>
   <button onclick="showTab('stock',this)" class="tabnav-btn">Stock MTM</button>
   <button onclick="showTab('impo',this)" class="tabnav-btn">IMPO</button>
+  <button onclick="showTab('logistica',this)" class="tabnav-btn">Logística</button>
 </nav>
 <div id="periodoBar" style="padding:12px 2px 0"></div>
 <!-- SECCIÓN 0: COMPARATIVA YTD 2025 vs 2026 -->
@@ -3848,6 +3849,173 @@ function renderStockCompare(cmpEl, S, estado, vmes){
 </script>
 
 <!-- ════════════════════════════════════════════════ -->
+<!-- SECCIÓN LOGÍSTICA -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="sec" id="secLogistica" style="margin-top:1.2rem;border-top:3px solid #2f7ea3">
+  <style>
+  #secLogistica .log-table{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
+  #secLogistica .log-table th{padding:.5rem .7rem;font-size:11px;font-weight:700;color:#fff;text-align:right;white-space:nowrap}
+  #secLogistica .log-table th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
+  #secLogistica .log-table td{padding:.5rem .7rem;text-align:right;border-bottom:.5px solid var(--brd);white-space:nowrap}
+  #secLogistica .log-table td:first-child{text-align:left;font-weight:600}
+  #secLogistica .log-table tr.log-tot td{font-weight:800;border-top:1.5px solid var(--brd2);background:var(--bg3)}
+  #secLogistica .log-stat{background:var(--bg2);border-radius:10px;padding:9px 12px;border-left:3px solid #2f7ea3}
+  #secLogistica .log-stat .l{font-size:10.5px;color:var(--txt2);font-weight:600;line-height:1.25}
+  #secLogistica .log-stat .v{font-size:18px;font-weight:700;color:var(--petrol,#2c2c2a);margin-top:2px}
+  </style>
+  <div class="page-hdr" style="border-bottom:.5px solid var(--brd);margin-bottom:.9rem;padding-top:0">
+    <div class="page-hdr-left">
+      <h1><i class="ti ti-truck-delivery" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:#2f7ea3"></i>Logística <span class="ok-badge" id="logBadge"><i class="ti ti-check" style="font-size:10px"></i> Datos embebidos</span></h1>
+      <p>Resultado de envíos por mes · flete propio, externo y terciarizados</p>
+    </div>
+    <div style="min-width:280px">
+      <div class="upload-zone" id="logUploadZone" style="border-color:#2f7ea3">
+        <input type="file" accept=".xlsx,.xls" id="logFileInput" onchange="handleLogFile(this.files[0])">
+        <i class="ti ti-file-spreadsheet upload-icon" style="color:#2f7ea3"></i>
+        <div class="upload-txt"><strong>Actualizar Logística</strong><span>Archivo con solapas por mes</span></div>
+        <div class="upload-status" id="logUploadStatus"></div>
+      </div>
+      <div class="progress-bar" id="logProgressBar"><div class="progress-fill" id="logProgressFill" style="width:0%;background:#2f7ea3"></div></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.9rem;flex-wrap:wrap">
+    <span class="msl"><i class="ti ti-calendar-month" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Mes</span>
+    <span id="logMesWrap"></span>
+  </div>
+  <div id="logContent"></div>
+</div>
+
+<script>
+// ════ MÓDULO LOGÍSTICA (resultado de envíos por mes) ════
+var LOG_D = { meses:[] };
+var logSelMes = null;
+function nrmLog(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+function fARSlog(v){ return (v==null)?'—':'$ '+Math.round(v).toLocaleString('es-AR'); }
+function fIntLog(v){ return (v==null)?'—':Math.round(v).toLocaleString('es-AR'); }
+function fPctLog(v){ return (v==null)?'—':(v*100).toFixed(2)+'%'; }
+// Extrae el cuadro (columnas N-R) de una solapa de mes. Busca por etiqueta (robusto a corrimientos).
+function parseLogSheet(rows){
+  var nrm=nrmLog;
+  var toN=function(v){ if(typeof v==='number'&&isFinite(v))return v; var x=parseFloat(v); return isNaN(x)?null:x; };
+  function fv(sub,valCol){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; for(var c=13;c<=17;c++){ if(typeof r[c]==='string'&&nrm(r[c]).indexOf(sub)>=0) return toN(r[valCol]); } } return null; }
+  function fvExact(sub,valCol){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; for(var c=13;c<=17;c++){ if(typeof r[c]==='string'&&nrm(r[c])===sub) return toN(r[valCol]); } } return null; }
+  function terc(sub){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; if(typeof r[14]==='string'&&nrm(r[14]).indexOf(sub)>=0&&typeof r[15]==='number') return {fact:toN(r[15]),cob:toN(r[16]),dif:toN(r[17])}; } return null; }
+  var totIng=null,totEgr=null,totDif=null;
+  for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; if(typeof r[14]==='string'&&nrm(r[14])==='total'&&typeof r[15]==='number'&&typeof r[16]==='number'&&typeof r[17]==='number'){ totIng=r[15];totEgr=r[16];totDif=r[17]; break; } }
+  var egrFijos=fv('total fijos',16); if(egrFijos==null) egrFijos=fv('total flete',16);
+  var egrVar=fv('total variables',16);
+  var d={
+    ingCobrados: fv('envios cobrados',15), egrFijos: egrFijos, egrVariables: egrVar,
+    totIng: totIng, totEgr: totEgr, totDif: totDif,
+    egrFleteExterno: (totEgr!=null&&egrFijos!=null&&egrVar!=null)?(totEgr-egrFijos-egrVar):null,
+    totalSinBonif: fv('no se hubiesen bonificado',17), montoMinimo: fv('monto minimo de compra',17),
+    idxBonif: fv('bonificados vs monto bonificado',16), idxCobrado: fv('cobrados vs monto cobrado',16),
+    pctNeg: fv('monto negativo resultante',16), valPromReal: fv('facturado real',16), valPromTotal: fv('bonificado + cobrados',16),
+    enviosAdic: fv('no hubo envios bonificados',17),
+    cantCobrados: fv('cant. pedidos cobrados',15), costoCobrados: fv('costo promedio de envios propios',15),
+    cantBonif: fv('cant. pedidos bonificados',15), costoBonif: fv('costo promedio de envio bonificado',15),
+    cantExterno: fv('cant. pedidos web',15), costoExterno: fvExact('costo promedio de envio',15),
+    terc: []
+  };
+  var z=terc('zippin'); if(z){ z.nombre='Zippin'; d.terc.push(z); }
+  var e=terc('envio nube'); if(e){ e.nombre='Envío nube'; d.terc.push(e); }
+  return d;
+}
+function setLogProgress(pct,msg){ document.getElementById('logProgressBar').classList.add('show'); document.getElementById('logProgressFill').style.width=pct+'%'; document.getElementById('logUploadStatus').innerHTML=msg; }
+async function handleLogFile(file){
+  if(!file) return;
+  var zone=document.getElementById('logUploadZone'); zone.style.pointerEvents='none';
+  setLogProgress(10,'<span class="spin">&#8635;</span> Leyendo...');
+  try{
+    var buf=await file.arrayBuffer();
+    setLogProgress(40,'<span class="spin">&#8635;</span> Parseando...');
+    var wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true});
+    var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    var byKey={};
+    wb.SheetNames.forEach(function(sn){
+      var low=nrmLog(sn); var mi=-1;
+      for(var k=0;k<12;k++){ if(low.indexOf(MES[k])>=0){ mi=k; break; } }
+      if(mi<0) return;
+      var ym=low.match(/20\d{2}/); var y2=low.match(/\b(\d{2})\b/);
+      var yr= ym?ym[0]:(y2?('20'+y2[1]):'2026');
+      var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
+      var d=parseLogSheet(rows);
+      if(d.totIng==null && d.totEgr==null && !d.terc.length) return; // solapa sin el cuadro
+      var key=yr+'-'+String(mi+1).padStart(2,'0');
+      var entry={ key:key, label:(MES[mi].charAt(0).toUpperCase()+MES[mi].slice(1))+' '+yr, sheet:sn, d:d, y4:/20\d{2}/.test(sn) };
+      if(!byKey[key] || (entry.y4 && !byKey[key].y4)) byKey[key]=entry; // preferir solapa con año de 4 dígitos
+    });
+    var meses=Object.keys(byKey).sort().map(function(k){return byKey[k];});
+    LOG_D={ meses:meses };
+    logSelMes=null;
+    setLogProgress(92,'<span class="spin">&#8635;</span> Actualizando...');
+    await new Promise(function(r){setTimeout(r,0);});
+    renderLog();
+    document.getElementById('logBadge').className='ok-badge';
+    document.getElementById('logBadge').innerHTML='<i class="ti ti-check" style="font-size:10px"></i> Excel actualizado';
+    try{ document.getElementById('logUploadZone').querySelector('.upload-txt span').textContent='Archivo: '+file.name+' · '+meses.length+' meses'; }catch(e){}
+    setLogProgress(100,'<i class="ti ti-check" style="color:#2f7ea3"></i> Listo');
+    setTimeout(function(){document.getElementById('logProgressBar').classList.remove('show'); document.getElementById('logUploadStatus').innerHTML='<i class="ti ti-check" style="color:#2f7ea3"></i> Actualizado';},1200);
+  }catch(err){ setLogProgress(100,'<span style="color:#c0392b">&#9888; '+err.message+'</span>'); console.error(err); }
+  finally{ zone.style.pointerEvents=''; }
+}
+(function(){ var z=document.getElementById('logUploadZone'); if(!z) return;
+  z.addEventListener('dragover',function(e){e.preventDefault();z.classList.add('drag');});
+  z.addEventListener('dragleave',function(){z.classList.remove('drag');});
+  z.addEventListener('drop',function(e){e.preventDefault();z.classList.remove('drag');handleLogFile(e.dataTransfer.files[0]);});
+})();
+function setLogMes(m){ logSelMes=m; renderLog(); }
+function renderLog(){
+  var mw=document.getElementById('logMesWrap'), ct=document.getElementById('logContent'); if(!ct) return;
+  var M=(LOG_D&&LOG_D.meses)?LOG_D.meses:[];
+  if(!M.length){ ct.innerHTML='<div class="prov-empty">Subí el archivo de Logística para ver el resultado por mes.</div>'; if(mw)mw.innerHTML=''; return; }
+  if(!logSelMes || !M.some(function(m){return m.key===logSelMes;})) logSelMes=M[M.length-1].key;
+  if(mw) mw.innerHTML='<select onchange="setLogMes(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+M.map(function(m){return '<option value="'+m.key+'"'+(m.key===logSelMes?' selected':'')+'>'+m.label+'</option>';}).join('')+'</select>';
+  var sel=M.find(function(m){return m.key===logSelMes;})||M[M.length-1]; var d=sel.d;
+  var difC=(d.totDif!=null&&d.totDif<0)?'#c0392b':'#0f6e56';
+  var stat=function(l,v,color){return '<div class="log-stat"'+(color?' style="border-left-color:'+color+'"':'')+'><div class="l">'+l+'</div><div class="v">'+v+'</div></div>';};
+  var tabla='<div class="cp" style="margin-bottom:.9rem"><div class="st"><i class="ti ti-arrows-left-right"></i>Resultado de envíos · Ingreso vs Egreso</div>'
+    +'<table class="log-table"><thead><tr><th></th><th style="background:#1D9E75">Ingreso</th><th style="background:#2c2c2a">Egreso</th><th style="background:#5a7a99">Diferencia</th></tr></thead><tbody>'
+    +'<tr><td>Envíos cobrados</td><td>'+fARSlog(d.ingCobrados)+'</td><td></td><td></td></tr>'
+    +'<tr><td>Total flete</td><td></td><td>'+fARSlog(d.egrFijos)+'</td><td></td></tr>'
+    +'<tr><td>Total variables</td><td></td><td>'+fARSlog(d.egrVariables)+'</td><td></td></tr>'
+    +'<tr><td>Flete externo</td><td></td><td>'+fARSlog(d.egrFleteExterno)+'</td><td></td></tr>'
+    +'<tr class="log-tot"><td>Total</td><td>'+fARSlog(d.totIng)+'</td><td>'+fARSlog(d.totEgr)+'</td><td style="color:'+difC+'">'+fARSlog(d.totDif)+'</td></tr>'
+    +'</tbody></table>'
+    +'<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem">'
+      +'<div class="log-stat" style="flex:1;min-width:220px;border-left-color:#c8873c;background:#fdf3e3"><div class="l">Total si no se hubiesen bonificado envíos</div><div class="v">'+fARSlog(d.totalSinBonif)+'</div></div>'
+      +'<div class="log-stat" style="flex:1;min-width:220px;border-left-color:#c8873c;background:#fdf3e3"><div class="l">Monto mínimo de compra para diferencia = 0</div><div class="v">'+fARSlog(d.montoMinimo)+'</div></div>'
+    +'</div></div>';
+  var indices='<div class="cp" style="margin-bottom:.9rem"><div class="st"><i class="ti ti-percentage"></i>Índices</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem">'
+    +stat('Facturación envíos bonificados vs monto bonificado', fPctLog(d.idxBonif))
+    +stat('Facturación envíos cobrados vs monto cobrado', fPctLog(d.idxCobrado))
+    +stat('% de la facturación web que representa el monto negativo', fPctLog(d.pctNeg), (d.pctNeg!=null&&d.pctNeg<0)?'#c0392b':'#2f7ea3')
+    +stat('Valor promedio de envío WEB facturado real', fARSlog(d.valPromReal))
+    +stat('Valor promedio de envíos WEB (bonif. + cobrados) sobre el total', fARSlog(d.valPromTotal))
+    +stat('Envíos adicionales (considerando sin bonificar)', fIntLog(d.enviosAdic))
+    +'</div></div>';
+  var flete='<div class="charts2" style="margin-bottom:.9rem">'
+    +'<div class="cp"><div class="st"><i class="ti ti-package"></i>Resumen flete propio del mes</div>'
+      +'<div style="display:flex;gap:.6rem;flex-wrap:wrap">'
+        +'<div class="log-stat" style="flex:1;min-width:150px;border-left-color:#1D9E75"><div class="l">Pedidos cobrados</div><div class="v">'+fIntLog(d.cantCobrados)+'</div><div style="font-size:11px;color:var(--txt2);margin-top:2px">Costo prom. '+fARSlog(d.costoCobrados)+'</div></div>'
+        +'<div class="log-stat" style="flex:1;min-width:150px;border-left-color:#c8873c"><div class="l">Pedidos bonificados</div><div class="v">'+fIntLog(d.cantBonif)+'</div><div style="font-size:11px;color:var(--txt2);margin-top:2px">Costo prom. '+fARSlog(d.costoBonif)+'</div></div>'
+      +'</div></div>'
+    +'<div class="cp"><div class="st"><i class="ti ti-truck"></i>Flete externo</div>'
+      +'<div class="log-stat" style="border-left-color:#5a9ca8"><div class="l">Pedidos web</div><div class="v">'+fIntLog(d.cantExterno)+'</div><div style="font-size:11px;color:var(--txt2);margin-top:2px">Costo prom. '+fARSlog(d.costoExterno)+'</div></div>'
+    +'</div></div>';
+  var terc='';
+  if(d.terc&&d.terc.length){
+    terc='<div class="cp"><div class="st"><i class="ti ti-building-warehouse"></i>Terciarizados (externos)</div>'
+      +'<table class="log-table"><thead><tr><th>Transporte</th><th style="background:#1D9E75">Facturado</th><th style="background:#2c2c2a">Cobrado</th><th style="background:#5a7a99">Diferencia</th></tr></thead><tbody>'
+      +d.terc.map(function(t){var dc=(t.dif!=null&&t.dif<0)?'#c0392b':'#0f6e56'; return '<tr><td>'+t.nombre+'</td><td>'+fARSlog(t.fact)+'</td><td>'+fARSlog(t.cob)+'</td><td style="color:'+dc+'">'+fARSlog(t.dif)+'</td></tr>';}).join('')
+      +'</tbody></table></div>';
+  }
+  ct.innerHTML=tabla+indices+flete+terc;
+}
+</script>
+
+<!-- ════════════════════════════════════════════════ -->
 <!-- SECCIÓN INDEPENDIENTE: ACTUALIZACIÓN IMPO -->
 <!-- ════════════════════════════════════════════════ -->
 <div class="sec" id="secIMPO" style="margin-top:1.2rem;border-top:3px solid #5a9ca8;padding-top:1rem">
@@ -4581,7 +4749,7 @@ salidasZone.addEventListener('drop', e=>{ e.preventDefault(); salidasZone.classL
 </script>
 
 <script>
-var TAB_MARKERS={secYTD:'comp',secRPComp:'comp',ctrlStrip:'fact',secFact:'fact',secFin:'fin',secOrig:'origen',secProd:'prod',secTopFC:'prod',secProv:'prov',secRubroProv:'prod',secCobr:'cobr',secVend:'vend',secCajas:'cajas',secSalidas:'salidas',secStock:'stock',secIMPO:'impo'};
+var TAB_MARKERS={secYTD:'comp',secRPComp:'comp',ctrlStrip:'fact',secFact:'fact',secFin:'fin',secOrig:'origen',secProd:'prod',secTopFC:'prod',secProv:'prov',secRubroProv:'prod',secCobr:'cobr',secVend:'vend',secCajas:'cajas',secSalidas:'salidas',secStock:'stock',secLogistica:'logistica',secIMPO:'impo'};
 var _pagesReady=false;
 function assignPages(){var cur=null;var ch=document.body.children;for(var i=0;i<ch.length;i++){var el=ch[i];
   if(el.id==='topnav'||el.classList.contains('page-hdr')){continue;}
@@ -4619,7 +4787,7 @@ function showTab(page,btn){if(!_pagesReady)assignPages();
   var els=document.querySelectorAll('[data-page]');
   for(var i=0;i<els.length;i++){els[i].style.display=(els[i].getAttribute('data-page')===page)?'':'none';}
   var bs=document.querySelectorAll('.tabnav-btn');for(var j=0;j<bs.length;j++)bs[j].classList.remove('act');
-  if(btn)btn.classList.add('act'); else {var m={comp:0,fact:1,fin:2,origen:3,prod:4,prov:5,cobr:6,vend:7,salidas:8,cajas:9,stock:10,impo:11};if(bs[m[page]])bs[m[page]].classList.add('act');}
+  if(btn)btn.classList.add('act'); else {var m={comp:0,fact:1,fin:2,origen:3,prod:4,prov:5,cobr:6,vend:7,salidas:8,cajas:9,stock:10,impo:11,logistica:12};if(bs[m[page]])bs[m[page]].classList.add('act');}
   try{window.scrollTo({top:0,behavior:'auto'});}catch(e){}
   setTimeout(function(){var cvs=document.querySelectorAll('canvas');for(var k=0;k<cvs.length;k++){try{var c=Chart.getChart(cvs[k]);if(c&&cvs[k].offsetParent!==null)c.resize();}catch(e){}}},50);}
 /* auto-render deshabilitado: el render ocurre tras el login de Supabase (ver rsemBoot) */
@@ -4655,6 +4823,7 @@ function rsemBuildPlano(){
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
     stock:{STOCK_D:g('STOCK_D')},
+    logistica:{LOG_D:g('LOG_D')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
   };
@@ -4664,12 +4833,14 @@ function rsemBuildPlano(){
     +'try{if(s.cajas&&s.cajas.AR_MAYORISTA_D&&typeof AR_MAYORISTA_D!=="undefined")AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}'
     +'try{if(s.cajas&&s.cajas.RENTAB_D&&typeof RENTAB_D!=="undefined")RENTAB_D=s.cajas.RENTAB_D;}catch(e){}'
     +'try{if(s.stock&&s.stock.STOCK_D&&typeof STOCK_D!=="undefined")STOCK_D=s.stock.STOCK_D;}catch(e){}'
+    +'try{if(s.logistica&&s.logistica.LOG_D&&typeof LOG_D!=="undefined")LOG_D=s.logistica.LOG_D;}catch(e){}'
     +'try{if(s.fotos){Object.assign(prodImgCache,s.fotos);Object.assign(prodImgUser,s.fotos);}}catch(e){}'
     +'try{if(s.fact&&s.fact.DATA_D)applyFactState(s.fact);}catch(e){}'
     +'try{if(s.salidas&&s.salidas.SALIDAS_B_D)applySalidasState(s.salidas);}catch(e){}'
     +'try{if(s.impo&&s.impo.IMPO_D)applyIMPOState(s.impo);}catch(e){}'
     +'try{if(typeof renderProd==="function")renderProd();}catch(e){}'
     +'try{if(typeof renderStock==="function")renderStock();}catch(e){}'
+    +'try{if(typeof renderLog==="function")renderLog();}catch(e){}'
     +'try{if(typeof buildCajasWeekChips==="function"){buildCajasWeekChips();renderCajas();}}catch(e){}'
     +'},300);});';
   var js='window.__RSEM_SNAP__='+JSON.stringify(snap).replace(/<\//g,'<\\/')+';\n'+handler;
@@ -4722,6 +4893,7 @@ function rsemSnapObj(){
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
     stock:{STOCK_D:g('STOCK_D')},
+    logistica:{LOG_D:g('LOG_D')},
     hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
@@ -4735,12 +4907,14 @@ function rsemApplySnap(s){
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
   try{if(s.cajas&&s.cajas.RENTAB_D)RENTAB_D=s.cajas.RENTAB_D;}catch(e){}
   try{if(s.stock&&s.stock.STOCK_D)STOCK_D=s.stock.STOCK_D;}catch(e){}
+  try{if(s.logistica&&s.logistica.LOG_D)LOG_D=s.logistica.LOG_D;}catch(e){}
   try{if(s.fotos){Object.assign(prodImgCache,s.fotos);Object.assign(prodImgUser,s.fotos);}}catch(e){}
   try{if(s.fact&&s.fact.DATA_D)applyFactState(s.fact);}catch(e){}
   try{if(s.salidas&&s.salidas.SALIDAS_B_D)applySalidasState(s.salidas);}catch(e){}
   try{if(s.impo&&s.impo.IMPO_D)applyIMPOState(s.impo);}catch(e){}
   try{if(typeof renderProd==='function')renderProd();}catch(e){}
   try{if(typeof renderStock==='function')renderStock();}catch(e){}
+  try{if(typeof renderLog==='function')renderLog();}catch(e){}
   try{if(typeof buildCajasWeekChips==='function'){buildCajasWeekChips();renderCajas();}}catch(e){}
   return true;
 }
