@@ -3909,7 +3909,7 @@ function parseLogSheet(rows){
   var rnum=function(row,fromCol){ for(var c=fromCol+1;c<=bandE;c++){ if(typeof row[c]==='number'&&isFinite(row[c])) return row[c]; } return null; };
   var findLbl=function(sub,exact){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; for(var c=bandS;c<=bandE;c++){ if(typeof r[c]==='string'){ var t=nrm(r[c]); if(exact? t===sub : t.indexOf(sub)>=0) return {row:r,c:c}; } } } return null; };
   var fvR=function(sub,exact){ var L=findLbl(sub,exact); return L?rnum(L.row,L.c):null; };
-  var terc=function(sub){ var L=findLbl(sub,false); if(!L)return null; return {fact:toN(L.row[ingCol]),cob:toN(L.row[egrCol]),dif:toN(L.row[difCol])}; };
+  var terc=function(sub){ var L=findLbl(sub,true); if(!L)return null; return {fact:toN(L.row[ingCol]),cob:toN(L.row[egrCol]),dif:toN(L.row[difCol])}; };
   // fila Total del cuadro: contiene "total" (exacto) en la banda y un número en Diferencia
   var totIng=null,totEgr=null,totDif=null;
   for(var i=hRow+1;i<rows.length;i++){ var r=rows[i]; if(!r)continue; var isTot=false; for(var c=bandS;c<=bandE;c++){ if(typeof r[c]==='string'&&nrm(r[c])==='total'){isTot=true;break;} } if(isTot && typeof r[difCol]==='number'){ totIng=toN(r[ingCol]);totEgr=toN(r[egrCol]);totDif=toN(r[difCol]); break; } }
