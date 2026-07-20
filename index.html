@@ -3893,28 +3893,39 @@ function nrmLog(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').r
 function fARSlog(v){ return (v==null)?'—':'$ '+Math.round(v).toLocaleString('es-AR'); }
 function fIntLog(v){ return (v==null)?'—':Math.round(v).toLocaleString('es-AR'); }
 function fPctLog(v){ return (v==null)?'—':(v*100).toFixed(2)+'%'; }
-// Extrae el cuadro (columnas N-R) de una solapa de mes. Busca por etiqueta (robusto a corrimientos).
+// Extrae el cuadro de una solapa de mes. Agnóstico a la posición: detecta la fila de
+// encabezados Ingreso/Egreso/Diferencia y lee los valores relativos (robusto a que el
+// cuadro esté en distintas filas/columnas según el mes).
 function parseLogSheet(rows){
   var nrm=nrmLog;
   var toN=function(v){ if(typeof v==='number'&&isFinite(v))return v; var x=parseFloat(v); return isNaN(x)?null:x; };
-  function fv(sub,valCol){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; for(var c=13;c<=17;c++){ if(typeof r[c]==='string'&&nrm(r[c]).indexOf(sub)>=0) return toN(r[valCol]); } } return null; }
-  function fvExact(sub,valCol){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; for(var c=13;c<=17;c++){ if(typeof r[c]==='string'&&nrm(r[c])===sub) return toN(r[valCol]); } } return null; }
-  function terc(sub){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; if(typeof r[14]==='string'&&nrm(r[14]).indexOf(sub)>=0&&typeof r[15]==='number') return {fact:toN(r[15]),cob:toN(r[16]),dif:toN(r[17])}; } return null; }
+  // 1. fila de encabezado del cuadro = la que tiene "egreso" y "diferencia"
+  var hRow=-1,ingCol=-1,egrCol=-1,difCol=-1;
+  for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; var hE=-1,hD=-1,hI=-1;
+    for(var c=0;c<r.length;c++){ if(typeof r[c]==='string'){ var t=nrm(r[c]); if(t==='egreso')hE=c; else if(t==='diferencia'&&hD<0)hD=c; else if(t==='ingreso')hI=c; } }
+    if(hE>=0&&hD>=0){ hRow=i; egrCol=hE; difCol=hD; ingCol=(hI>=0)?hI:(egrCol-1); break; } }
+  if(hRow<0) return { totIng:null, totEgr:null, terc:[] }; // solapa sin el cuadro
+  var bandS=Math.max(0,Math.min(ingCol,egrCol,difCol)-4), bandE=difCol;
+  var rnum=function(row,fromCol){ for(var c=fromCol+1;c<=bandE;c++){ if(typeof row[c]==='number'&&isFinite(row[c])) return row[c]; } return null; };
+  var findLbl=function(sub,exact){ sub=nrm(sub); for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; for(var c=bandS;c<=bandE;c++){ if(typeof r[c]==='string'){ var t=nrm(r[c]); if(exact? t===sub : t.indexOf(sub)>=0) return {row:r,c:c}; } } } return null; };
+  var fvR=function(sub,exact){ var L=findLbl(sub,exact); return L?rnum(L.row,L.c):null; };
+  var terc=function(sub){ var L=findLbl(sub,false); if(!L)return null; return {fact:toN(L.row[ingCol]),cob:toN(L.row[egrCol]),dif:toN(L.row[difCol])}; };
+  // fila Total del cuadro: contiene "total" (exacto) en la banda y un número en Diferencia
   var totIng=null,totEgr=null,totDif=null;
-  for(var i=0;i<rows.length;i++){ var r=rows[i]; if(!r)continue; if(typeof r[14]==='string'&&nrm(r[14])==='total'&&typeof r[15]==='number'&&typeof r[16]==='number'&&typeof r[17]==='number'){ totIng=r[15];totEgr=r[16];totDif=r[17]; break; } }
-  var egrFijos=fv('total fijos',16); if(egrFijos==null) egrFijos=fv('total flete',16);
-  var egrVar=fv('total variables',16);
+  for(var i=hRow+1;i<rows.length;i++){ var r=rows[i]; if(!r)continue; var isTot=false; for(var c=bandS;c<=bandE;c++){ if(typeof r[c]==='string'&&nrm(r[c])==='total'){isTot=true;break;} } if(isTot && typeof r[difCol]==='number'){ totIng=toN(r[ingCol]);totEgr=toN(r[egrCol]);totDif=toN(r[difCol]); break; } }
+  var egrFijos=fvR('total fijos'); if(egrFijos==null) egrFijos=fvR('total flete');
+  var egrVar=fvR('total variables');
   var d={
-    ingCobrados: fv('envios cobrados',15), egrFijos: egrFijos, egrVariables: egrVar,
+    ingCobrados: fvR('envios cobrados'), egrFijos: egrFijos, egrVariables: egrVar,
     totIng: totIng, totEgr: totEgr, totDif: totDif,
     egrFleteExterno: (totEgr!=null&&egrFijos!=null&&egrVar!=null)?(totEgr-egrFijos-egrVar):null,
-    totalSinBonif: fv('no se hubiesen bonificado',17), montoMinimo: fv('monto minimo de compra',17),
-    idxBonif: fv('bonificados vs monto bonificado',16), idxCobrado: fv('cobrados vs monto cobrado',16),
-    pctNeg: fv('monto negativo resultante',16), valPromReal: fv('facturado real',16), valPromTotal: fv('bonificado + cobrados',16),
-    enviosAdic: fv('no hubo envios bonificados',17),
-    cantCobrados: fv('cant. pedidos cobrados',15), costoCobrados: fv('costo promedio de envios propios',15),
-    cantBonif: fv('cant. pedidos bonificados',15), costoBonif: fv('costo promedio de envio bonificado',15),
-    cantExterno: fv('cant. pedidos web',15), costoExterno: fvExact('costo promedio de envio',15),
+    totalSinBonif: fvR('no se hubiesen bonificado'), montoMinimo: fvR('monto minimo de compra'),
+    idxBonif: fvR('bonificados vs monto bonificado'), idxCobrado: fvR('cobrados vs monto cobrado'),
+    pctNeg: fvR('monto negativo resultante'), valPromReal: fvR('facturado real'), valPromTotal: fvR('bonificado + cobrados'),
+    enviosAdic: fvR('no hubo envios bonificados'),
+    cantCobrados: fvR('cant. pedidos cobrados'), costoCobrados: fvR('costo promedio de envios propios'),
+    cantBonif: fvR('cant. pedidos bonificados'), costoBonif: fvR('costo promedio de envio bonificado'),
+    cantExterno: fvR('cant. pedidos web'), costoExterno: fvR('costo promedio de envio', true),
     terc: []
   };
   var z=terc('zippin'); if(z){ z.nombre='Zippin'; d.terc.push(z); }
