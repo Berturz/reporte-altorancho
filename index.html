@@ -4062,6 +4062,9 @@ function fIntN(v){return Math.round(v||0).toLocaleString('es-AR');}
 function fDMY(s){ if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s||''; var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
 function setIMPOProgress(pct,msg){ var b=document.getElementById('impoProgressBar'); if(b)b.classList.add('show'); var fl=document.getElementById('impoProgressFill'); if(fl)fl.style.width=pct+'%'; var st=document.getElementById('impoUploadStatus'); if(st)st.innerHTML=msg; }
 function impoFill(r,key){
+  // Si se leyeron los colores reales del Excel, usarlos tal cual (vacío = sin color)
+  if(r.hf) return (r.fills&&r.fills[key])||'';
+  // Fallback heurístico (cuando el Excel no trae estilos legibles)
   var v=r[key]||0; if(v<=0) return '';
   var paid=(r.com||'').trim().toUpperCase().indexOf('LLEG')===0;
   if(paid) return 'g';
@@ -4135,10 +4138,19 @@ async function handleIMPOFile(file){
   try{
     var buf=await file.arrayBuffer();
     setIMPOProgress(35,'<span class="spin">&#8635;</span> Parseando...');
-    var wb=XLSX.read(buf,{type:'array',cellDates:true,dense:true});
+    var wb=XLSX.read(buf,{type:'array',cellDates:true,dense:true,cellStyles:true});
     var SH='IMPO LLEGADAS';
     if(!wb.SheetNames.includes(SH)) throw new Error('No se encontró la hoja "IMPO LLEGADAS". Hojas: '+wb.SheetNames.join(', '));
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[SH],{header:1,raw:true,defval:null});
+    var _ws=wb.Sheets[SH], _D=_ws['!data']||[];
+    // Lee el color de relleno real de la celda (fila ri, col ci) y lo clasifica: 'g' verde (pagado), 'y' amarillo (pendiente), '' sin color
+    function cellFill(ri,ci){ try{ var row=_D[ri]; if(!row) return ''; var cell=row[ci]; if(!cell||!cell.s) return '';
+      var s=cell.s; var fg=s.fgColor||(s.fill&&(s.fill.fgColor||s.fill.bgColor))||s.bgColor; var rgb=fg&&(fg.rgb||fg.RGB); if(!rgb) return '';
+      rgb=String(rgb).toUpperCase(); if(rgb.length===8) rgb=rgb.slice(2);
+      var R=parseInt(rgb.slice(0,2),16),G=parseInt(rgb.slice(2,4),16),B=parseInt(rgb.slice(4,6),16); if(isNaN(R)||isNaN(G)||isNaN(B)) return '';
+      if(G>R+25 && G>B+15 && G>110) return 'g';
+      if(R>190 && G>150 && B<170) return 'y';
+      return ''; }catch(e){ return ''; } }
     var ti=-1;
     for(var i=0;i<rows.length;i++){ var rr=rows[i]||[]; if(rr.some(function(c){var s=c?String(c).toUpperCase():'';return s.indexOf('REAL')>=0&&s.indexOf('DIRECTORIO')>=0;})){ti=i;break;} }
     if(ti<0) throw new Error('No se encontró el cuadro REAL/DIRECTORIO en la hoja.');
@@ -4151,8 +4163,12 @@ async function handleIMPOFile(file){
     function eb(v){ if(typeof v==='number') return String(Math.round(v)); return dt(v); }
     var out=[];
     for(var k=ti+2;k<rows.length;k++){ var r=rows[k]; if(!r)continue; var prov=dt(r[ix.prov]); if(!prov)break;
-      out.push({prov:prov,emb:eb(r[ix.emb]),tipo:dt(r[ix.tipo]),cont:dt(r[ix.cont]),unid:dn(r[ix.unid]),fob:dn(r[ix.fob]),trib:dn(r[ix.trib]),fleteint:dn(r[ix.fleteint]),desp:dn(r[ix.desp]),nac:dn(r[ix.nac]),fleten:dn(r[ix.fleten]),etd:dd(r[ix.etd]),arribo:dd(r[ix.arribo]),com:dt(r[ix.com]),pago:dt(r[ix.pago])}); }
+      out.push({prov:prov,emb:eb(r[ix.emb]),tipo:dt(r[ix.tipo]),cont:dt(r[ix.cont]),unid:dn(r[ix.unid]),fob:dn(r[ix.fob]),trib:dn(r[ix.trib]),fleteint:dn(r[ix.fleteint]),desp:dn(r[ix.desp]),nac:dn(r[ix.nac]),fleten:dn(r[ix.fleten]),etd:dd(r[ix.etd]),arribo:dd(r[ix.arribo]),com:dt(r[ix.com]),pago:dt(r[ix.pago]),
+        fills:{fob:cellFill(k,ix.fob),trib:cellFill(k,ix.trib),fleteint:cellFill(k,ix.fleteint),desp:cellFill(k,ix.desp),nac:cellFill(k,ix.nac),fleten:cellFill(k,ix.fleten)}}); }
     if(!out.length) throw new Error('No se encontraron filas de datos bajo REAL/DIRECTORIO.');
+    // ¿se pudieron leer colores del Excel? Si sí, se usan tal cual; si no, se cae a la regla heurística.
+    var anyFill=out.some(function(rr){ var f=rr.fills||{}; return f.fob||f.trib||f.fleteint||f.desp||f.nac||f.fleten; });
+    out.forEach(function(rr){ rr.hf=anyFill; });
     IMPO_D=out; renderIMPO(); try{ persistIMPO(); }catch(e){}
     setIMPOProgress(100,'<i class="ti ti-check" style="color:#2a6b53"></i> '+out.length+' filas actualizadas');
     document.querySelector('#impoUploadZone .upload-txt span').textContent='Archivo: '+file.name+' · '+out.length+' filas';
