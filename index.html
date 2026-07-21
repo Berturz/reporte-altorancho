@@ -535,8 +535,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <button onclick="showTab('vend',this)" class="tabnav-btn">Vendedores</button>
   <button onclick="showTab('salidas',this)" class="tabnav-btn">Salidas</button>
   <button onclick="showTab('cajas',this)" class="tabnav-btn">Cajas</button>
-  <button onclick="showTab('stock',this)" class="tabnav-btn">Stock MTM</button>
   <button onclick="showTab('impo',this)" class="tabnav-btn">IMPO</button>
+  <button onclick="showTab('stock',this)" class="tabnav-btn">Stock MTM</button>
   <button onclick="showTab('logistica',this)" class="tabnav-btn">Logística</button>
 </nav>
 <div id="periodoBar" style="padding:12px 2px 0"></div>
@@ -4806,7 +4806,7 @@ function showTab(page,btn){if(!_pagesReady)assignPages();
   var els=document.querySelectorAll('[data-page]');
   for(var i=0;i<els.length;i++){els[i].style.display=(els[i].getAttribute('data-page')===page)?'':'none';}
   var bs=document.querySelectorAll('.tabnav-btn');for(var j=0;j<bs.length;j++)bs[j].classList.remove('act');
-  if(btn)btn.classList.add('act'); else {var m={comp:0,fact:1,fin:2,origen:3,prod:4,prov:5,cobr:6,vend:7,salidas:8,cajas:9,stock:10,impo:11,logistica:12};if(bs[m[page]])bs[m[page]].classList.add('act');}
+  if(btn)btn.classList.add('act'); else {var m={comp:0,fact:1,fin:2,origen:3,prod:4,prov:5,cobr:6,vend:7,salidas:8,cajas:9,impo:10,stock:11,logistica:12};if(bs[m[page]])bs[m[page]].classList.add('act');}
   try{window.scrollTo({top:0,behavior:'auto'});}catch(e){}
   setTimeout(function(){var cvs=document.querySelectorAll('canvas');for(var k=0;k<cvs.length;k++){try{var c=Chart.getChart(cvs[k]);if(c&&cvs[k].offsetParent!==null)c.resize();}catch(e){}}},50);}
 /* auto-render deshabilitado: el render ocurre tras el login de Supabase (ver rsemBoot) */
