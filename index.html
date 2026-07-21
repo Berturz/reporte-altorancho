@@ -2231,8 +2231,8 @@ function makeOrigVBar(canvasId, origObj){
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var mg=c.dataset.mgData[c.dataIndex];return c.raw.toFixed(1).replace('.',',')+'%  ('+fmt(c.dataset.rawData[c.dataIndex])+')  ·  Margen '+(mg>0?mg.toFixed(2):'—');}}}},
       scales:{x:{ticks:{font:{size:13,weight:'700'},color:function(ctx){return bd[ctx.index]||'#444';}},grid:{display:false}},y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}},
     plugins:[{id:'ovlbl',afterDatasetsDraw:function(ch){var m=ch.getDatasetMeta(0),dd=ch.data.datasets[0],cx=ch.ctx;cx.save();cx.textAlign='center';m.data.forEach(function(b,i){var v=dd.data[i];if(v==null)return;
-      cx.font='800 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle=dd.borderColor[i];cx.textBaseline='bottom';cx.fillText(v.toFixed(1).replace('.',',')+'%',b.x,b.y-4);
-      var mg=dd.mgData[i];if(mg>0){cx.font='800 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle='#333';cx.textBaseline='middle';cx.fillText('Mg '+mg.toFixed(2),b.x,b.y+16);}
+      cx.font='800 13px Calibri,"Segoe UI",sans-serif';cx.fillStyle=dd.borderColor[i];cx.textBaseline='bottom';cx.fillText(v.toFixed(1).replace('.',',')+'%',b.x,b.y-4);
+      var mg=dd.mgData[i];if(mg>0){cx.font='800 13px Calibri,"Segoe UI",sans-serif';cx.fillStyle='#333';cx.textBaseline='middle';cx.fillText('Mg '+mg.toFixed(2),b.x,b.y+18);}
     });cx.restore();}}]});
 }
 
@@ -2253,7 +2253,7 @@ function renderOrig(){
     return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:16px 18px">'
       +'<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 14px">'
         +'<div style="font-size:16px;font-weight:800;color:'+base+'">'+groupLabel+(sub?' <span style="font-size:12px;font-weight:600;opacity:.75">'+sub+'</span>':'')+'</div>'
-        +'<div style="font-size:16px;font-weight:700;color:'+base+'">'+fmt(d.tv)+' <span style="font-size:9.5px;font-weight:600;color:#8a8880">s/IVA · margen <span style="color:'+mc+';font-weight:700">'+(mg>0?mg.toFixed(2):'—')+'</span></span></div>'
+        +'<div style="font-size:16px;font-weight:700;color:'+base+'">'+fmt(d.tv)+' <span style="font-size:11px;font-weight:600;color:#8a8880">s/IVA · margen <span style="color:'+mc+';font-weight:700;font-size:15px">'+(mg>0?mg.toFixed(2):'—')+'</span></span></div>'
       +'</div>'
       +'<div style="position:relative;width:100%;height:225px;margin-top:10px"><canvas id="'+canvasId+'"></canvas></div></div>';
   }
