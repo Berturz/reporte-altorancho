@@ -1669,7 +1669,7 @@ function renderDonut(){
   const dc=document.querySelector('#secFact .donut-wrap .dc'); if(dc)dc.style.display='none';
   document.getElementById('dLeg').innerHTML='';
   const labelPlugin={id:'canalLabels',afterDatasetsDraw(ch){
-    const meta=ch.getDatasetMeta(0);const cxt=ch.ctx;cxt.save();const outside=[];const inside=[];const chh=ch.height;const INSIDE_MIN=10;
+    const meta=ch.getDatasetMeta(0);const cxt=ch.ctx;cxt.save();const outside=[];const inside=[];const chh=ch.height;const INSIDE_MIN=101;const FAC_COL='#1c3f6e',MG_COL='#0f6e56',PCT_COL='#b0576f';
     meta.data.forEach((arc,i)=>{
       const c=labels[i],val=data[i],pct=total>0?val/total*100:0,b=bc[c],mg=b.cmv>0?b.fc/b.cmv:0,col=CH_LIGHT[c]||'#4472c4',colT=CC[c]||'#2c2c2a';
       const cp=arc.getCenterPoint();const nm=CANAL_LABELS[c]||c;
@@ -1690,23 +1690,24 @@ function renderDonut(){
       }
     });
     // de-colisión externas (3 líneas): topes superior/inferior dentro del canvas, ambos lados
-    const gap=46,lblH=42,minY=8+lblH/2,maxY=chh-8-lblH/2;
+    const gap=66,lblH=62,minY=8+lblH/2,maxY=chh-8-lblH/2;
     [outside.filter(o=>o.dx>=0),outside.filter(o=>o.dx<0)].forEach(g=>{
       g.sort((a,b)=>a.ty-b.ty);
       if(g.length&&g[0].ty<minY)g[0].ty=minY;
       for(let k=1;k<g.length;k++){if(g[k].ty-g[k-1].ty<gap)g[k].ty=g[k-1].ty+gap;}
       for(let k=g.length-1;k>=0;k--){if(g[k].ty>maxY){g[k].ty=maxY;for(let j=k-1;j>=0;j--){if(g[j+1].ty-g[j].ty<gap)g[j].ty=g[j+1].ty-gap;}}}
     });
-    outside.forEach(o=>{const right=o.dx>=0,lx=o.lx;var lh2=13.5;var yy=o.ty-lh2;
-      cxt.strokeStyle=o.col;cxt.lineWidth=1.2;cxt.beginPath();cxt.moveTo(o.ex,o.ey);cxt.lineTo(lx,o.ty);cxt.stroke();
+    outside.forEach(o=>{const right=o.dx>=0,lx=o.lx;var lh2=15.5;var yy=o.ty-lh2*1.5;
+      cxt.strokeStyle=o.col;cxt.lineWidth=1.3;cxt.beginPath();cxt.moveTo(o.ex,o.ey);cxt.lineTo(lx,o.ty);cxt.stroke();
       cxt.textAlign=right?'left':'right';cxt.textBaseline='middle';const tx=lx+(right?7:-7);
       cxt.fillStyle=o.colT;cxt.font='800 12.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(o.nm,tx,yy);yy+=lh2;
-      cxt.fillStyle=o.colT;cxt.font='800 13px Calibri,"Segoe UI",sans-serif';cxt.fillText(fmt(o.val),tx,yy);yy+=lh2;
-      cxt.fillStyle=o.colT;cxt.font='400 10.5px Calibri,"Segoe UI",sans-serif';cxt.fillText((o.mg>0?'Mg '+o.mg.toFixed(2)+' · ':'')+o.pct.toFixed(1)+'%',tx,yy);
+      cxt.fillStyle=FAC_COL;cxt.font='800 14.5px Calibri,"Segoe UI",sans-serif';cxt.fillText(fmt(o.val),tx,yy);yy+=lh2;
+      if(o.mg>0){cxt.fillStyle=MG_COL;cxt.font='700 14px Calibri,"Segoe UI",sans-serif';cxt.fillText('Mg '+o.mg.toFixed(2),tx,yy);}yy+=lh2;
+      cxt.fillStyle=PCT_COL;cxt.font='700 14px Calibri,"Segoe UI",sans-serif';cxt.fillText(o.pct.toFixed(1)+'%',tx,yy);
     });
     cxt.restore();
   }};
-  dnCh=new Chart(document.getElementById('cDN').getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:labels.map(c=>chTint(CH_LIGHT[c]||'#4472c4',0.74)),borderColor:labels.map(c=>CH_LIGHT[c]||'#4472c4'),borderWidth:2,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'0%',layout:{padding:{left:70,right:70,top:34,bottom:34}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${CANAL_LABELS[c.label]||c.label}: ${fmt(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}},plugins:[labelPlugin]});
+  dnCh=new Chart(document.getElementById('cDN').getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:labels.map(c=>chTint(CH_LIGHT[c]||'#4472c4',0.74)),borderColor:labels.map(c=>CH_LIGHT[c]||'#4472c4'),borderWidth:2,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'0%',layout:{padding:{left:105,right:105,top:42,bottom:42}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${CANAL_LABELS[c.label]||c.label}: ${fmt(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}},plugins:[labelPlugin]});
 }
 
 // ── RENDER FINANCIACIÓN ──
