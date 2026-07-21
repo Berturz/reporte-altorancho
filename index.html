@@ -4138,13 +4138,13 @@ async function handleIMPOFile(file){
   try{
     var buf=await file.arrayBuffer();
     setIMPOProgress(35,'<span class="spin">&#8635;</span> Parseando...');
-    var wb=XLSX.read(buf,{type:'array',cellDates:true,dense:true,cellStyles:true});
+    var wb=XLSX.read(buf,{type:'array',cellDates:true,cellStyles:true});
     var SH='IMPO LLEGADAS';
     if(!wb.SheetNames.includes(SH)) throw new Error('No se encontró la hoja "IMPO LLEGADAS". Hojas: '+wb.SheetNames.join(', '));
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[SH],{header:1,raw:true,defval:null});
-    var _ws=wb.Sheets[SH], _D=_ws['!data']||[];
-    // Lee el color de relleno real de la celda (fila ri, col ci) y lo clasifica: 'g' verde (pagado), 'y' amarillo (pendiente), '' sin color
-    function cellFill(ri,ci){ try{ var row=_D[ri]; if(!row) return ''; var cell=row[ci]; if(!cell||!cell.s) return '';
+    var _ws=wb.Sheets[SH]; var _rng=(function(){try{return XLSX.utils.decode_range(_ws['!ref']);}catch(e){return {s:{r:0,c:0}};}})();
+    // Lee el color de relleno real de la celda (fila ri / col ci relativas al rango) y lo clasifica: 'g' verde (pagado), 'y' amarillo (pendiente), '' sin color
+    function cellFill(ri,ci){ try{ var cell=_ws[XLSX.utils.encode_cell({r:_rng.s.r+ri,c:_rng.s.c+ci})]; if(!cell||!cell.s) return '';
       var s=cell.s; var fg=s.fgColor||(s.fill&&(s.fill.fgColor||s.fill.bgColor))||s.bgColor; var rgb=fg&&(fg.rgb||fg.RGB); if(!rgb) return '';
       rgb=String(rgb).toUpperCase(); if(rgb.length===8) rgb=rgb.slice(2);
       var R=parseInt(rgb.slice(0,2),16),G=parseInt(rgb.slice(2,4),16),B=parseInt(rgb.slice(4,6),16); if(isNaN(R)||isNaN(G)||isNaN(B)) return '';
