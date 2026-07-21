@@ -1298,7 +1298,7 @@ function renderCostFin(){
         var p=g.items[0];
         return '<div class="cf-row cf-single"><span>'+p[0]+'</span><b style="color:'+color+'">'+pct(p[1])+'</b></div>';
       }
-      var subs=g.items.map(function(p){ var sub=p[0].slice(g.fam.length).trim()||'General';
+      var subs=g.items.map(function(p){ var sub=p[0].slice(g.fam.length).trim(); if(!sub) sub=(g.fam==='Pagonube')?'PN TRF':'General';
         return '<div class="cf-row cf-sub"><span>'+sub+'</span><b>'+pct(p[1])+'</b></div>'; }).join('');
       return '<details class="cf-det"><summary class="cf-sum" style="border-left:3px solid '+color+'"><span class="cf-fam">'+g.fam+'</span><span class="cf-badge" style="background:'+soft+';color:'+color+'">'+g.items.length+'</span></summary><div class="cf-subs">'+subs+'</div></details>';
     }).join('');
