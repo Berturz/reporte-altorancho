@@ -2494,18 +2494,18 @@ function renderTopFC(){
           const x=bar.x;
           const gy=m1.data[i].y, oy=m2.data[i].y;
           // importe (azul) arriba de la barra
-          let iy=bar.y-12;
+          let iy=bar.y-14;
           // margen (verde) arriba del punto de margen
-          let my=gy-13;
+          let my=gy-16;
           // si importe y margen se pisan, apilar margen encima del importe
-          if(Math.abs(iy-my)<16){ my=Math.min(iy,my)-17; }
+          if(Math.abs(iy-my)<19){ my=Math.min(iy,my)-20; }
           // cantidad (rojo) debajo del punto de cantidad
-          let cy=oy+13;
+          let cy=oy+16;
           // si cantidad choca con margen o importe, bajarla
-          if(Math.abs(cy-my)<16 || Math.abs(cy-iy)<16) cy=Math.max(my,iy,oy)+17;
-          badge(x, iy, fmt(fcData[i]), '#4472c4', 9);
-          badge(x, my, mgData[i].toFixed(2), '#5a9ca8', 10);
-          badge(x, cy, String(qtyData[i]), '#D64545', 11);
+          if(Math.abs(cy-my)<19 || Math.abs(cy-iy)<19) cy=Math.max(my,iy,oy)+20;
+          badge(x, iy, fmt(fcData[i]), '#4472c4', 12);
+          badge(x, my, mgData[i].toFixed(2), '#5a9ca8', 12);
+          badge(x, cy, String(qtyData[i]), '#D64545', 13);
         });
         ctx.restore();
       }
