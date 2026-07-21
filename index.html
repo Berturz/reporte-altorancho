@@ -392,9 +392,9 @@ h1,.sec-hdr,.st,.ct,.mv,.fin-pct,.dm,.fin-title,.dc .dm{font-family:Calibri,"Seg
 .upload-icon{color:var(--blue)!important}.upload-txt strong{color:var(--txt)}.upload-txt span{color:var(--txt2)}
 /* NAV DE PESTAÑAS */
 #topnav{background:var(--bg)!important;border:1px solid var(--brd);box-shadow:0 4px 14px rgba(44,44,42,.08)!important;backdrop-filter:none!important}
-.tabnav-btn{background:var(--bg2)!important;border:1px solid var(--brd)!important;color:var(--txt2)!important;font-family:Calibri,"Segoe UI",sans-serif!important}
-.tabnav-btn:hover{background:var(--info-bg)!important;color:var(--blue-navy)!important}
-.tabnav-btn.act{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important}
+.tabnav-btn{background:var(--bg)!important;border:1.3px solid var(--tc,var(--brd))!important;color:var(--tc,var(--txt2))!important;font-family:Calibri,"Segoe UI",sans-serif!important;font-weight:700!important}
+.tabnav-btn:hover{filter:brightness(.97)}
+.tabnav-btn.act{background:var(--tc,var(--blue))!important;border-color:var(--tc,var(--blue))!important;color:#fff!important}
 /* SECCIONES */
 .sec{background:var(--bg);border-radius:var(--rl);padding:1.15rem 1.3rem;border:1px solid var(--brd);box-shadow:0 4px 16px rgba(44,44,42,.06);margin-bottom:1.1rem}
 .sec-hdr{font-size:20px;font-weight:700;color:var(--txt);border:none!important;display:flex;align-items:center;gap:10px;margin-bottom:.5rem;padding-bottom:.55rem;border-bottom:1px solid var(--brd)!important}
@@ -525,19 +525,19 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 
 <!-- CONTROLES -->
 <nav id="topnav">
-  <button onclick="showTab('comp',this)" class="tabnav-btn act">Comparativa YTD</button>
-  <button onclick="showTab('fact',this)" class="tabnav-btn">Facturación</button>
-  <button onclick="showTab('fin',this)" class="tabnav-btn">Financiación</button>
-  <button onclick="showTab('origen',this)" class="tabnav-btn">Origen</button>
-  <button onclick="showTab('prod',this)" class="tabnav-btn">Productos</button>
-  <button onclick="showTab('prov',this)" class="tabnav-btn">Proveedores</button>
-  <button onclick="showTab('cobr',this)" class="tabnav-btn">Cobranzas</button>
-  <button onclick="showTab('vend',this)" class="tabnav-btn">Vendedores</button>
-  <button onclick="showTab('salidas',this)" class="tabnav-btn">Salidas</button>
-  <button onclick="showTab('cajas',this)" class="tabnav-btn">Cajas</button>
-  <button onclick="showTab('impo',this)" class="tabnav-btn">IMPO</button>
-  <button onclick="showTab('stock',this)" class="tabnav-btn">Stock MTM</button>
-  <button onclick="showTab('logistica',this)" class="tabnav-btn">Logística</button>
+  <button onclick="showTab('comp',this)" class="tabnav-btn act" style="--tc:#1C7C8C">Comparativa YTD</button>
+  <button onclick="showTab('fact',this)" class="tabnav-btn" style="--tc:#4472c4">Facturación</button>
+  <button onclick="showTab('fin',this)" class="tabnav-btn" style="--tc:#7F77DD">Financiación</button>
+  <button onclick="showTab('origen',this)" class="tabnav-btn" style="--tc:#8B4630">Origen</button>
+  <button onclick="showTab('prod',this)" class="tabnav-btn" style="--tc:#BA7517">Productos</button>
+  <button onclick="showTab('prov',this)" class="tabnav-btn" style="--tc:#5a9ca8">Proveedores</button>
+  <button onclick="showTab('cobr',this)" class="tabnav-btn" style="--tc:#1D9E75">Cobranzas</button>
+  <button onclick="showTab('vend',this)" class="tabnav-btn" style="--tc:#8e6e9d">Vendedores</button>
+  <button onclick="showTab('salidas',this)" class="tabnav-btn" style="--tc:#b0576f">Salidas</button>
+  <button onclick="showTab('cajas',this)" class="tabnav-btn" style="--tc:#1D9E75">Cajas</button>
+  <button onclick="showTab('impo',this)" class="tabnav-btn" style="--tc:#5a9ca8">IMPO</button>
+  <button onclick="showTab('stock',this)" class="tabnav-btn" style="--tc:#A0673B">Stock MTM</button>
+  <button onclick="showTab('logistica',this)" class="tabnav-btn" style="--tc:#7A5CA6">Logística</button>
 </nav>
 <div id="periodoBar" style="padding:12px 2px 0"></div>
 <!-- SECCIÓN 0: COMPARATIVA YTD 2025 vs 2026 -->
