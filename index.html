@@ -3626,35 +3626,36 @@ renderCajas();
     </div>
   </div>
 
-  <!-- Calendario + tabla AA/B, lado a lado -->
-  <div style="display:flex;gap:.85rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:.85rem">
-  <!-- Slicer de fecha propio: rango de Fecha de Pago -->
-  <div class="panel cal-wrap" style="max-width:300px">
-    <div class="pt">
-      <span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Fecha de Pago</span>
-      <button class="bl" onclick="clearSalidasD()">Limpiar</button>
+  <!-- Izquierda: calendario + AA/B · Derecha: torta -->
+  <div class="salidas-top2col">
+    <div class="salidas-topleft">
+      <!-- Slicer de fecha propio: rango de Fecha de Pago -->
+      <div class="panel cal-wrap">
+        <div class="pt">
+          <span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Fecha de Pago</span>
+          <button class="bl" onclick="clearSalidasD()">Limpiar</button>
+        </div>
+        <div class="cnav">
+          <button class="cbtn" onclick="pmSalidas()">&#8249;</button>
+          <span class="ct" id="salidasCT"></span>
+          <button class="cbtn" onclick="nmSalidas()">&#8250;</button>
+        </div>
+        <div class="cgrid" id="salidasCG"></div>
+        <div class="dri" id="salidasDRI">Mostrando todo el período</div>
+      </div>
+      <!-- Tarjeta AA/B -->
+      <div class="prov-table-wrap" id="salidasAABWrap"></div>
     </div>
-    <div class="cnav">
-      <button class="cbtn" onclick="pmSalidas()">&#8249;</button>
-      <span class="ct" id="salidasCT"></span>
-      <button class="cbtn" onclick="nmSalidas()">&#8250;</button>
-    </div>
-    <div class="cgrid" id="salidasCG"></div>
-    <div class="dri" id="salidasDRI">Mostrando todo el período</div>
-  </div>
 
-  <!-- Tarjeta AA/B -->
-  <div class="prov-table-wrap" id="salidasAABWrap" style="max-width:420px;flex:1;min-width:280px"></div>
-  </div>
-
-  <!-- Torta principal -->
-  <div class="cp" style="margin-bottom:.85rem">
-    <div class="st" style="display:flex;justify-content:space-between;align-items:center">
-      <span><i class="ti ti-chart-pie"></i>Distribución de salidas por cuenta</span>
-      <span class="mc" style="padding:.35rem .8rem;background:var(--bg2)"><span class="ml2">Total salidas</span><span class="mv" id="salidasDonutMain" style="font-size:19px;display:block">—</span></span>
-    </div>
-    <div class="donut-wrap" style="height:540px">
-      <canvas id="cSalidasDonut"></canvas>
+    <!-- Torta principal -->
+    <div class="cp" style="margin-bottom:0">
+      <div class="st" style="display:flex;justify-content:space-between;align-items:center">
+        <span><i class="ti ti-chart-pie"></i>Distribución de salidas por cuenta</span>
+        <span class="mc" style="padding:.35rem .8rem;background:var(--bg2)"><span class="ml2">Total salidas</span><span class="mv" id="salidasDonutMain" style="font-size:19px;display:block">—</span></span>
+      </div>
+      <div class="donut-wrap" style="height:470px">
+        <canvas id="cSalidasDonut"></canvas>
+      </div>
     </div>
   </div>
 
@@ -3670,6 +3671,10 @@ renderCajas();
   .salcard-pct{font-size:10px;color:var(--txt2);margin-top:1px}
   .salidas-2col{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:1rem;align-items:start}
   @media(max-width:860px){.salidas-2col{grid-template-columns:1fr}}
+  .salidas-top2col{display:grid;grid-template-columns:315px 1fr;gap:1rem;align-items:start;margin-bottom:.85rem}
+  .salidas-topleft{display:flex;flex-direction:column;gap:.7rem}
+  .salidas-topleft .cal-wrap{max-width:none!important;width:100%}
+  @media(max-width:900px){.salidas-top2col{grid-template-columns:1fr}}
   #salidasDetailWrap table thead th{background:var(--selc,var(--ink))!important;color:#fff!important}
   #salidasDetailWrap .prov-title{color:var(--selc,var(--txt))!important;font-style:normal!important;font-weight:800!important;font-size:14px!important;border-left:4px solid var(--selc,var(--brd2));padding:3px 0 5px 9px;margin-bottom:.5rem}
   #salidasDetailWrap .cobr-total-row td{font-weight:800!important;font-size:12.5px!important;color:var(--selc,var(--txt))!important;border-top:2px solid var(--selc,var(--brd2))!important;background:var(--bg3)!important}
@@ -4372,7 +4377,7 @@ function renderSalidasDonut(agg){
     type:'pie',
     data:{labels, datasets:[{data, backgroundColor:colors, borderWidth:2, borderColor:'var(--bg2)'}]},
     plugins:[sliceLabels],
-    options:{responsive:true, maintainAspectRatio:false, layout:{padding:{top:88,bottom:88,left:178,right:178}},
+    options:{responsive:true, maintainAspectRatio:false, layout:{padding:{top:40,bottom:40,left:150,right:150}},
       plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.label}: ${fflSalidas(c.raw)} (${total>0?(c.raw/total*100).toFixed(1):'0'}%)`}}}}
   });
 }
