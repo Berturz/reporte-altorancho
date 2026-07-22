@@ -3668,10 +3668,16 @@ renderCajas();
   .salcard-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
   .salcard-val{font-family:Calibri,"Segoe UI",sans-serif;font-size:18px;font-weight:700;color:var(--petrol,#2c2c2a)}
   .salcard-pct{font-size:10px;color:var(--txt2);margin-top:1px}
+  .salidas-2col{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:1rem;align-items:start}
+  @media(max-width:860px){.salidas-2col{grid-template-columns:1fr}}
+  #salidasDetailWrap table thead th{background:var(--selc,var(--ink))!important;color:#fff!important}
+  #salidasDetailWrap .prov-title{color:var(--selc,var(--txt))!important;font-style:normal!important;font-weight:800!important;font-size:14px!important;border-left:4px solid var(--selc,var(--brd2));padding:3px 0 5px 9px;margin-bottom:.5rem}
   </style>
   <div class="st" style="margin-bottom:.55rem"><i class="ti ti-layout-grid"></i>Desglose por categoría <span class="sec-sub">· tocá una tarjeta para ver el detalle</span></div>
-  <div id="salidasCards" class="salidas-cards"></div>
-  <div class="prov-table-wrap" id="salidasDetailWrap" style="margin-top:.9rem"></div>
+  <div class="salidas-2col">
+    <div id="salidasCards" class="salidas-cards"></div>
+    <div class="prov-table-wrap" id="salidasDetailWrap"></div>
+  </div>
   
   </div>
 </div>
@@ -4505,6 +4511,7 @@ function renderSalidasCards(agg){
 function renderSalidasSelectedDetail(dates){
   const w='salidasDetailWrap', el=document.getElementById(w); if(!el) return; el.style.display='';
   const c=salidasSelCat;
+  el.style.setProperty('--selc', (c&&SALIDAS_CAT_COLORS[c])?SALIDAS_CAT_COLORS[c]:'#2c2c2a');
   if(!c){ el.innerHTML='<div class="prov-empty" style="padding:1rem">Tocá una tarjeta para ver el detalle</div>'; return; }
   const r=SALIDAS_CAT_ROUTE[c];
   if(!r){ el.innerHTML=''; return; }
