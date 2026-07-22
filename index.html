@@ -3338,21 +3338,27 @@ function renderCajasVarTables(){
 }
 
 function renderCajasTable(){
+  const semanas = getCajasSemanas();
+  const idx = semanas.indexOf(cajasSemana);
   const cur = CAJAS_D[cajasSemana];
-  const entries = Object.entries(cur.cuentas).sort((a,b)=>b[1][0]-a[1][0]);
-  const rows = entries.map(([cuenta,[importe,moneda,categoria]])=>{
-    const catColor = categoria==='Liquido' ? '#0f6e56' : '#854f0b';
-    const valFmt = moneda==='Dolares' ? `US$ ${importe.toLocaleString('es-AR',{maximumFractionDigits:0})}` : fflCajas(importe);
-    return `<tr>
-      <td>${cuenta}</td>
-      <td>${moneda}</td>
-      <td style="color:${catColor};font-weight:600">${categoria}</td>
-      <td style="text-align:right">${valFmt}</td>
-    </tr>`;
-  }).join('');
+  const prev = idx>0 ? CAJAS_D[semanas[idx-1]] : null;
+  const labA = dmyCajas(cajasSemana);
+  const labP = prev ? dmyCajas(semanas[idx-1]) : '—';
+  const fmtMon = (v,m)=> m==='Dolares' ? ('US$ '+Math.round(v||0).toLocaleString('es-AR')) : fflCajas(v||0);
+  const varCell = (cv,pv)=>{ if(!prev) return '<span style="color:var(--txt2)">—</span>';
+    if(pv===0) return (cv!==0)?'<span style="color:#0f6e56;font-weight:700">nuevo</span>':'<span style="color:var(--txt2)">—</span>';
+    const pct=(cv-pv)/Math.abs(pv)*100, c=pct>=0?'#0f6e56':'#a83232';
+    return `<span style="color:${c};font-weight:700">${pct>=0?'+':''}${pct.toFixed(1)}%</span>`; };
+  const keys={}; Object.keys(cur.cuentas).forEach(k=>keys[k]=1); if(prev) Object.keys(prev.cuentas).forEach(k=>keys[k]=1);
+  const list = Object.keys(keys).map(k=>{ const cc=cur.cuentas[k], pc=prev?prev.cuentas[k]:null;
+    return {cuenta:k, moneda:(cc&&cc[1])||(pc&&pc[1])||'Pesos', cv:cc?cc[0]:0, pv:pc?pc[0]:0}; }).sort((a,b)=>b.cv-a.cv);
+  let rows = list.map(r=>`<tr><td>${r.cuenta}</td><td style="text-align:right">${fmtMon(r.pv,r.moneda)}</td><td style="text-align:right">${fmtMon(r.cv,r.moneda)}</td><td style="text-align:right">${varCell(r.cv,r.pv)}</td></tr>`).join('');
+  rows += `<tr style="font-weight:700;background:var(--bg2)"><td>Total ARS</td><td style="text-align:right">${fflCajas(prev?prev.total_ars:0)}</td><td style="text-align:right">${fflCajas(cur.total_ars)}</td><td style="text-align:right">${varCell(cur.total_ars, prev?prev.total_ars:0)}</td></tr>`;
+  if((cur.total_usd||0)!==0 || (prev&&prev.total_usd)) rows += `<tr style="font-weight:700;background:var(--bg2)"><td>Total USD</td><td style="text-align:right">US$ ${Math.round(prev?prev.total_usd:0).toLocaleString('es-AR')}</td><td style="text-align:right">US$ ${Math.round(cur.total_usd||0).toLocaleString('es-AR')}</td><td style="text-align:right">${varCell(cur.total_usd||0, prev?prev.total_usd:0)}</td></tr>`;
   document.getElementById('cajasTableWrap').innerHTML = `
-    <table class="prov-table">
-      <thead><tr><th>Cuenta</th><th>Moneda</th><th>Liquidez</th><th>Importe</th></tr></thead>
+    <div class="prov-title" style="font-style:normal;font-weight:800;color:#1D9E75;font-size:13.5px;margin-bottom:.4rem">Comparativa semanal por cuenta · ${labP} → ${labA}</div>
+    <table class="cajas-var-table">
+      <thead><tr style="background:#1D9E75"><th>Cuenta</th><th>${labP}</th><th>${labA}</th><th>Var%</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
