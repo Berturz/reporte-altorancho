@@ -335,7 +335,7 @@ table.cobr-table tbody tr.cobr-total-row td{border-top:1.5px solid var(--brd2)}
 
 /* ── PERFORMANCE VENDEDOR ── */
 table.vend-table{width:100%;border-collapse:collapse;font-size:12px;min-width:600px}
-table.vend-table thead th{background:#1a1a1a;color:#fff;font-weight:600;text-align:center;padding:.5rem .6rem;font-size:11px}
+table.vend-table thead th{background:#1a1a1a;color:#fff;font-weight:800;text-align:center;padding:.5rem .6rem;font-size:12px}
 table.vend-table thead th:first-child{text-align:left;background:#1a1a1a}
 table.vend-table thead th.vend-total-col{background:#a84a42}
 table.vend-table tbody td{padding:.45rem .6rem;text-align:center;border-bottom:.5px solid var(--brd)}
@@ -763,6 +763,16 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div class="st"><i class="ti ti-chart-bar"></i>Facturación Total por vendedor</div>
     <div style="position:relative;width:100%;height:300px">
       <canvas id="cVend"></canvas>
+    </div>
+  </div>
+
+  <div class="cp" style="margin-top:.85rem">
+    <div class="st" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span><i class="ti ti-chart-bar"></i>Ventas por vendedor <span class="sec-sub" style="font-weight:400">· Acumulado MTM</span></span>
+      <span id="vendMTMselWrap"></span>
+    </div>
+    <div style="position:relative;width:100%;height:300px">
+      <canvas id="cVendMTM"></canvas>
     </div>
   </div>
 </div>
@@ -2883,14 +2893,15 @@ function renderVendTable(items){
 }
 
 let vendChart = null;
-function renderVendChart(items){
-  if(vendChart){vendChart.destroy();vendChart=null;}
-  if(!items.length) return;
+// Constructor de barras por vendedor reutilizable (nombres del eje en negrita, badge de importe arriba)
+function makeVendBar(canvasId, items){
+  const cv=document.getElementById(canvasId); if(!cv) return;
+  const ex=Chart.getChart(cv); if(ex) ex.destroy();
+  if(!items||!items.length) return;
   const labels = items.map(i=>i.vend);
   const data = items.map(i=>i.tv);
   const colors = items.map((_,i)=>VEND_COLORS[Math.min(i,VEND_COLORS.length-1)]);
-
-  vendChart = new Chart(document.getElementById('cVend').getContext('2d'),{
+  new Chart(cv.getContext('2d'),{
     type:'bar',
     data:{labels,datasets:[{label:'Facturación Total',data,backgroundColor:colors,borderRadius:4,barThickness:60}]},
     options:{
@@ -2901,8 +2912,8 @@ function renderVendChart(items){
         tooltip:{callbacks:{label:c=>` ${ffl(c.raw)}`}}
       },
       scales:{
-        x:{ticks:{font:{size:10}},grid:{display:false}},
-        y:{ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}
+        x:{ticks:{font:{size:12,weight:'700'},color:'#2c2c2a'},grid:{display:false}},
+        y:{ticks:{callback:v=>fmt(v),font:{size:11}},grid:{color:'rgba(128,128,128,0.1)'}}
       }
     },
     plugins:[{
@@ -2913,9 +2924,9 @@ function renderVendChart(items){
         meta.data.forEach((bar,i)=>{
           const val = data[i];
           const txt = ffl(val).replace('ARS ','$');
-          chart.ctx.font = 'bold 11px -apple-system, sans-serif';
+          chart.ctx.font = 'bold 12px -apple-system, sans-serif';
           const tw = chart.ctx.measureText(txt).width;
-          const pad = 6, bh = 20;
+          const pad = 6, bh = 21;
           const bw = tw + pad*2;
           const x = bar.x, y = bar.y - bh - 6;
           chart.ctx.fillStyle = '#4472c4';
@@ -2932,12 +2943,30 @@ function renderVendChart(items){
     }]
   });
 }
+function renderVendChart(items){ makeVendBar('cVend', items); }
+
+// ── Gráfico Acumulado MTM: ventas por vendedor del mes elegido (Ene→Dic 2026) ──
+var vendMTMmes = null;
+function setVendMTMmes(m){ vendMTMmes=m; renderVendMTM(); }
+function renderVendMTM(){
+  const cv=document.getElementById('cVendMTM'); if(!cv) return;
+  const sw=document.getElementById('vendMTMselWrap');
+  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const conDatos={}; Object.keys(VEND_D).forEach(function(d){ if(/^\d{4}-\d{2}-\d{2}$/.test(d)) conDatos[d.slice(0,7)]=1; });
+  const FIXED=[]; for(var mm=1;mm<=12;mm++){ var k='2026-'+String(mm).padStart(2,'0'); FIXED.push({key:k,label:MN[mm-1]+' 2026',has:!!conDatos[k]}); }
+  if(!vendMTMmes || !FIXED.some(function(f){return f.key===vendMTMmes;})){ var wd=FIXED.filter(function(f){return f.has;}); vendMTMmes = wd.length?wd[wd.length-1].key:FIXED[0].key; }
+  if(sw) sw.innerHTML='<select onchange="setVendMTMmes(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+FIXED.map(function(f){return '<option value="'+f.key+'"'+(f.key===vendMTMmes?' selected':'')+'>'+f.label+(f.has?'':' — sin datos')+'</option>';}).join('')+'</select>';
+  const dates=Object.keys(VEND_D).filter(function(d){return d.slice(0,7)===vendMTMmes;});
+  const items=aggVend(dates);
+  makeVendBar('cVendMTM', items); // makeVendBar destruye el gráfico previo y no dibuja si no hay datos
+}
 
 function renderVend(){
   const dates = getRange();
   const items = aggVend(dates);
   renderVendTable(items);
   renderVendChart(items);
+  renderVendMTM();
 }
 
 // ── INIT ──
