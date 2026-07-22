@@ -725,6 +725,14 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <!-- SECCIÓN 8: COBRANZAS MDP IMPORTE S/IVA -->
 <div class="sec" id="secCobr">
   <div class="sec-hdr"><i class="ti ti-cash-banknote"></i>Cobranzas MDP importe S/IVA <span class="sec-sub">· controlado por el calendario</span></div>
+  <style>
+  #cobrDetailWrap table thead th{background:var(--cobrc,var(--ink))!important;color:#fff!important}
+  #cobrDetailWrap .prov-title{color:var(--cobrc,var(--txt))!important;font-style:normal!important;font-weight:800!important;font-size:14px!important;border-left:4px solid var(--cobrc,var(--brd2));padding:3px 0 5px 9px;margin-bottom:.5rem}
+  #cobrDetailWrap .cobr-total-row td{font-weight:800!important;color:var(--cobrc,var(--txt))!important;border-top:2px solid var(--cobrc,var(--brd2))!important;background:var(--bg3)!important}
+  #cobrBAATableWrap{width:fit-content;max-width:100%}
+  #cobrBAATableWrap .cobr-table{min-width:0!important;font-size:12px}
+  #cobrBAATableWrap .cobr-table th,#cobrBAATableWrap .cobr-table td{padding:.45rem 1.15rem}
+  </style>
 
   <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:.7rem;margin-bottom:.8rem">
     <div>
@@ -2782,6 +2790,7 @@ function renderCobrCards(mdpTot){
 }
 function renderCobrCanalDetail(mdpTot){
   const w=document.getElementById('cobrDetailWrap'); const c=cobrSelCanal;
+  w.style.setProperty('--cobrc', (c&&CC[COBR_CMAP[c]])?CC[COBR_CMAP[c]]:'#2c2c2a');
   if(!c||!mdpTot[c]){ w.innerHTML='<div class="prov-empty" style="padding:1rem">Tocá un canal para ver el desglose</div>'; return; }
   const entries=Object.entries(mdpTot[c]).filter(([,v])=>Math.abs(v)>0.5).sort((a,b)=>b[1]-a[1]);
   const tot=entries.reduce((s,[,v])=>s+v,0);
