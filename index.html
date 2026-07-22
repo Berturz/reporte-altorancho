@@ -3080,6 +3080,7 @@ const CAJAS_LIQUIDO_CUENTAS = ['Efectivo ($)','Efectivo (USD)','Fondo FIMA Valor
 const CAJAS_ALIQUIDAR_CUENTAS = ['MP a Liquidar','PN a liquidar','GO Cuotas a Liquidar','Valores a Depositar','Cheques endosados','Cocos','Balanz'];
 
 let cajasSemana = null;
+let cajasCmpA = null, cajasCmpB = null; // semanas a comparar en el cuadro "Comparativa semanal por cuenta"
 let cajasDonutAChart = null, cajasDonutLChart = null;
 
 function getCajasSemanas(){ return Object.keys(CAJAS_D).sort(); }
@@ -3099,6 +3100,7 @@ function buildCajasWeekChips(){
 }
 function setCajasSemana(s){
   cajasSemana = s;
+  cajasCmpA = null; cajasCmpB = null; // que la comparativa siga a la semana elegida
   try{updPeriodoBar();}catch(e){}
   renderCajas();
 }
@@ -3339,13 +3341,18 @@ function renderCajasVarTables(){
   renderCajasVarTable('cajasVarUSDWrap', labelActual, labelAnterior, rowsUSD, '(USD)', '#4472c4');
 }
 
+function setCajasCmp(which, val){ if(which==='A') cajasCmpA=val; else cajasCmpB=val; renderCajasTable(); }
 function renderCajasTable(){
   const semanas = getCajasSemanas();
-  const idx = semanas.indexOf(cajasSemana);
-  const cur = CAJAS_D[cajasSemana];
-  const prev = idx>0 ? CAJAS_D[semanas[idx-1]] : null;
-  const labA = dmyCajas(cajasSemana);
-  const labP = prev ? dmyCajas(semanas[idx-1]) : '—';
+  if(!semanas.length){ document.getElementById('cajasTableWrap').innerHTML=''; return; }
+  // B = semana "actual" (por defecto la seleccionada), A = "anterior" (por defecto la previa a B). Ambas elegibles.
+  if(!cajasCmpB || !semanas.includes(cajasCmpB)) cajasCmpB = (cajasSemana && semanas.includes(cajasSemana)) ? cajasSemana : semanas[semanas.length-1];
+  if(!cajasCmpA || !semanas.includes(cajasCmpA)){ const bi=semanas.indexOf(cajasCmpB); cajasCmpA = bi>0?semanas[bi-1]:cajasCmpB; }
+  const cur = CAJAS_D[cajasCmpB];
+  const prev = (cajasCmpA && cajasCmpA!==cajasCmpB) ? CAJAS_D[cajasCmpA] : null;
+  const labA = dmyCajas(cajasCmpB);
+  const labP = cajasCmpA ? dmyCajas(cajasCmpA) : '—';
+  const mkSel=(id,sel)=>'<select onchange="setCajasCmp(\''+id+'\',this.value)" style="font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:7px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+semanas.map(function(s){return '<option value="'+s+'"'+(s===sel?' selected':'')+'>'+dmyCajas(s)+'</option>';}).join('')+'</select>';
   const fmtMon = (v,m)=> m==='Dolares' ? ('US$ '+Math.round(v||0).toLocaleString('es-AR')) : fflCajas(v||0);
   const varCell = (cv,pv)=>{ if(!prev) return '<span style="color:var(--txt2)">—</span>';
     if(pv===0) return (cv!==0)?'<span style="color:#0f6e56;font-weight:700">nuevo</span>':'<span style="color:var(--txt2)">—</span>';
@@ -3358,7 +3365,7 @@ function renderCajasTable(){
   rows += `<tr style="font-weight:700;background:var(--bg2)"><td>Total ARS</td><td style="text-align:right">${fflCajas(prev?prev.total_ars:0)}</td><td style="text-align:right">${fflCajas(cur.total_ars)}</td><td style="text-align:right">${varCell(cur.total_ars, prev?prev.total_ars:0)}</td></tr>`;
   if((cur.total_usd||0)!==0 || (prev&&prev.total_usd)) rows += `<tr style="font-weight:700;background:var(--bg2)"><td>Total USD</td><td style="text-align:right">US$ ${Math.round(prev?prev.total_usd:0).toLocaleString('es-AR')}</td><td style="text-align:right">US$ ${Math.round(cur.total_usd||0).toLocaleString('es-AR')}</td><td style="text-align:right">${varCell(cur.total_usd||0, prev?prev.total_usd:0)}</td></tr>`;
   document.getElementById('cajasTableWrap').innerHTML = `
-    <div class="prov-title" style="font-style:normal;font-weight:800;color:#1D9E75;font-size:13.5px;margin-bottom:.4rem">Comparativa semanal por cuenta · ${labP} → ${labA}</div>
+    <div class="prov-title" style="font-style:normal;font-weight:800;color:#1D9E75;font-size:13.5px;margin-bottom:.4rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap">Comparativa semanal por cuenta · ${mkSel('A',cajasCmpA)} <span style="opacity:.6">→</span> ${mkSel('B',cajasCmpB)}</div>
     <table class="cajas-var-table">
       <thead><tr style="background:#1D9E75"><th>Cuenta</th><th>${labP}</th><th>${labA}</th><th>Var%</th></tr></thead>
       <tbody>${rows}</tbody>
