@@ -2048,8 +2048,22 @@ function renderCmpChips(){
   el.innerHTML=['YTD',...av].map(v=>{const lbl=v==='YTD'?'YTD':MN[parseInt(v)-1];return `<button class="cmp-chip${cmpSel===v?' act':''}" onclick="setCmp('${v}')">${lbl}</button>`;}).join('');
 }
 function setCmp(v){cmpSel=v;try{updPeriodoBar();}catch(e){}renderYTD();renderRPCompare();}
-const IPC_IDX={"2025-01": 7864.1257, "2025-02": 8052.9927, "2025-03": 8353.3158, "2025-04": 8585.6078, "2025-05": 8714.4871, "2025-06": 8855.5681, "2025-07": 9023.973, "2025-08": 9193.2441, "2025-09": 9384.0922, "2025-10": 9603.8623, "2025-11": 9841.3581, "2025-12": 10121.3715, "2026-01": 10413.0309, "2026-02": 10714.6255, "2026-03": 11077.0608, "2026-04": 11363.0904, "2026-05": 11607.3937, "2026-06": 11851.149};
-const IPC_ESTIM={"2026-06": true};
+const IPC_IDX={"2025-01": 7864.1257, "2025-02": 8052.9927, "2025-03": 8353.3158, "2025-04": 8585.6078, "2025-05": 8714.4871, "2025-06": 8855.5681, "2025-07": 9023.973, "2025-08": 9193.2441, "2025-09": 9384.0922, "2025-10": 9603.8623, "2025-11": 9841.3581, "2025-12": 10121.3715, "2026-01": 10413.0309, "2026-02": 10714.6255, "2026-03": 11077.0608, "2026-04": 11363.0904, "2026-05": 11607.3937, "2026-06": 11826.4103};
+const IPC_ESTIM={};
+// Auto-actualización del IPC desde INDEC (API pública datos.gob.ar · serie IPC Nivel General Nacional base dic 2016).
+// Actualiza/agrega los meses publicados y quita la marca de "estimado". Si falla, quedan los valores cargados.
+function fetchIPC(){ try{
+  fetch('https://apis.datos.gob.ar/series/api/series/?ids=148.3_INIVELNAL_DICI_M_26&format=json&last=48')
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ if(!j||!j.data) return; var ch=false;
+      j.data.forEach(function(row){ var ym=String(row&&row[0]||'').slice(0,7), v=row&&row[1];
+        if(!/^20\d\d-\d\d$/.test(ym) || typeof v!=='number') return;
+        if(IPC_IDX[ym]!==v){ IPC_IDX[ym]=v; ch=true; }
+        if(IPC_ESTIM[ym]){ delete IPC_ESTIM[ym]; ch=true; } });
+      if(ch){ try{renderYTD();}catch(e){} try{renderRPCompare();}catch(e){} } })
+    .catch(function(){});
+}catch(e){} }
+try{ window.addEventListener('load', function(){ setTimeout(fetchIPC, 500); }); }catch(e){}
 function ipcFactor(mm){const a=IPC_IDX["2025-"+mm],b=IPC_IDX["2026-"+mm];return (a&&b)?b/a:1.324;}
 var RP2025_CANAL = {};
 var RP2025M = {};
