@@ -3954,6 +3954,7 @@ renderCajas();
     </div>
   </div>
   <div style="display:flex;gap:1.2rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
+    <span><span class="msl"><i class="ti ti-history" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Período (cierre)</span> <span id="stockPeriodoWrap"></span></span>
     <span><span class="msl"><i class="ti ti-calendar-month" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Ventas del mes</span> <span id="stockMesWrap"></span></span>
     <span><span class="msl"><i class="ti ti-currency-dollar" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Dólar de cierre</span> <input type="number" id="stockDolarInput" onchange="setStockDolar(this.value)" style="width:92px;font-size:13px;font-weight:600;padding:5px 9px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt)"></span>
     <span style="font-size:11px;color:var(--txt2)" id="stockFechaLbl"></span>
@@ -3978,6 +3979,8 @@ renderCajas();
 <script>
 // ════ MÓDULO STOCK VALORIZADO (Stock vs Ventas por estado/origen/rubro) ════
 var STOCK_D = { fecha:null, estados:[], origenes:[], stockRows:[], ventasRows:[], ventasMeses:[], pricing:{}, costos:{}, dolar:1460 };
+var STOCK_HIST = {}; // { periodoKey(fecha) : snapshot STOCK_D } — historial por cierre mensual
+var stockPeriodo = null;
 var stockSelEstado = null, stockSelMes = null;
 var STOCK_ESTADO_COL = {'ACTIVO':'#4B5CC4','DISCONTINUO':'#B0568F','PRÓXIMO INGRESO':'#3E8FA6','NO VIGENTE':'#C08A3D','EXCEPCIÓN':'#8A6BB0','(SIN ESTADO)':'#7a7a85'};
 var STOCK_PAL = ['#4B5CC4','#B0568F','#3E8FA6','#C08A3D','#8A6BB0','#7a7a85'];
@@ -4054,8 +4057,12 @@ async function handleStockFile(file){
     var origenes=Object.keys(origSet).sort(function(a,b){var ia=ORI_ORDER.indexOf(a),ib=ORI_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
     var EST_ORDER=['ACTIVO','DISCONTINUO','PRÓXIMO INGRESO','NO VIGENTE','EXCEPCIÓN'];
     var estados=Object.keys(estadosSet).sort(function(a,b){var ia=EST_ORDER.indexOf(a),ib=EST_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
-    var prevP=(STOCK_D&&STOCK_D.pricing)||{}; var prevC=(STOCK_D&&STOCK_D.costos)||{}; var prevD=(STOCK_D&&STOCK_D.dolar)||1460;
-    STOCK_D={ fecha:fecha, estados:estados, origenes:origenes, stockRows:stockRows, ventasRows:ventasRows, ventasMeses:Object.keys(mesesSet).sort(), pricing:prevP, costos:prevC, dolar:prevD };
+    var perKey = fecha || ('carga-'+(Object.keys(STOCK_HIST).length+1));
+    var prevSnap = STOCK_HIST[perKey]; // solo se reusa pricing/costos si es re-carga del MISMO cierre
+    var prevP=(prevSnap&&prevSnap.pricing)||{}; var prevC=(prevSnap&&prevSnap.costos)||{};
+    var prevD=(prevSnap&&prevSnap.dolar)||(STOCK_D&&STOCK_D.dolar)||1460;
+    var snap={ fecha:fecha, estados:estados, origenes:origenes, stockRows:stockRows, ventasRows:ventasRows, ventasMeses:Object.keys(mesesSet).sort(), pricing:prevP, costos:prevC, dolar:prevD };
+    STOCK_HIST[perKey]=snap; stockPeriodo=perKey; STOCK_D=snap;
     stockSelEstado=null; stockSelMes=null;
     setStockProgress(92,'<span class="spin">&#8635;</span> Actualizando...');
     await new Promise(function(r){setTimeout(r,0);});
@@ -4087,7 +4094,7 @@ async function handlePricingFile(file){
     var map={}, n=0;
     for(var i=1;i<rows.length;i++){ var r=rows[i]; if(!r) continue; var sku=String(r[iSku]==null?'':r[iSku]).trim(); if(!sku) continue; var mn=num(r[iMin]); if(mn>0){ map[sku]=mn; n++; } }
     if(!STOCK_D) STOCK_D={estados:[],origenes:[],stockRows:[],ventasRows:[],ventasMeses:[],pricing:{},dolar:1460};
-    STOCK_D.pricing=map; if(!STOCK_D.dolar)STOCK_D.dolar=1460;
+    STOCK_D.pricing=map; if(!STOCK_D.dolar)STOCK_D.dolar=1460; if(stockPeriodo)STOCK_HIST[stockPeriodo]=STOCK_D;
     setPricingProgress(90,'<span class="spin">&#8635;</span> Actualizando...');
     await new Promise(function(r){setTimeout(r,0);});
     renderStock();
@@ -4099,6 +4106,8 @@ async function handlePricingFile(file){
 }
 function setStockDolar(v){ v=parseFloat(v)||0; if(v<=0) return; if(!STOCK_D)STOCK_D={pricing:{}}; STOCK_D.dolar=v; renderStock(); }
 function stkToggleUploads(){ var p=document.getElementById('stkUploadPanel'); if(!p)return; var open=(p.style.display==='none'||!p.style.display); p.style.display=open?'block':'none'; var c=document.getElementById('stkUpChev'); if(c)c.style.transform=open?'rotate(180deg)':''; }
+function stkPerLabel(p){ if(/^\d{4}-\d{2}-\d{2}$/.test(p)){var x=p.split('-');return 'al '+x[2]+'/'+x[1]+'/'+x[0].slice(2);} return p; }
+function setStockPeriodo(p){ if(!STOCK_HIST[p])return; stockPeriodo=p; STOCK_D=STOCK_HIST[p]; stockSelEstado=null; stockSelMes=null; renderStock(); }
 function setCostosProgress(pct,msg){ document.getElementById('costosProgressBar').classList.add('show'); document.getElementById('costosProgressFill').style.width=pct+'%'; document.getElementById('costosUploadStatus').innerHTML=msg; }
 async function handleCostosFile(file){
   if(!file) return; var zone=document.getElementById('costosUploadZone'); zone.style.pointerEvents='none';
@@ -4119,7 +4128,7 @@ async function handleCostosFile(file){
       if(!(sku in map) || fe>=fmap[sku]){ map[sku]=cost; fmap[sku]=fe; } }
     var n=Object.keys(map).length;
     if(!STOCK_D) STOCK_D={estados:[],origenes:[],stockRows:[],ventasRows:[],ventasMeses:[],pricing:{},costos:{},dolar:1460};
-    STOCK_D.costos=map; if(!STOCK_D.dolar)STOCK_D.dolar=1460;
+    STOCK_D.costos=map; if(!STOCK_D.dolar)STOCK_D.dolar=1460; if(stockPeriodo)STOCK_HIST[stockPeriodo]=STOCK_D;
     setCostosProgress(90,'<span class="spin">&#8635;</span> Actualizando...');
     await new Promise(function(r){setTimeout(r,0);});
     renderStock();
@@ -4239,7 +4248,12 @@ function stkRenderImmo(estado, pricing, dolar){
   el.innerHTML='<b>Capital inmovilizado en '+stockCap(estado)+':</b> '+stkUSD(c)+' al costo. A precio de lista vale '+stkUSD(v)+' → margen potencial '+stkUSD(mg)+' ('+pct.toFixed(0)+'%).'+(disc?' <b>Discontinuo:</b> margen que sólo se realiza si se liquida.':'');
 }
 function renderStock(){
-  var S=STOCK_D||{}; var cardsEl=document.getElementById('stockCards'); if(!cardsEl) return;
+  var cardsEl=document.getElementById('stockCards'); if(!cardsEl) return;
+  var pers=Object.keys(STOCK_HIST).sort();
+  if(pers.length){ if(!stockPeriodo||!STOCK_HIST[stockPeriodo]) stockPeriodo=pers[pers.length-1]; STOCK_D=STOCK_HIST[stockPeriodo]; }
+  var pw=document.getElementById('stockPeriodoWrap');
+  if(pw){ pw.innerHTML = pers.length ? '<select onchange="setStockPeriodo(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+pers.map(function(p){return '<option value="'+p+'"'+(p===stockPeriodo?' selected':'')+'>'+stkPerLabel(p)+'</option>';}).join('')+'</select>' : '<span style="font-size:12px;color:var(--txt2)">—</span>'; }
+  var S=STOCK_D||{};
   var estados=(S.estados||[]).filter(function(e){return e!=='(SIN ESTADO)' && e!=='(VACIO)' && e!=='';});
   var v1El=document.getElementById('stkV1'), v2El=document.getElementById('stkV2'), immoEl=document.getElementById('stkImmo');
   var mw=document.getElementById('stockMesWrap'), fl=document.getElementById('stockFechaLbl'), di=document.getElementById('stockDolarInput');
@@ -5280,7 +5294,7 @@ function rsemBuildPlano(){
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
-    stock:{STOCK_D:g('STOCK_D')},
+    stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo')},
     logistica:{LOG_D:g('LOG_D')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
@@ -5290,7 +5304,7 @@ function rsemBuildPlano(){
     +'try{if(s.cajas&&s.cajas.CAJAS_D&&typeof CAJAS_D!=="undefined")CAJAS_D=s.cajas.CAJAS_D;}catch(e){}'
     +'try{if(s.cajas&&s.cajas.AR_MAYORISTA_D&&typeof AR_MAYORISTA_D!=="undefined")AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}'
     +'try{if(s.cajas&&s.cajas.RENTAB_D&&typeof RENTAB_D!=="undefined")RENTAB_D=s.cajas.RENTAB_D;}catch(e){}'
-    +'try{if(s.stock&&s.stock.STOCK_D&&typeof STOCK_D!=="undefined")STOCK_D=s.stock.STOCK_D;}catch(e){}'
+    +'try{if(s.stock){if(s.stock.STOCK_HIST){STOCK_HIST=s.stock.STOCK_HIST;stockPeriodo=s.stock.stockPeriodo||Object.keys(STOCK_HIST).sort().pop()||null;if(stockPeriodo&&STOCK_HIST[stockPeriodo])STOCK_D=STOCK_HIST[stockPeriodo];}else if(s.stock.STOCK_D){STOCK_D=s.stock.STOCK_D;if(STOCK_D&&STOCK_D.fecha){STOCK_HIST[STOCK_D.fecha]=STOCK_D;stockPeriodo=STOCK_D.fecha;}}}}catch(e){}'
     +'try{if(s.logistica&&s.logistica.LOG_D&&typeof LOG_D!=="undefined")LOG_D=s.logistica.LOG_D;}catch(e){}'
     +'try{if(s.fotos){Object.assign(prodImgCache,s.fotos);Object.assign(prodImgUser,s.fotos);}}catch(e){}'
     +'try{if(s.fact&&s.fact.DATA_D)applyFactState(s.fact);}catch(e){}'
@@ -5350,7 +5364,7 @@ function rsemSnapObj(){
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
-    stock:{STOCK_D:g('STOCK_D')},
+    stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo')},
     logistica:{LOG_D:g('LOG_D')},
     hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
@@ -5364,7 +5378,7 @@ function rsemApplySnap(s){
   try{if(s.cajas&&s.cajas.CAJAS_D)CAJAS_D=s.cajas.CAJAS_D;}catch(e){}
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
   try{if(s.cajas&&s.cajas.RENTAB_D)RENTAB_D=s.cajas.RENTAB_D;}catch(e){}
-  try{if(s.stock&&s.stock.STOCK_D)STOCK_D=s.stock.STOCK_D;}catch(e){}
+  try{if(s.stock){ if(s.stock.STOCK_HIST){ STOCK_HIST=s.stock.STOCK_HIST; stockPeriodo=s.stock.stockPeriodo||Object.keys(STOCK_HIST).sort().pop()||null; if(stockPeriodo&&STOCK_HIST[stockPeriodo])STOCK_D=STOCK_HIST[stockPeriodo]; } else if(s.stock.STOCK_D){ STOCK_D=s.stock.STOCK_D; if(STOCK_D&&STOCK_D.fecha){STOCK_HIST[STOCK_D.fecha]=STOCK_D;stockPeriodo=STOCK_D.fecha;} } }}catch(e){}
   try{if(s.logistica&&s.logistica.LOG_D)LOG_D=s.logistica.LOG_D;}catch(e){}
   try{if(s.fotos){Object.assign(prodImgCache,s.fotos);Object.assign(prodImgUser,s.fotos);}}catch(e){}
   try{if(s.fact&&s.fact.DATA_D)applyFactState(s.fact);}catch(e){}
