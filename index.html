@@ -4154,6 +4154,7 @@ function setStockMes(m){ stockSelMes=m; renderStock(); }
 function stkNum(v){ return Math.round(v||0).toLocaleString('es-AR'); }
 function stkUSD(v){ return 'USD '+Math.round(v||0).toLocaleString('es-AR'); }
 function stkMgPct(c,v){ return v>0?((v-c)/v*100).toFixed(0)+'%':'—'; }
+function stkMkup(c,v){ return c>0?(v/c).toFixed(2).replace('.',',')+'x':'—'; }
 function stkOrderKeys(keys, order){ return keys.sort(function(a,b){var ia=order.indexOf(a),ib=order.indexOf(b);ia=ia<0?99:ia;ib=ib<0?99:ib; if(ia!==ib)return ia-ib; return a<b?-1:1;}); }
 function stkUnion(a,b){ var s={}; for(var k in a)s[k]=1; for(var k in b)s[k]=1; return Object.keys(s); }
 function stkRubOrder(a,b){ var s={}; for(var k in a)s[k]=1; for(var k in b)s[k]=1; return Object.keys(s).sort(function(x,y){ return ((b[y]?b[y].val:0)+(a[y]?a[y].val:0))-((b[x]?b[x].val:0)+(a[x]?a[x].val:0)); }); }
@@ -4209,19 +4210,19 @@ function stkBuildV1(estado, mes){
 function stkBuildV2(estado, pricing, dolar){
   var m=stkTreeMargin(estado, pricing, dolar);
   var oris=stkOrderKeys(Object.keys(m.tree), STOCK_D.origenes||[]);
-  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo / Modelo</th><th style="background:#B0568F">Cant</th><th style="background:#B0568F">Costo</th><th style="background:#B0568F">Venta</th><th style="background:#7A3E8F">Margen</th><th style="background:#7A3E8F">Mg%</th></tr></thead><tbody>';
+  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo / Modelo</th><th style="background:#B0568F">Cant</th><th style="background:#B0568F">Costo</th><th style="background:#B0568F">Venta</th><th style="background:#7A3E8F">Margen</th><th style="background:#7A3E8F">Mg%</th><th style="background:#3E8FA6">Mkup comercial</th></tr></thead><tbody>';
   oris.forEach(function(ori,oi){ var o=m.tree[ori]; var oc=STOCK_ORI_COL[ori]||'#7a7a85';
-    h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+stkNum(o.cant)+'</td><td>'+stkUSD(o.costo)+'</td><td>'+stkUSD(o.venta)+'</td><td>'+stkUSD(o.venta-o.costo)+'</td><td>'+stkMgPct(o.costo,o.venta)+'</td></tr>';
+    h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+stkNum(o.cant)+'</td><td>'+stkUSD(o.costo)+'</td><td>'+stkUSD(o.venta)+'</td><td>'+stkUSD(o.venta-o.costo)+'</td><td>'+stkMgPct(o.costo,o.venta)+'</td><td>'+stkMkup(o.costo,o.venta)+'</td></tr>';
     Object.keys(o.rubros).sort(function(a,b){return o.rubros[b].costo-o.rubros[a].costo;}).forEach(function(rub,ri){ var rr=o.rubros[rub]; var rid='v2_'+oi+'_'+ri;
-      h+='<tr class="k-rub" data-r="'+rid+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(rr.cant)+'</td><td>'+stkUSD(rr.costo)+'</td><td>'+stkUSD(rr.venta)+'</td><td>'+stkUSD(rr.venta-rr.costo)+'</td><td>'+stkMgPct(rr.costo,rr.venta)+'</td></tr>';
+      h+='<tr class="k-rub" data-r="'+rid+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(rr.cant)+'</td><td>'+stkUSD(rr.costo)+'</td><td>'+stkUSD(rr.venta)+'</td><td>'+stkUSD(rr.venta-rr.costo)+'</td><td>'+stkMgPct(rr.costo,rr.venta)+'</td><td>'+stkMkup(rr.costo,rr.venta)+'</td></tr>';
       Object.keys(rr.estilos).sort().forEach(function(es,ei){ var ee=rr.estilos[es]; var eid=rid+'_'+ei;
-        h+='<tr class="k-est-row c-'+rid+'" data-e="'+eid+'" style="display:none"><td><span class="cv">▶</span> '+es+'</td><td>'+stkNum(ee.cant)+'</td><td>'+stkUSD(ee.costo)+'</td><td>'+stkUSD(ee.venta)+'</td><td>'+stkUSD(ee.venta-ee.costo)+'</td><td>'+stkMgPct(ee.costo,ee.venta)+'</td></tr>';
+        h+='<tr class="k-est-row c-'+rid+'" data-e="'+eid+'" style="display:none"><td><span class="cv">▶</span> '+es+'</td><td>'+stkNum(ee.cant)+'</td><td>'+stkUSD(ee.costo)+'</td><td>'+stkUSD(ee.venta)+'</td><td>'+stkUSD(ee.venta-ee.costo)+'</td><td>'+stkMgPct(ee.costo,ee.venta)+'</td><td>'+stkMkup(ee.costo,ee.venta)+'</td></tr>';
         Object.keys(ee.modelos).sort().forEach(function(mo){ var mm=ee.modelos[mo];
-          h+='<tr class="k-mod-row cm-'+rid+' m-'+eid+'" style="display:none"><td>'+mo+'</td><td>'+stkNum(mm.cant)+'</td><td>'+stkUSD(mm.costo)+'</td><td>'+stkUSD(mm.venta)+'</td><td>'+stkUSD(mm.venta-mm.costo)+'</td><td>'+stkMgPct(mm.costo,mm.venta)+'</td></tr>'; });
+          h+='<tr class="k-mod-row cm-'+rid+' m-'+eid+'" style="display:none"><td>'+mo+'</td><td>'+stkNum(mm.cant)+'</td><td>'+stkUSD(mm.costo)+'</td><td>'+stkUSD(mm.venta)+'</td><td>'+stkUSD(mm.venta-mm.costo)+'</td><td>'+stkMgPct(mm.costo,mm.venta)+'</td><td>'+stkMkup(mm.costo,mm.venta)+'</td></tr>'; });
       });
     });
   });
-  h+='<tr class="k-tot"><td>Total '+stockCap(estado)+'</td><td>'+stkNum(m.tot.cant)+'</td><td>'+stkUSD(m.tot.costo)+'</td><td>'+stkUSD(m.tot.venta)+'</td><td>'+stkUSD(m.tot.venta-m.tot.costo)+'</td><td>'+stkMgPct(m.tot.costo,m.tot.venta)+'</td></tr>';
+  h+='<tr class="k-tot"><td>Total '+stockCap(estado)+'</td><td>'+stkNum(m.tot.cant)+'</td><td>'+stkUSD(m.tot.costo)+'</td><td>'+stkUSD(m.tot.venta)+'</td><td>'+stkUSD(m.tot.venta-m.tot.costo)+'</td><td>'+stkMgPct(m.tot.costo,m.tot.venta)+'</td><td>'+stkMkup(m.tot.costo,m.tot.venta)+'</td></tr>';
   return h+'</tbody></table></div>';
 }
 function stkRenderImmo(estado, pricing, dolar){
