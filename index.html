@@ -2008,7 +2008,7 @@ function renderYTD(){
   if(cmpSel==='YTD'){rows.forEach(r=>{s25+=r.v25;s25a+=r.v25a;s26+=r.v26;});per='YTD '+(rows.length?(rows[0].mn+'–'+rows[rows.length-1].mn):'');}
   else{const i=parseInt(cmpSel),mm=cmpSel;s25=YTD_2025[i]||0;s25a=s25*ipcFactor(mm);s26=m26[mm]||0;per=MN[i-1];}
   const dif=s26-s25a,gr=s25a?((s26-s25a)/s25a*100):0;
-  const ipcPct=s25?((s25a/s25-1)*100):0;const estimIPC=(cmpSel==='YTD'?rows.some(r=>IPC_ESTIM['2026-'+r.mm]):!!IPC_ESTIM['2026-'+cmpSel]);
+  const ipcPct=s25?((s25a/s25-1)*100):0;const estimIPC=(cmpSel==='YTD'?rows.some(r=>ipcEstim(r.mm)):ipcEstim(cmpSel));
   renderCmpChips();
   const _yk=document.getElementById('ytdKpis');_yk.style.display='block';
   _yk.innerHTML=`
@@ -2064,7 +2064,12 @@ function fetchIPC(){ try{
     .catch(function(){});
 }catch(e){} }
 try{ window.addEventListener('load', function(){ setTimeout(fetchIPC, 500); }); }catch(e){}
-function ipcFactor(mm){const a=IPC_IDX["2025-"+mm],b=IPC_IDX["2026-"+mm];return (a&&b)?b/a:1.324;}
+function ipcFactor(mm){var a=IPC_IDX["2025-"+mm],b=IPC_IDX["2026-"+mm]; if(a&&b) return b/a;
+  // mes 2026 aún sin IPC publicado: usar el factor del último mes disponible (ej. julio usa junio)
+  for(var k=parseInt(mm,10)-1;k>=1;k--){ var kk=(k<10?'0':'')+k, aa=IPC_IDX["2025-"+kk], bb=IPC_IDX["2026-"+kk]; if(aa&&bb) return bb/aa; }
+  return 1.324; }
+// Un mes está "estimado" si no tiene su propio IPC 2026 publicado (usa el del mes anterior)
+function ipcEstim(mm){ return !!IPC_ESTIM["2026-"+mm] || !IPC_IDX["2026-"+mm]; }
 var RP2025_CANAL = {};
 var RP2025M = {};
 let cmpSel='YTD';
@@ -2083,7 +2088,7 @@ function renderRPCompare(){
   const pc=x=>`${x>=0?'+':''}${x.toFixed(1)}%`,col=x=>x>=0?'#2a6b53':'#c0392b';
   const gv=(cur,base)=>base>0?pc((cur-base)/base*100):(cur>0?'Nuevo':'—');
   const gcol=(cur,base)=>base>0?col((cur-base)/base*100):(cur>0?'#2a6b53':'var(--txt2)');
-  let estim=false; months.forEach(mm=>{if(IPC_ESTIM['2026-'+mm])estim=true;});
+  let estim=false; months.forEach(mm=>{if(ipcEstim(mm))estim=true;});
   function compute(ckFilter){
     const r25={},r25a={},r26={};
     // Para un canal, comparar SOLO los meses en que tuvo actividad en 2026 (evita comparar contra meses donde el canal ya cerró/no existía). El total (sin filtro) usa todos los meses.
@@ -2130,7 +2135,7 @@ function renderRPCompare(){
   let html=renderBlock('TODOS LOS CANALES',compute(null),true,null);
   CANALES.forEach(([ck,label])=>{html+=renderBlock(label,compute(ck),false,ck);});
   var _pb=document.getElementById('rpPeriodBox');
-  if(_pb)_pb.innerHTML=`<div class="rp-period">Período: <strong style="color:var(--petrol,#0E3B43)">${per}</strong> · 2025 ajustado por IPC interanual INDEC${estim?' · Jun 2026 estimado':''}</div>`;
+  if(_pb)_pb.innerHTML=`<div class="rp-period">Período: <strong style="color:var(--petrol,#0E3B43)">${per}</strong> · 2025 ajustado por IPC interanual INDEC${estim?' · mes en curso con IPC del mes anterior (estimado)':''}</div>`;
   document.getElementById('rpCompWrap').innerHTML=`<div class="rp-grid">${html||'<div class="prov-empty">Sin datos</div>'}</div>`;
 }
 function buildFactMonthChips(){
