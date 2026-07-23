@@ -723,8 +723,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   #rpCanalBlocks .rpc-grid{display:flex;flex-wrap:nowrap;gap:8px;align-items:flex-start}
   #rpCanalBlocks .rpc{flex:1 1 0;min-width:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .15s}
   #rpCanalBlocks .rpc:hover{box-shadow:0 2px 10px rgba(0,0,0,.09)}
-  #rpCanalBlocks .rpc-photo{position:relative;height:92px;display:flex;align-items:center;justify-content:center}
-  #rpCanalBlocks .rpc-img{width:100%;height:100%;object-fit:cover;display:block}
+  #rpCanalBlocks .rpc-photo{position:relative;height:118px;display:flex;align-items:center;justify-content:center}
+  #rpCanalBlocks .rpc-img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box;display:block}
   #rpCanalBlocks .rpc-ic{font-size:38px}
   #rpCanalBlocks .rpc-chev{position:absolute;top:7px;right:9px;font-size:15px;opacity:.6;transition:transform .2s}
   #rpCanalBlocks .rpc.open .rpc-chev{transform:rotate(180deg)}
@@ -2767,8 +2767,9 @@ function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
     const photoInner = foto
       ? `<img src="${foto}" alt="${r.cat}" class="rpc-img">`
       : `<i class="ti ti-${icon} rpc-ic" style="color:${col}"></i>`;
+    const photoBg = foto ? '#ffffff' : chTint(col,0.86);
     return `<div class="rpc" onclick="this.classList.toggle('open')">
-      <div class="rpc-photo" style="background:${chTint(col,0.86)}">
+      <div class="rpc-photo" style="background:${photoBg}">
         ${photoInner}
         <span class="rpc-chev" style="color:${col}"><i class="ti ti-chevron-down"></i></span>
         <button class="rpc-fotobtn" onclick="event.stopPropagation();rpTriggerImg('${r.cat}','${canalKey}')"><i class="ti ti-camera" style="font-size:11px"></i>${foto?'Cambiar':'Foto'}</button>
@@ -2800,15 +2801,20 @@ function renderRP(){
     document.getElementById('rpCanalBlocks').innerHTML='<div class="prov-empty">Sin datos para el mes seleccionado</div>';
     return;
   }
-  // Un único producto estrella por rubro (misma foto/color en todos los canales):
-  // se toma el SKU top del canal con más unidades de ese rubro en el mes.
+  // Un único producto estrella por rubro (misma foto/color en todos los canales),
+  // tomando el más vendido a lo largo de TODO el año (acumula todos los meses/canales).
   const skuByCat = {};
   RP_CAT_ORDER.forEach(cat=>{
+    const acc = {};
+    for(const mk in RUBROPROV_D){
+      const md = RUBROPROV_D[mk]||{};
+      for(const ck in md){
+        const cell = md[ck] && md[ck][cat];
+        if(cell){ const q=cell[2]||0, sku=cell[3]||''; if(sku) acc[sku]=(acc[sku]||0)+q; }
+      }
+    }
     let bestSku='', bestQ=-1;
-    canales.forEach(c=>{
-      const cell = mesData[c] && mesData[c][cat];
-      if(cell){ const q=cell[2]||0, sku=cell[3]||''; if(sku && q>bestQ){ bestQ=q; bestSku=sku; } }
-    });
+    for(const s in acc){ if(acc[s]>bestQ){ bestQ=acc[s]; bestSku=s; } }
     if(bestSku) skuByCat[cat]=bestSku;
   });
   document.getElementById('rpCanalBlocks').innerHTML = canales.map(c=>{
