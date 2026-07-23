@@ -4006,24 +4006,44 @@ async function handleStockFile(file){
     var SS=function(v){ return v==null?'':String(v).trim(); };
     // Stock: encab. fila 2 (idx1), datos fila 3. A=SKU(0) B=Rubro(1) D=Estilo(3) F=Origen(5) H=Estado(7) Q=Cant(16) S=Val USD(18)
     var rowsS=XLSX.utils.sheet_to_json(wb.Sheets[stockSheet],{header:1,raw:true,defval:null});
+    var findCol=function(hdrArr,tests,fb){ if(hdrArr){ for(var c=0;c<hdrArr.length;c++){ var t=SS(hdrArr[c]).toLowerCase(); for(var k=0;k<tests.length;k++){ if(tests[k](t)) return c; } } } return fb; };
+    var HS=rowsS[1]||[];
+    var cS={ sku:findCol(HS,[function(t){return t==='sku';}],0),
+      rub:findCol(HS,[function(t){return t==='rubro';}],1),
+      esti:findCol(HS,[function(t){return t==='estilo';}],3),
+      mod:findCol(HS,[function(t){return t==='modelo';}],4),
+      ori:findCol(HS,[function(t){return t.indexOf('origen')>=0;}],5),
+      est:findCol(HS,[function(t){return t==='estado';}],7),
+      cant:findCol(HS,[function(t){return t.indexOf('total cantidad')>=0;},function(t){return t==='cantidad';}],16),
+      val:findCol(HS,[function(t){return t.indexOf('total valorizado')>=0;},function(t){return t.indexOf('valorizado')>=0;}],18) };
     var stockRows=[], estadosSet={}, origSet={};
     for(var i=2;i<rowsS.length;i++){ var r=rowsS[i]; if(!r) continue;
-      var cant=num(r[16]), val=num(r[18]); if(cant===0 && val===0) continue;
-      var est=SS(r[7]).toUpperCase()||'(SIN ESTADO)';
-      var ori=SS(r[5])||'(Sin origen)'; var rub=SS(r[1])||'(Sin rubro)'; var esti=SS(r[3])||'(sin estilo)';
-      stockRows.push([est,ori,rub,esti,SS(r[4]),cant,val,SS(r[0])]); estadosSet[est]=1; origSet[ori]=1;
+      var cant=num(r[cS.cant]), val=num(r[cS.val]); if(cant===0 && val===0) continue;
+      var est=SS(r[cS.est]).toUpperCase()||'(SIN ESTADO)';
+      var ori=SS(r[cS.ori])||'(Sin origen)'; var rub=SS(r[cS.rub])||'(Sin rubro)'; var esti=SS(r[cS.esti])||'(sin estilo)';
+      stockRows.push([est,ori,rub,esti,SS(r[cS.mod]),cant,val,SS(r[cS.sku])]); estadosSet[est]=1; origSet[ori]=1;
     }
     var fecha=null; try{ var c1=(rowsS[0]&&rowsS[0][2]); if(typeof c1==='number'){var d=XLSX.SSF.parse_date_code(c1); fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');} }catch(e){}
     setStockProgress(65,'<span class="spin">&#8635;</span> Procesando ventas...');
     await new Promise(function(r){setTimeout(r,0);});
     // Ventas: encab. fila 1, datos fila 2. A=Fecha(0) B=Estado(1) D=Rubro(3) F=Estilo(5) I=Origen(8) J=Cant(9) L=Val USD(11)
     var rowsV=XLSX.utils.sheet_to_json(wb.Sheets['Ventas'],{header:1,raw:true,defval:null});
+    var HV=rowsV[0]||[];
+    var cV={ fecha:findCol(HV,[function(t){return t==='fecha';}],0),
+      est:findCol(HV,[function(t){return t==='estado';}],1),
+      sku:findCol(HV,[function(t){return t==='sku';}],2),
+      rub:findCol(HV,[function(t){return t==='rubro';}],3),
+      esti:findCol(HV,[function(t){return t==='estilo';}],5),
+      mod:findCol(HV,[function(t){return t==='modelo';}],6),
+      ori:findCol(HV,[function(t){return t.indexOf('origen')>=0;}],8),
+      cant:findCol(HV,[function(t){return t==='cantidad';}],9),
+      val:findCol(HV,[function(t){return t.indexOf('total valorizado')>=0;},function(t){return t.indexOf('valorizado')>=0;}],11) };
     var ventasRows=[], mesesSet={};
     var vFecha=function(v){ if(typeof v==='number'){var d=XLSX.SSF.parse_date_code(v); return d.y+'-'+String(d.m).padStart(2,'0');} if(typeof v==='string'){var s=v.slice(0,7); return /^\d{4}-\d{2}$/.test(s)?s:null;} return null; };
-    for(var j=1;j<rowsV.length;j++){ var rv=rowsV[j]; if(!rv||rv[0]==null) continue;
-      var mes=vFecha(rv[0]); if(!mes) continue;
-      var est2=SS(rv[1]).toUpperCase()||'(SIN ESTADO)'; var ori2=SS(rv[8])||'(Sin origen)'; var rub2=SS(rv[3])||'(Sin rubro)'; var esti2=SS(rv[5])||'(sin estilo)';
-      ventasRows.push([mes,est2,ori2,rub2,esti2,SS(rv[6]),num(rv[9]),num(rv[11]),SS(rv[2])]); mesesSet[mes]=1;
+    for(var j=1;j<rowsV.length;j++){ var rv=rowsV[j]; if(!rv||rv[cV.fecha]==null) continue;
+      var mes=vFecha(rv[cV.fecha]); if(!mes) continue;
+      var est2=SS(rv[cV.est]).toUpperCase()||'(SIN ESTADO)'; var ori2=SS(rv[cV.ori])||'(Sin origen)'; var rub2=SS(rv[cV.rub])||'(Sin rubro)'; var esti2=SS(rv[cV.esti])||'(sin estilo)';
+      ventasRows.push([mes,est2,ori2,rub2,esti2,SS(rv[cV.mod]),num(rv[cV.cant]),num(rv[cV.val]),SS(rv[cV.sku])]); mesesSet[mes]=1;
     }
     var ORI_ORDER=['Importado','Fábrica','Proveedor Nacional'];
     var origenes=Object.keys(origSet).sort(function(a,b){var ia=ORI_ORDER.indexOf(a),ib=ORI_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
