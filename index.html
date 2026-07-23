@@ -3954,7 +3954,7 @@ renderCajas();
     <span style="font-size:11px;color:var(--txt2)" id="stockFechaLbl"></span>
   </div>
   <div style="font-size:11.5px;color:var(--txt2);margin-bottom:.5rem">Tocá un estado para ver las dos vistas · abrí cada rubro para ver sus estilos.</div>
-  <div id="stockCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.55rem;margin-bottom:1rem"></div>
+  <div id="stockCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:.7rem;margin-bottom:1rem"></div>
   <div class="stk-cols">
     <div class="k-card">
       <div class="k-h" id="stkV1H" style="color:#4B5CC4">Valorizado al costo (USD)</div>
@@ -4250,11 +4250,11 @@ function renderStock(){
   (S.ventasRows||[]).forEach(function(a){ if(a[0]!==stockSelMes)return; var e=a[1];(vtTot[e]=vtTot[e]||{cant:0,val:0});vtTot[e].cant+=a[6];vtTot[e].val+=stkRowCostoUSD(a[8],a[6],a[7]);});
   cardsEl.innerHTML = estados.map(function(e,i){
     var col=STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length]; var st=stTot[e]||{cant:0,val:0}; var vt=vtTot[e]||{cant:0,val:0}; var act=e===stockSelEstado;
-    return '<div onclick="setStockEstado(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:11px;padding:8px 10px;border:1.5px solid '+col+';border-left:5px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+';transition:.12s">'
-      +'<div style="font-size:12px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:5px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:11px"></i>':'')+'</div>'
-      +'<div style="display:flex;gap:12px;margin-top:5px;flex-wrap:wrap">'
-        +'<div><div style="font-size:9.5px;color:var(--txt2)">Stock</div><div style="font-size:13px;font-weight:700">'+stkUSD(st.val)+'</div><div style="font-size:9.5px;color:var(--txt2)">'+stkNum(st.cant)+' u.</div></div>'
-        +'<div><div style="font-size:9.5px;color:var(--txt2)">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:13px;font-weight:700">'+stkUSD(vt.val)+'</div><div style="font-size:9.5px;color:var(--txt2)">'+stkNum(vt.cant)+' u.</div></div>'
+    return '<div onclick="setStockEstado(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:11px;padding:10px 12px;border:1.5px solid '+col+';border-left:5px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+';transition:.12s">'
+      +'<div style="font-size:13px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:5px;margin-bottom:6px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
+      +'<div style="display:flex;gap:18px;flex-wrap:wrap">'
+        +'<div><div style="font-size:11.5px;color:var(--txt2);font-weight:600">Stock</div><div style="font-size:17px;font-weight:800">'+stkUSD(st.val)+'</div><div style="font-size:12.5px;color:var(--txt);font-weight:700">'+stkNum(st.cant)+' u.</div></div>'
+        +'<div><div style="font-size:11.5px;color:var(--txt2);font-weight:600">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:17px;font-weight:800">'+stkUSD(vt.val)+'</div><div style="font-size:12.5px;color:var(--txt);font-weight:700">'+stkNum(vt.cant)+' u.</div></div>'
       +'</div></div>';
   }).join('');
   if(v1El) v1El.innerHTML=stkBuildV1(stockSelEstado, stockSelMes);
