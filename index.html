@@ -720,8 +720,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   </div>
 
   <style>
-  #rpCanalBlocks .rpc-grid{display:flex;flex-wrap:nowrap;gap:8px;align-items:flex-start}
-  #rpCanalBlocks .rpc{flex:1 1 0;min-width:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .15s}
+  #rpCanalBlocks .rpc-grid{display:flex;flex-wrap:nowrap;gap:8px;align-items:stretch}
+  #rpCanalBlocks .rpc{flex:1 1 0;min-width:0;display:flex;flex-direction:column;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;transition:box-shadow .15s}
   #rpCanalBlocks .rpc:hover{box-shadow:0 2px 10px rgba(0,0,0,.09)}
   #rpCanalBlocks .rpc-photo{position:relative;height:118px;display:flex;align-items:center;justify-content:center}
   #rpCanalBlocks .rpc-img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box;display:block}
@@ -729,12 +729,12 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   #rpCanalBlocks .rpc-fotobtn{position:absolute;bottom:6px;right:6px;display:flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#374151;background:rgba(255,255,255,.92);border:1px solid #d1d5db;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit}
   #rpCanalBlocks .rpc-inp{display:none}
   #rpCanalBlocks .rpc-body{padding:7px 9px}
-  #rpCanalBlocks .rpc-rubro{font-size:11.5px;font-weight:700;color:#1f2937;line-height:1.18}
-  #rpCanalBlocks .rpc-prov{font-size:10px;color:#6b7280;margin-top:2px;line-height:1.15}
-  #rpCanalBlocks .rpc-det-in{padding:2px 9px 9px}
-  #rpCanalBlocks .rpc-row{display:flex;justify-content:space-between;align-items:baseline;gap:4px;padding:4px 0;border-top:1px solid #f0f0f0}
-  #rpCanalBlocks .rpc-l{font-size:10px;color:#6b7280;white-space:nowrap}
-  #rpCanalBlocks .rpc-v{font-size:12px;font-weight:700;color:#1f2937;text-align:right}
+  #rpCanalBlocks .rpc-rubro{font-size:11.5px;font-weight:700;color:#1f2937;line-height:1.18;min-height:27px}
+  #rpCanalBlocks .rpc-prov{font-size:10px;color:#6b7280;margin-top:2px;line-height:1.15;min-height:23px}
+  #rpCanalBlocks .rpc-det-in{padding:2px 9px 9px;margin-top:auto}
+  #rpCanalBlocks .rpc-row{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;padding:4px 0;border-top:1px solid #f0f0f0}
+  #rpCanalBlocks .rpc-l{font-size:10px;color:#6b7280;line-height:1.2}
+  #rpCanalBlocks .rpc-v{font-size:12px;font-weight:700;color:#1f2937;text-align:right;white-space:nowrap}
   #rpCanalBlocks .rpc-total{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:8px 13px;border-radius:9px;font-size:12.5px;font-weight:600}
   </style>
   <div id="rpCanalBlocks"></div>
@@ -2670,6 +2670,11 @@ const RP_CAT_ICON = {
 };
 // foto fija por rubro (misma que Top 5, catálogo Tienda Nube). Se puede setear con un clic; queda en Supabase al Guardar.
 const RP_CAT_PHOTO = {};
+// SKU forzado por rubro: si se define, esa foto gana sobre el "más vendido" automático.
+const RP_CAT_FORCE_SKU = {
+  // 'PROVEEDOR NACIONAL':'SKU_COPA',
+  // 'DECO/NAVIDAD/BAZAR IMPORTADO':'SKU_DECO',
+};
 function rpSafe(s){ return s.replace(/[^A-Za-z0-9]/g,'_'); }
 // foto desde el SKU más vendido del rubro (catálogo Tienda Nube), con fallback al mismo modelo (6 díg)
 function rpPhotoFromSku(sku){
@@ -2678,8 +2683,13 @@ function rpPhotoFromSku(sku){
   if(!_photoModelIdx){ _photoModelIdx={}; for(var k in PHOTO_MAP){ var m=k.slice(0,6); if(!_photoModelIdx[m])_photoModelIdx[m]=PHOTO_MAP[k]; } }
   return _photoModelIdx[String(sku).slice(0,6)] || '';
 }
-// prioridad: foto subida a mano > foto del más vendido (auto) > foto fija manual > ícono
-function rpFoto(rubro, topSku){ return prodImgCache['rp|'+rubro] || rpPhotoFromSku(topSku) || RP_CAT_PHOTO[rubro] || ''; }
+// prioridad: foto subida a mano > SKU forzado por rubro > foto del más vendido (auto) > foto fija manual > ícono
+function rpFoto(rubro, topSku){
+  return prodImgCache['rp|'+rubro]
+    || (RP_CAT_FORCE_SKU[rubro] ? rpPhotoFromSku(RP_CAT_FORCE_SKU[rubro]) : '')
+    || rpPhotoFromSku(topSku)
+    || RP_CAT_PHOTO[rubro] || '';
+}
 function rpTriggerImg(rubro, canal){ var inp=document.getElementById('rpinp_'+canal+'_'+rpSafe(rubro)); if(inp) inp.click(); }
 function handleRPImg(input, rubro){
   if(!input.files[0]) return;
