@@ -3235,7 +3235,29 @@ const CAJAS_CUENTA_COLORS = {
   'Cocos':'#c8873c','Balanz':'#9c5b45'
 };
 const CAJAS_LIQUIDO_CUENTAS = ['Efectivo ($)','Efectivo (USD)','Fondo FIMA Valorizado','Galicia -(USD)','$ Galicia','$ Santander','MP Disponible'];
-const CAJAS_ALIQUIDAR_CUENTAS = ['MP a Liquidar','PN a liquidar','GO Cuotas a Liquidar','Valores a Depositar','Cheques endosados','Cocos','Balanz'];
+const CAJAS_ALIQUIDAR_CUENTAS = ['MP a Liquidar','PN a liquidar','GO Cuotas a Liquidar','Valores a Depositar','Cocos','Balanz'];
+
+// Cuentas que NO deben computar en "A liquidar" (ni en el total ARS ni en la composición).
+// "Cheques endosados" son cheques ya endosados a terceros: no es plata a liquidar de la caja.
+const CAJAS_ALIQ_EXCLUIR = ['Cheques endosados'];
+function cajasAplicarExclusiones(){
+  if(typeof CAJAS_D!=='object' || !CAJAS_D) return;
+  for(const f in CAJAS_D){
+    const w = CAJAS_D[f];
+    if(!w || !w.cuentas) continue;
+    CAJAS_ALIQ_EXCLUIR.forEach(function(name){
+      const v = w.cuentas[name];
+      if(v){
+        const imp = v[0]||0;
+        if(v[1]==='Pesos'){
+          w.aliquidar = Math.round((w.aliquidar - imp)*100)/100;
+          w.total_ars = Math.round((w.total_ars - imp)*100)/100;
+        }
+        delete w.cuentas[name]; // idempotente: al borrarla no se vuelve a restar
+      }
+    });
+  }
+}
 
 let cajasSemana = null;
 let cajasCmpA = null, cajasCmpB = null; // semanas a comparar en el cuadro "Comparativa semanal por cuenta"
@@ -3247,6 +3269,7 @@ function fflCajas(v){return'ARS '+v.toLocaleString('es-AR',{minimumFractionDigit
 function dmyCajas(s){const d=new Date(s+'T00:00:00');return `${String(d.getDate()).padStart(2,'0')}-${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()]}`;}
 
 function buildCajasWeekChips(){
+  cajasAplicarExclusiones();
   const semanas = getCajasSemanas();
   if(!cajasSemana || !semanas.includes(cajasSemana)) cajasSemana = semanas[semanas.length-1] || null;
   const fmt = s => { const d=new Date(s+'T00:00:00'); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
@@ -3586,6 +3609,7 @@ function loadCajasManual(){
 }
 
 function renderCajas(){
+  cajasAplicarExclusiones();
   try{ renderRentab(); }catch(e){}
   if(!cajasSemana) return;
   renderCajasPanel();
