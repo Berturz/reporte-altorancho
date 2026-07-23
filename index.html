@@ -726,15 +726,11 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   #rpCanalBlocks .rpc-photo{position:relative;height:118px;display:flex;align-items:center;justify-content:center}
   #rpCanalBlocks .rpc-img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box;display:block}
   #rpCanalBlocks .rpc-ic{font-size:38px}
-  #rpCanalBlocks .rpc-chev{position:absolute;top:7px;right:9px;font-size:15px;opacity:.6;transition:transform .2s}
-  #rpCanalBlocks .rpc.open .rpc-chev{transform:rotate(180deg)}
   #rpCanalBlocks .rpc-fotobtn{position:absolute;bottom:6px;right:6px;display:flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#374151;background:rgba(255,255,255,.92);border:1px solid #d1d5db;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit}
   #rpCanalBlocks .rpc-inp{display:none}
   #rpCanalBlocks .rpc-body{padding:7px 9px}
   #rpCanalBlocks .rpc-rubro{font-size:11.5px;font-weight:700;color:#1f2937;line-height:1.18}
   #rpCanalBlocks .rpc-prov{font-size:10px;color:#6b7280;margin-top:2px;line-height:1.15}
-  #rpCanalBlocks .rpc-det{max-height:0;overflow:hidden;transition:max-height .22s ease}
-  #rpCanalBlocks .rpc.open .rpc-det{max-height:280px}
   #rpCanalBlocks .rpc-det-in{padding:2px 9px 9px}
   #rpCanalBlocks .rpc-row{display:flex;justify-content:space-between;align-items:baseline;gap:4px;padding:4px 0;border-top:1px solid #f0f0f0}
   #rpCanalBlocks .rpc-l{font-size:10px;color:#6b7280;white-space:nowrap}
@@ -2768,10 +2764,9 @@ function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
       ? `<img src="${foto}" alt="${r.cat}" class="rpc-img">`
       : `<i class="ti ti-${icon} rpc-ic" style="color:${col}"></i>`;
     const photoBg = foto ? '#ffffff' : chTint(col,0.86);
-    return `<div class="rpc" onclick="this.classList.toggle('open')">
+    return `<div class="rpc">
       <div class="rpc-photo" style="background:${photoBg}">
         ${photoInner}
-        <span class="rpc-chev" style="color:${col}"><i class="ti ti-chevron-down"></i></span>
         <button class="rpc-fotobtn" onclick="event.stopPropagation();rpTriggerImg('${r.cat}','${canalKey}')"><i class="ti ti-camera" style="font-size:11px"></i>${foto?'Cambiar':'Foto'}</button>
         <input type="file" accept="image/*" id="rpinp_${canalKey}_${safe}" class="rpc-inp" onclick="event.stopPropagation()" onchange="handleRPImg(this,'${r.cat}')">
       </div>
