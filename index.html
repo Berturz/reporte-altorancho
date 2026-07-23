@@ -2002,7 +2002,7 @@ function renderYTD(){
   const MNF=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const nd={},m26={};
   for(const d in DATA_D){if(d.slice(0,4)!=='2026')continue;const mm=d.slice(5,7);nd[mm]=(nd[mm]||0)+1;let t=0;const dw=DATA_D[d];for(const r in dw){const rw=dw[r];for(const c in rw)t+=rw[c].tv||0;}m26[mm]=(m26[mm]||0)+t;}
-  const av=['01','02','03','04','05','06'].filter(mm=>nd[mm]>=20);
+  const av=['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>nd[mm]>=1);
   const rows=av.map(mm=>{const i=parseInt(mm);const v25=YTD_2025[i]||0;return{mm,i,mn:MN[i-1],v25,v25a:v25*ipcFactor(mm),v26:m26[mm]||0};});
   let s25=0,s25a=0,s26=0,per;
   if(cmpSel==='YTD'){rows.forEach(r=>{s25+=r.v25;s25a+=r.v25a;s26+=r.v26;});per='YTD '+(rows.length?(rows[0].mn+'–'+rows[rows.length-1].mn):'');}
@@ -2042,8 +2042,8 @@ function renderYTD(){
 }
 function renderCmpChips(){
   const nd={};for(const d in DATA_D){if(d.slice(0,4)==='2026'){const mm=d.slice(5,7);nd[mm]=(nd[mm]||0)+1;}}
-  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio'];
-  const av=['01','02','03','04','05','06'].filter(mm=>nd[mm]>=20);
+  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const av=['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>nd[mm]>=1);
   const el=document.getElementById('cmpChips'); if(!el)return;
   el.innerHTML=['YTD',...av].map(v=>{const lbl=v==='YTD'?'YTD':MN[parseInt(v)-1];return `<button class="cmp-chip${cmpSel===v?' act':''}" onclick="setCmp('${v}')">${lbl}</button>`;}).join('');
 }
