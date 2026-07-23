@@ -3900,20 +3900,24 @@ renderCajas();
   #secStock .k-card{background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px;margin-bottom:14px}
   #secStock .k-h{font-weight:800;font-size:14px;margin:0}
   #secStock .k-sub{font-size:11.5px;color:var(--txt2);margin:2px 0 10px}
-  #secStock .k-tbl{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
-  #secStock .k-tbl th{font-weight:700;font-size:11px;text-align:right;padding:.45rem .6rem;white-space:nowrap;color:#fff}
+  #secStock .stk-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media(max-width:900px){#secStock .stk-cols{grid-template-columns:1fr}}
+  #secStock .k-tbl{width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
+  #secStock .k-tbl th{font-weight:700;font-size:10px;text-align:right;padding:.4rem .45rem;white-space:nowrap;color:#fff}
   #secStock .k-tbl th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
-  #secStock .k-tbl td{text-align:right;padding:.35rem .6rem;border-bottom:.5px solid var(--brd);white-space:nowrap}
+  #secStock .k-tbl td{text-align:right;padding:.3rem .45rem;border-bottom:.5px solid var(--brd);white-space:nowrap}
   #secStock .k-tbl td:first-child{text-align:left}
   #secStock .k-ori td{font-weight:700}
   #secStock .k-rub{cursor:pointer}
-  #secStock .k-rub td:first-child{padding-left:1.4rem;font-weight:600}
-  #secStock .k-rub .cv{display:inline-block;width:11px;transition:transform .15s;color:var(--txt2)}
-  #secStock .k-rub.op .cv{transform:rotate(90deg)}
-  #secStock .k-est td:first-child{padding-left:2.7rem;color:var(--txt2);font-size:11.5px}
-  #secStock .k-est{background:var(--bg2)}
+  #secStock .k-rub td:first-child{padding-left:1rem;font-weight:600}
+  #secStock .k-rub .cv,#secStock .k-est-row .cv{display:inline-block;width:9px;transition:transform .15s;color:var(--txt2)}
+  #secStock .k-rub.op .cv,#secStock .k-est-row.op .cv{transform:rotate(90deg)}
+  #secStock .k-est-row{cursor:pointer;background:var(--bg2)}
+  #secStock .k-est-row td:first-child{padding-left:2rem;font-weight:500}
+  #secStock .k-mod-row{background:var(--bg)}
+  #secStock .k-mod-row td:first-child{padding-left:3rem;color:var(--txt2)}
   #secStock .k-tot td{font-weight:800;border-top:1.5px solid var(--brd2);background:var(--bg3)}
-  #secStock .k-immo{border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-top:10px}
+  #secStock .k-immo{border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.5;margin-top:10px}
   </style>
   <div class="page-hdr" style="border-bottom:.5px solid var(--brd);margin-bottom:.9rem;padding-top:0">
     <div class="page-hdr-left">
@@ -3935,6 +3939,13 @@ renderCajas();
         <div class="upload-status" id="pricingUploadStatus"></div>
       </div>
       <div class="progress-bar" id="pricingProgressBar"><div class="progress-fill" id="pricingProgressFill" style="width:0%;background:#B0568F"></div></div>
+      <div class="upload-zone" id="costosUploadZone" style="border-color:#3E8FA6">
+        <input type="file" accept=".xlsx,.xls" id="costosFileInput" onchange="handleCostosFile(this.files[0])">
+        <i class="ti ti-coin upload-icon" style="color:#3E8FA6"></i>
+        <div class="upload-txt"><strong>Cargar Costos (galpón)</strong><span>Hoja "Costo Pricing" · costo por SKU (último)</span></div>
+        <div class="upload-status" id="costosUploadStatus"></div>
+      </div>
+      <div class="progress-bar" id="costosProgressBar"><div class="progress-fill" id="costosProgressFill" style="width:0%;background:#3E8FA6"></div></div>
     </div>
   </div>
   <div style="display:flex;gap:1.2rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
@@ -3943,23 +3954,25 @@ renderCajas();
     <span style="font-size:11px;color:var(--txt2)" id="stockFechaLbl"></span>
   </div>
   <div style="font-size:11.5px;color:var(--txt2);margin-bottom:.5rem">Tocá un estado para ver las dos vistas · abrí cada rubro para ver sus estilos.</div>
-  <div id="stockCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.7rem;margin-bottom:1rem"></div>
-  <div class="k-card">
-    <div class="k-h" id="stkV1H" style="color:#4B5CC4">Valorizado al costo (USD)</div>
-    <div class="k-sub" id="stkV1sub">Stock actual vs Ventas — ambos a costo</div>
-    <div id="stkV1"></div>
-  </div>
-  <div class="k-card">
-    <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes (USD)</div>
-    <div class="k-sub">Stock actual: precio lista minorista vs costo galpón</div>
-    <div id="stkV2"></div>
-    <div class="k-immo" id="stkImmo"></div>
+  <div id="stockCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.55rem;margin-bottom:1rem"></div>
+  <div class="stk-cols">
+    <div class="k-card">
+      <div class="k-h" id="stkV1H" style="color:#4B5CC4">Valorizado al costo (USD)</div>
+      <div class="k-sub" id="stkV1sub">Stock actual vs Ventas — ambos a costo</div>
+      <div id="stkV1"></div>
+    </div>
+    <div class="k-card">
+      <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes (USD)</div>
+      <div class="k-sub">Stock actual: precio lista minorista vs costo galpón</div>
+      <div id="stkV2"></div>
+      <div class="k-immo" id="stkImmo"></div>
+    </div>
   </div>
 </div>
 
 <script>
 // ════ MÓDULO STOCK VALORIZADO (Stock vs Ventas por estado/origen/rubro) ════
-var STOCK_D = { fecha:null, estados:[], origenes:[], stockRows:[], ventasRows:[], ventasMeses:[], pricing:{}, dolar:1460 };
+var STOCK_D = { fecha:null, estados:[], origenes:[], stockRows:[], ventasRows:[], ventasMeses:[], pricing:{}, costos:{}, dolar:1460 };
 var stockSelEstado = null, stockSelMes = null;
 var STOCK_ESTADO_COL = {'ACTIVO':'#4B5CC4','DISCONTINUO':'#B0568F','PRÓXIMO INGRESO':'#3E8FA6','NO VIGENTE':'#C08A3D','EXCEPCIÓN':'#8A6BB0','(SIN ESTADO)':'#7a7a85'};
 var STOCK_PAL = ['#4B5CC4','#B0568F','#3E8FA6','#C08A3D','#8A6BB0','#7a7a85'];
@@ -3998,7 +4011,7 @@ async function handleStockFile(file){
       var cant=num(r[16]), val=num(r[18]); if(cant===0 && val===0) continue;
       var est=SS(r[7]).toUpperCase()||'(SIN ESTADO)';
       var ori=SS(r[5])||'(Sin origen)'; var rub=SS(r[1])||'(Sin rubro)'; var esti=SS(r[3])||'(sin estilo)';
-      stockRows.push([est,ori,rub,esti,cant,val,SS(r[0])]); estadosSet[est]=1; origSet[ori]=1;
+      stockRows.push([est,ori,rub,esti,SS(r[4]),cant,val,SS(r[0])]); estadosSet[est]=1; origSet[ori]=1;
     }
     var fecha=null; try{ var c1=(rowsS[0]&&rowsS[0][2]); if(typeof c1==='number'){var d=XLSX.SSF.parse_date_code(c1); fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');} }catch(e){}
     setStockProgress(65,'<span class="spin">&#8635;</span> Procesando ventas...');
@@ -4010,14 +4023,14 @@ async function handleStockFile(file){
     for(var j=1;j<rowsV.length;j++){ var rv=rowsV[j]; if(!rv||rv[0]==null) continue;
       var mes=vFecha(rv[0]); if(!mes) continue;
       var est2=SS(rv[1]).toUpperCase()||'(SIN ESTADO)'; var ori2=SS(rv[8])||'(Sin origen)'; var rub2=SS(rv[3])||'(Sin rubro)'; var esti2=SS(rv[5])||'(sin estilo)';
-      ventasRows.push([mes,est2,ori2,rub2,esti2,num(rv[9]),num(rv[11])]); mesesSet[mes]=1;
+      ventasRows.push([mes,est2,ori2,rub2,esti2,SS(rv[6]),num(rv[9]),num(rv[11]),SS(rv[2])]); mesesSet[mes]=1;
     }
     var ORI_ORDER=['Importado','Fábrica','Proveedor Nacional'];
     var origenes=Object.keys(origSet).sort(function(a,b){var ia=ORI_ORDER.indexOf(a),ib=ORI_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
     var EST_ORDER=['ACTIVO','DISCONTINUO','PRÓXIMO INGRESO','NO VIGENTE','EXCEPCIÓN'];
     var estados=Object.keys(estadosSet).sort(function(a,b){var ia=EST_ORDER.indexOf(a),ib=EST_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
-    var prevP=(STOCK_D&&STOCK_D.pricing)||{}; var prevD=(STOCK_D&&STOCK_D.dolar)||1460;
-    STOCK_D={ fecha:fecha, estados:estados, origenes:origenes, stockRows:stockRows, ventasRows:ventasRows, ventasMeses:Object.keys(mesesSet).sort(), pricing:prevP, dolar:prevD };
+    var prevP=(STOCK_D&&STOCK_D.pricing)||{}; var prevC=(STOCK_D&&STOCK_D.costos)||{}; var prevD=(STOCK_D&&STOCK_D.dolar)||1460;
+    STOCK_D={ fecha:fecha, estados:estados, origenes:origenes, stockRows:stockRows, ventasRows:ventasRows, ventasMeses:Object.keys(mesesSet).sort(), pricing:prevP, costos:prevC, dolar:prevD };
     stockSelEstado=null; stockSelMes=null;
     setStockProgress(92,'<span class="spin">&#8635;</span> Actualizando...');
     await new Promise(function(r){setTimeout(r,0);});
@@ -4060,6 +4073,36 @@ async function handlePricingFile(file){
   finally{ zone.style.pointerEvents=''; }
 }
 function setStockDolar(v){ v=parseFloat(v)||0; if(v<=0) return; if(!STOCK_D)STOCK_D={pricing:{}}; STOCK_D.dolar=v; renderStock(); }
+function setCostosProgress(pct,msg){ document.getElementById('costosProgressBar').classList.add('show'); document.getElementById('costosProgressFill').style.width=pct+'%'; document.getElementById('costosUploadStatus').innerHTML=msg; }
+async function handleCostosFile(file){
+  if(!file) return; var zone=document.getElementById('costosUploadZone'); zone.style.pointerEvents='none';
+  setCostosProgress(15,'<span class="spin">&#8635;</span> Leyendo...');
+  try{
+    var buf=await file.arrayBuffer();
+    setCostosProgress(45,'<span class="spin">&#8635;</span> Parseando...');
+    var wb=XLSX.read(buf,{type:'array',raw:true});
+    var sh=wb.SheetNames.find(function(n){return /costo pricing/i.test(String(n).trim());}) || wb.SheetNames.find(function(n){return /costo/i.test(String(n).trim());});
+    if(!sh) throw new Error('No se encontró la hoja de costos ("Costo Pricing"). Hojas: '+wb.SheetNames.join(', '));
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:null});
+    var hdr=rows[0]||[]; var iSku=-1,iC=-1,iF=-1;
+    for(var c=0;c<hdr.length;c++){ var t=String(hdr[c]==null?'':hdr[c]).trim().toLowerCase(); if(iSku<0&&t==='sku')iSku=c; if(iC<0&&t.indexOf('costo galp')>=0)iC=c; if(iF<0&&t==='fecha')iF=c; }
+    if(iSku<0)iSku=0; if(iC<0)iC=1;
+    var num=function(v){ return typeof v==='number'?v:(v==null||v===''?0:(parseFloat(v)||0)); };
+    var map={}, fmap={};
+    for(var i=1;i<rows.length;i++){ var r=rows[i]; if(!r) continue; var sku=String(r[iSku]==null?'':r[iSku]).trim(); if(!sku) continue; var cost=num(r[iC]); if(cost<=0) continue; var fe=iF>=0?num(r[iF]):0;
+      if(!(sku in map) || fe>=fmap[sku]){ map[sku]=cost; fmap[sku]=fe; } }
+    var n=Object.keys(map).length;
+    if(!STOCK_D) STOCK_D={estados:[],origenes:[],stockRows:[],ventasRows:[],ventasMeses:[],pricing:{},costos:{},dolar:1460};
+    STOCK_D.costos=map; if(!STOCK_D.dolar)STOCK_D.dolar=1460;
+    setCostosProgress(90,'<span class="spin">&#8635;</span> Actualizando...');
+    await new Promise(function(r){setTimeout(r,0);});
+    renderStock();
+    try{ document.getElementById('costosUploadZone').querySelector('.upload-txt span').textContent=n+' costos · '+file.name; }catch(e){}
+    setCostosProgress(100,'<i class="ti ti-check" style="color:#3E8FA6"></i> '+n+' costos cargados');
+    setTimeout(function(){document.getElementById('costosProgressBar').classList.remove('show');},1500);
+  }catch(err){ setCostosProgress(100,'<span style="color:#c0392b">&#9888; '+err.message+'</span>'); console.error(err); }
+  finally{ zone.style.pointerEvents=''; }
+}
 (function(){
   var z=document.getElementById('stockUploadZone');
   if(z){ z.addEventListener('dragover',function(e){e.preventDefault();z.classList.add('drag');});
@@ -4069,8 +4112,22 @@ function setStockDolar(v){ v=parseFloat(v)||0; if(v<=0) return; if(!STOCK_D)STOC
   if(p){ p.addEventListener('dragover',function(e){e.preventDefault();p.classList.add('drag');});
     p.addEventListener('dragleave',function(){p.classList.remove('drag');});
     p.addEventListener('drop',function(e){e.preventDefault();p.classList.remove('drag');handlePricingFile(e.dataTransfer.files[0]);}); }
+  var q=document.getElementById('costosUploadZone');
+  if(q){ q.addEventListener('dragover',function(e){e.preventDefault();q.classList.add('drag');});
+    q.addEventListener('dragleave',function(){q.classList.remove('drag');});
+    q.addEventListener('drop',function(e){e.preventDefault();q.classList.remove('drag');handleCostosFile(e.dataTransfer.files[0]);}); }
   var sec=document.getElementById('secStock');
-  if(sec && !sec._stkTog){ sec._stkTog=1; sec.addEventListener('click',function(e){ var r=e.target.closest?e.target.closest('.k-rub'):null; if(!r||!sec.contains(r))return; var id=r.getAttribute('data-t'); r.classList.toggle('op'); sec.querySelectorAll('.r'+id).forEach(function(x){x.style.display=x.style.display==='none'?'':'none';}); }); }
+  if(sec && !sec._stkTog){ sec._stkTog=1; sec.addEventListener('click',function(e){
+    var rub=e.target.closest?e.target.closest('.k-rub'):null;
+    if(rub && sec.contains(rub)){ var id=rub.getAttribute('data-r'); var open=rub.classList.toggle('op');
+      sec.querySelectorAll('.c-'+id).forEach(function(x){x.style.display=open?'':'none';});
+      sec.querySelectorAll('.cm-'+id).forEach(function(x){x.style.display='none';});
+      sec.querySelectorAll('.k-est-row.c-'+id).forEach(function(x){x.classList.remove('op');});
+      return; }
+    var est=e.target.closest?e.target.closest('.k-est-row'):null;
+    if(est && sec.contains(est) && est.getAttribute('data-e')){ var eid=est.getAttribute('data-e'); var op=est.classList.toggle('op');
+      sec.querySelectorAll('.m-'+eid).forEach(function(x){x.style.display=op?'':'none';}); }
+  }); }
 })();
 function setStockEstado(e){ stockSelEstado=e; renderStock(); }
 function setStockMes(m){ stockSelMes=m; renderStock(); }
@@ -4080,29 +4137,32 @@ function stkMgPct(c,v){ return v>0?((v-c)/v*100).toFixed(0)+'%':'—'; }
 function stkOrderKeys(keys, order){ return keys.sort(function(a,b){var ia=order.indexOf(a),ib=order.indexOf(b);ia=ia<0?99:ia;ib=ib<0?99:ib; if(ia!==ib)return ia-ib; return a<b?-1:1;}); }
 function stkUnion(a,b){ var s={}; for(var k in a)s[k]=1; for(var k in b)s[k]=1; return Object.keys(s); }
 function stkRubOrder(a,b){ var s={}; for(var k in a)s[k]=1; for(var k in b)s[k]=1; return Object.keys(s).sort(function(x,y){ return ((b[y]?b[y].val:0)+(a[y]?a[y].val:0))-((b[x]?b[x].val:0)+(a[x]?a[x].val:0)); }); }
+function stkRowCostoUSD(sku,cant,fb){ var C=(STOCK_D&&STOCK_D.costos)||{}, d=(STOCK_D&&STOCK_D.dolar)||1460; if(C[sku]!=null) return d>0?cant*C[sku]/d:0; return fb||0; }
 function stkTreeCosto(rows, isVentas, mes, estado){
   var tree={}, tot={cant:0,val:0};
   rows.forEach(function(a){
-    var est,ori,rub,esti,cant,val;
-    if(isVentas){ if(a[0]!==mes) return; est=a[1];ori=a[2];rub=a[3];esti=a[4];cant=a[5];val=a[6]; }
-    else { est=a[0];ori=a[1];rub=a[2];esti=a[3];cant=a[4];val=a[5]; }
-    if(est!==estado) return;
+    var est,ori,rub,esti,mod,cant,val;
+    if(isVentas){ if(a[0]!==mes) return; est=a[1]; if(est!==estado)return; ori=a[2];rub=a[3];esti=a[4];mod=a[5];cant=a[6];val=stkRowCostoUSD(a[8],cant,a[7]); }
+    else { est=a[0]; if(est!==estado)return; ori=a[1];rub=a[2];esti=a[3];mod=a[4];cant=a[5];val=stkRowCostoUSD(a[7],cant,a[6]); }
+    mod=mod||'(s/m)';
     tot.cant+=cant; tot.val+=val;
     var o=tree[ori]||(tree[ori]={cant:0,val:0,rubros:{}}); o.cant+=cant;o.val+=val;
     var rr=o.rubros[rub]||(o.rubros[rub]={cant:0,val:0,estilos:{}}); rr.cant+=cant;rr.val+=val;
-    var ee=rr.estilos[esti]||(rr.estilos[esti]={cant:0,val:0}); ee.cant+=cant;ee.val+=val;
+    var ee=rr.estilos[esti]||(rr.estilos[esti]={cant:0,val:0,modelos:{}}); ee.cant+=cant;ee.val+=val;
+    var mm=ee.modelos[mod]||(ee.modelos[mod]={cant:0,val:0}); mm.cant+=cant;mm.val+=val;
   });
   return {tree:tree,tot:tot};
 }
 function stkTreeMargin(estado, pricing, dolar){
   var tree={}, tot={cant:0,costo:0,venta:0};
   (STOCK_D.stockRows||[]).forEach(function(a){
-    if(a[0]!==estado) return; var ori=a[1],rub=a[2],esti=a[3],cant=a[4],costo=a[5],sku=a[6];
-    var mn=pricing[sku]||0; var venta=dolar>0?cant*mn/dolar:0;
+    if(a[0]!==estado) return; var ori=a[1],rub=a[2],esti=a[3],mod=a[4]||'(s/m)',cant=a[5],sku=a[7];
+    var costo=stkRowCostoUSD(sku,cant,a[6]); var mn=pricing[sku]||0; var venta=dolar>0?cant*mn/dolar:0;
     tot.cant+=cant;tot.costo+=costo;tot.venta+=venta;
     var o=tree[ori]||(tree[ori]={cant:0,costo:0,venta:0,rubros:{}}); o.cant+=cant;o.costo+=costo;o.venta+=venta;
     var rr=o.rubros[rub]||(o.rubros[rub]={cant:0,costo:0,venta:0,estilos:{}}); rr.cant+=cant;rr.costo+=costo;rr.venta+=venta;
-    var ee=rr.estilos[esti]||(rr.estilos[esti]={cant:0,costo:0,venta:0}); ee.cant+=cant;ee.costo+=costo;ee.venta+=venta;
+    var ee=rr.estilos[esti]||(rr.estilos[esti]={cant:0,costo:0,venta:0,modelos:{}}); ee.cant+=cant;ee.costo+=costo;ee.venta+=venta;
+    var mm=ee.modelos[mod]||(ee.modelos[mod]={cant:0,costo:0,venta:0}); mm.cant+=cant;mm.costo+=costo;mm.venta+=venta;
   });
   return {tree:tree,tot:tot};
 }
@@ -4110,14 +4170,17 @@ function stkBuildV1(estado, mes){
   var s=stkTreeCosto(STOCK_D.stockRows||[], false, null, estado);
   var v=stkTreeCosto(STOCK_D.ventasRows||[], true, mes, estado);
   var oris=stkOrderKeys(stkUnion(s.tree,v.tree), STOCK_D.origenes||[]);
-  var h='<div class="prov-table-wrap"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo</th><th style="background:#4B5CC4">Stock cant</th><th style="background:#4B5CC4">Stock USD</th><th style="background:#33323A">Ventas cant</th><th style="background:#33323A">Ventas USD</th></tr></thead><tbody>';
+  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo / Modelo</th><th style="background:#4B5CC4">St.cant</th><th style="background:#4B5CC4">St.USD</th><th style="background:#33323A">Vt.cant</th><th style="background:#33323A">Vt.USD</th></tr></thead><tbody>';
   oris.forEach(function(ori,oi){
     var so=s.tree[ori]||{cant:0,val:0,rubros:{}}, vo=v.tree[ori]||{cant:0,val:0,rubros:{}}; var oc=STOCK_ORI_COL[ori]||'#7a7a85';
     h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+stkNum(so.cant)+'</td><td>'+stkUSD(so.val)+'</td><td>'+stkNum(vo.cant)+'</td><td>'+stkUSD(vo.val)+'</td></tr>';
-    stkRubOrder(so.rubros, vo.rubros).forEach(function(rub,ri){ var sr=so.rubros[rub]||{cant:0,val:0,estilos:{}}, vr=vo.rubros[rub]||{cant:0,val:0,estilos:{}}; var id='v1_'+oi+'_'+ri;
-      h+='<tr class="k-rub" data-t="'+id+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(sr.cant)+'</td><td>'+stkUSD(sr.val)+'</td><td>'+stkNum(vr.cant)+'</td><td>'+stkUSD(vr.val)+'</td></tr>';
-      stkUnion(sr.estilos, vr.estilos).sort().forEach(function(es){ var se=sr.estilos[es]||{cant:0,val:0}, ve=vr.estilos[es]||{cant:0,val:0};
-        h+='<tr class="k-est r'+id+'" style="display:none"><td>'+es+'</td><td>'+stkNum(se.cant)+'</td><td>'+stkUSD(se.val)+'</td><td>'+stkNum(ve.cant)+'</td><td>'+stkUSD(ve.val)+'</td></tr>'; });
+    stkRubOrder(so.rubros, vo.rubros).forEach(function(rub,ri){ var sr=so.rubros[rub]||{cant:0,val:0,estilos:{}}, vr=vo.rubros[rub]||{cant:0,val:0,estilos:{}}; var rid='v1_'+oi+'_'+ri;
+      h+='<tr class="k-rub" data-r="'+rid+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(sr.cant)+'</td><td>'+stkUSD(sr.val)+'</td><td>'+stkNum(vr.cant)+'</td><td>'+stkUSD(vr.val)+'</td></tr>';
+      stkUnion(sr.estilos, vr.estilos).sort().forEach(function(es,ei){ var se=sr.estilos[es]||{cant:0,val:0,modelos:{}}, ve=vr.estilos[es]||{cant:0,val:0,modelos:{}}; var eid=rid+'_'+ei;
+        h+='<tr class="k-est-row c-'+rid+'" data-e="'+eid+'" style="display:none"><td><span class="cv">▶</span> '+es+'</td><td>'+stkNum(se.cant)+'</td><td>'+stkUSD(se.val)+'</td><td>'+stkNum(ve.cant)+'</td><td>'+stkUSD(ve.val)+'</td></tr>';
+        stkUnion(se.modelos, ve.modelos).sort().forEach(function(mo){ var sm=se.modelos[mo]||{cant:0,val:0}, vm=ve.modelos[mo]||{cant:0,val:0};
+          h+='<tr class="k-mod-row cm-'+rid+' m-'+eid+'" style="display:none"><td>'+mo+'</td><td>'+stkNum(sm.cant)+'</td><td>'+stkUSD(sm.val)+'</td><td>'+stkNum(vm.cant)+'</td><td>'+stkUSD(vm.val)+'</td></tr>'; });
+      });
     });
   });
   h+='<tr class="k-tot"><td>Total '+stockCap(estado)+'</td><td>'+stkNum(s.tot.cant)+'</td><td>'+stkUSD(s.tot.val)+'</td><td>'+stkNum(v.tot.cant)+'</td><td>'+stkUSD(v.tot.val)+'</td></tr>';
@@ -4126,13 +4189,16 @@ function stkBuildV1(estado, mes){
 function stkBuildV2(estado, pricing, dolar){
   var m=stkTreeMargin(estado, pricing, dolar);
   var oris=stkOrderKeys(Object.keys(m.tree), STOCK_D.origenes||[]);
-  var h='<div class="prov-table-wrap"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo</th><th style="background:#B0568F">Stock cant</th><th style="background:#B0568F">Costo USD</th><th style="background:#B0568F">A venta USD</th><th style="background:#7A3E8F">Margen USD</th><th style="background:#7A3E8F">Mg %</th></tr></thead><tbody>';
+  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo / Modelo</th><th style="background:#B0568F">Cant</th><th style="background:#B0568F">Costo</th><th style="background:#B0568F">Venta</th><th style="background:#7A3E8F">Margen</th><th style="background:#7A3E8F">Mg%</th></tr></thead><tbody>';
   oris.forEach(function(ori,oi){ var o=m.tree[ori]; var oc=STOCK_ORI_COL[ori]||'#7a7a85';
     h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+stkNum(o.cant)+'</td><td>'+stkUSD(o.costo)+'</td><td>'+stkUSD(o.venta)+'</td><td>'+stkUSD(o.venta-o.costo)+'</td><td>'+stkMgPct(o.costo,o.venta)+'</td></tr>';
-    Object.keys(o.rubros).sort(function(a,b){return o.rubros[b].costo-o.rubros[a].costo;}).forEach(function(rub,ri){ var rr=o.rubros[rub]; var id='v2_'+oi+'_'+ri;
-      h+='<tr class="k-rub" data-t="'+id+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(rr.cant)+'</td><td>'+stkUSD(rr.costo)+'</td><td>'+stkUSD(rr.venta)+'</td><td>'+stkUSD(rr.venta-rr.costo)+'</td><td>'+stkMgPct(rr.costo,rr.venta)+'</td></tr>';
-      Object.keys(rr.estilos).sort().forEach(function(es){ var ee=rr.estilos[es];
-        h+='<tr class="k-est r'+id+'" style="display:none"><td>'+es+'</td><td>'+stkNum(ee.cant)+'</td><td>'+stkUSD(ee.costo)+'</td><td>'+stkUSD(ee.venta)+'</td><td>'+stkUSD(ee.venta-ee.costo)+'</td><td>'+stkMgPct(ee.costo,ee.venta)+'</td></tr>'; });
+    Object.keys(o.rubros).sort(function(a,b){return o.rubros[b].costo-o.rubros[a].costo;}).forEach(function(rub,ri){ var rr=o.rubros[rub]; var rid='v2_'+oi+'_'+ri;
+      h+='<tr class="k-rub" data-r="'+rid+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(rr.cant)+'</td><td>'+stkUSD(rr.costo)+'</td><td>'+stkUSD(rr.venta)+'</td><td>'+stkUSD(rr.venta-rr.costo)+'</td><td>'+stkMgPct(rr.costo,rr.venta)+'</td></tr>';
+      Object.keys(rr.estilos).sort().forEach(function(es,ei){ var ee=rr.estilos[es]; var eid=rid+'_'+ei;
+        h+='<tr class="k-est-row c-'+rid+'" data-e="'+eid+'" style="display:none"><td><span class="cv">▶</span> '+es+'</td><td>'+stkNum(ee.cant)+'</td><td>'+stkUSD(ee.costo)+'</td><td>'+stkUSD(ee.venta)+'</td><td>'+stkUSD(ee.venta-ee.costo)+'</td><td>'+stkMgPct(ee.costo,ee.venta)+'</td></tr>';
+        Object.keys(ee.modelos).sort().forEach(function(mo){ var mm=ee.modelos[mo];
+          h+='<tr class="k-mod-row cm-'+rid+' m-'+eid+'" style="display:none"><td>'+mo+'</td><td>'+stkNum(mm.cant)+'</td><td>'+stkUSD(mm.costo)+'</td><td>'+stkUSD(mm.venta)+'</td><td>'+stkUSD(mm.venta-mm.costo)+'</td><td>'+stkMgPct(mm.costo,mm.venta)+'</td></tr>'; });
+      });
     });
   });
   h+='<tr class="k-tot"><td>Total '+stockCap(estado)+'</td><td>'+stkNum(m.tot.cant)+'</td><td>'+stkUSD(m.tot.costo)+'</td><td>'+stkUSD(m.tot.venta)+'</td><td>'+stkUSD(m.tot.venta-m.tot.costo)+'</td><td>'+stkMgPct(m.tot.costo,m.tot.venta)+'</td></tr>';
@@ -4160,15 +4226,15 @@ function renderStock(){
     : '<span style="font-size:12px;color:var(--txt2)">sin ventas</span>'; }
   if(fl) fl.textContent = S.fecha?('· stock al '+S.fecha.split('-').reverse().join('/')):'';
   var stTot={}, vtTot={};
-  (S.stockRows||[]).forEach(function(a){var e=a[0];(stTot[e]=stTot[e]||{cant:0,val:0});stTot[e].cant+=a[4];stTot[e].val+=a[5];});
-  (S.ventasRows||[]).forEach(function(a){ if(a[0]!==stockSelMes)return; var e=a[1];(vtTot[e]=vtTot[e]||{cant:0,val:0});vtTot[e].cant+=a[5];vtTot[e].val+=a[6];});
+  (S.stockRows||[]).forEach(function(a){var e=a[0];(stTot[e]=stTot[e]||{cant:0,val:0});stTot[e].cant+=a[5];stTot[e].val+=stkRowCostoUSD(a[7],a[5],a[6]);});
+  (S.ventasRows||[]).forEach(function(a){ if(a[0]!==stockSelMes)return; var e=a[1];(vtTot[e]=vtTot[e]||{cant:0,val:0});vtTot[e].cant+=a[6];vtTot[e].val+=stkRowCostoUSD(a[8],a[6],a[7]);});
   cardsEl.innerHTML = estados.map(function(e,i){
     var col=STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length]; var st=stTot[e]||{cant:0,val:0}; var vt=vtTot[e]||{cant:0,val:0}; var act=e===stockSelEstado;
-    return '<div onclick="setStockEstado(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:14px;padding:12px 14px;border:1.5px solid '+col+';border-left:6px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 4px 14px rgba(0,0,0,.10)':'0 2px 8px rgba(0,0,0,.05)')+';transition:.12s">'
-      +'<div style="font-size:13.5px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:6px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
-      +'<div style="display:flex;gap:14px;margin-top:7px;flex-wrap:wrap">'
-        +'<div><div style="font-size:10px;color:var(--txt2)">Stock</div><div style="font-size:15px;font-weight:700">'+stkUSD(st.val)+'</div><div style="font-size:10px;color:var(--txt2)">'+stkNum(st.cant)+' u.</div></div>'
-        +'<div><div style="font-size:10px;color:var(--txt2)">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:15px;font-weight:700">'+stkUSD(vt.val)+'</div><div style="font-size:10px;color:var(--txt2)">'+stkNum(vt.cant)+' u.</div></div>'
+    return '<div onclick="setStockEstado(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:11px;padding:8px 10px;border:1.5px solid '+col+';border-left:5px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+';transition:.12s">'
+      +'<div style="font-size:12px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:5px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:11px"></i>':'')+'</div>'
+      +'<div style="display:flex;gap:12px;margin-top:5px;flex-wrap:wrap">'
+        +'<div><div style="font-size:9.5px;color:var(--txt2)">Stock</div><div style="font-size:13px;font-weight:700">'+stkUSD(st.val)+'</div><div style="font-size:9.5px;color:var(--txt2)">'+stkNum(st.cant)+' u.</div></div>'
+        +'<div><div style="font-size:9.5px;color:var(--txt2)">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:13px;font-weight:700">'+stkUSD(vt.val)+'</div><div style="font-size:9.5px;color:var(--txt2)">'+stkNum(vt.cant)+' u.</div></div>'
       +'</div></div>';
   }).join('');
   if(v1El) v1El.innerHTML=stkBuildV1(stockSelEstado, stockSelMes);
