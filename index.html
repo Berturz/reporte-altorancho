@@ -3897,48 +3897,73 @@ renderCajas();
 <!-- ════════════════════════════════════════════════ -->
 <div class="sec" id="secStock" style="margin-top:1.2rem;border-top:3px solid #8B4630">
   <style>
-  #secStock .stk-table{width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
-  #secStock .stk-table thead th{color:#fff;font-weight:700;text-align:right;padding:.4rem .6rem;font-size:11px;white-space:nowrap}
-  #secStock .stk-table thead th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
-  #secStock .stk-table thead tr.stk-sub th{color:var(--txt);background:var(--bg2);font-weight:700}
-  #secStock .stk-table tbody td{padding:.35rem .6rem;text-align:right;border-bottom:.5px solid var(--brd);white-space:nowrap}
-  #secStock .stk-table tbody td:first-child{text-align:left}
-  #secStock .stk-ori td{font-weight:700}
-  #secStock .stk-rub td:first-child{padding-left:1.6rem;color:var(--txt2);font-size:11px}
-  #secStock .stk-tot td{font-weight:800;border-top:1.5px solid var(--brd2);background:var(--bg3)}
+  #secStock .k-card{background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+  #secStock .k-h{font-weight:800;font-size:14px;margin:0}
+  #secStock .k-sub{font-size:11.5px;color:var(--txt2);margin:2px 0 10px}
+  #secStock .k-tbl{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
+  #secStock .k-tbl th{font-weight:700;font-size:11px;text-align:right;padding:.45rem .6rem;white-space:nowrap;color:#fff}
+  #secStock .k-tbl th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
+  #secStock .k-tbl td{text-align:right;padding:.35rem .6rem;border-bottom:.5px solid var(--brd);white-space:nowrap}
+  #secStock .k-tbl td:first-child{text-align:left}
+  #secStock .k-ori td{font-weight:700}
+  #secStock .k-rub{cursor:pointer}
+  #secStock .k-rub td:first-child{padding-left:1.4rem;font-weight:600}
+  #secStock .k-rub .cv{display:inline-block;width:11px;transition:transform .15s;color:var(--txt2)}
+  #secStock .k-rub.op .cv{transform:rotate(90deg)}
+  #secStock .k-est td:first-child{padding-left:2.7rem;color:var(--txt2);font-size:11.5px}
+  #secStock .k-est{background:var(--bg2)}
+  #secStock .k-tot td{font-weight:800;border-top:1.5px solid var(--brd2);background:var(--bg3)}
+  #secStock .k-immo{border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-top:10px}
   </style>
   <div class="page-hdr" style="border-bottom:.5px solid var(--brd);margin-bottom:.9rem;padding-top:0">
     <div class="page-hdr-left">
       <h1><i class="ti ti-packages" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:#8B4630"></i>Stock Valorizado MTM <span class="ok-badge" id="stockBadge"><i class="ti ti-check" style="font-size:10px"></i> Datos embebidos</span></h1>
-      <p>Stock vs Ventas por estado, origen y rubro · valorizado al costo (USD)</p>
+      <p>Stock vs Ventas (al costo) y valorización a márgenes · por estado, origen, rubro y estilo</p>
     </div>
-    <div style="min-width:280px">
-      <div class="upload-zone" id="stockUploadZone" style="border-color:#8B4630">
+    <div style="min-width:290px;display:flex;flex-direction:column;gap:8px">
+      <div class="upload-zone" id="stockUploadZone" style="border-color:#4B5CC4">
         <input type="file" accept=".xlsx,.xls" id="stockFileInput" onchange="handleStockFile(this.files[0])">
-        <i class="ti ti-file-spreadsheet upload-icon" style="color:#8B4630"></i>
-        <div class="upload-txt"><strong>Actualizar Stock valorizado</strong><span>Archivo mensual · hojas "Stock al..." y "Ventas"</span></div>
+        <i class="ti ti-file-spreadsheet upload-icon" style="color:#4B5CC4"></i>
+        <div class="upload-txt"><strong>Actualizar Stock valorizado</strong><span>Hojas "Stock al..." y "Ventas"</span></div>
         <div class="upload-status" id="stockUploadStatus"></div>
       </div>
-      <div class="progress-bar" id="stockProgressBar"><div class="progress-fill" id="stockProgressFill" style="width:0%;background:#8B4630"></div></div>
+      <div class="progress-bar" id="stockProgressBar"><div class="progress-fill" id="stockProgressFill" style="width:0%;background:#4B5CC4"></div></div>
+      <div class="upload-zone" id="pricingUploadZone" style="border-color:#B0568F">
+        <input type="file" accept=".xlsx,.xls" id="pricingFileInput" onchange="handlePricingFile(this.files[0])">
+        <i class="ti ti-tag upload-icon" style="color:#B0568F"></i>
+        <div class="upload-txt"><strong>Cargar Pricing (márgenes)</strong><span>Hoja "Pricing" · precio final min. por SKU</span></div>
+        <div class="upload-status" id="pricingUploadStatus"></div>
+      </div>
+      <div class="progress-bar" id="pricingProgressBar"><div class="progress-fill" id="pricingProgressFill" style="width:0%;background:#B0568F"></div></div>
     </div>
   </div>
-  <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
-    <span class="msl"><i class="ti ti-calendar-month" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Ventas del mes</span>
-    <span id="stockMesWrap"></span>
+  <div style="display:flex;gap:1.2rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
+    <span><span class="msl"><i class="ti ti-calendar-month" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Ventas del mes</span> <span id="stockMesWrap"></span></span>
+    <span><span class="msl"><i class="ti ti-currency-dollar" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Dólar de cierre</span> <input type="number" id="stockDolarInput" onchange="setStockDolar(this.value)" style="width:92px;font-size:13px;font-weight:600;padding:5px 9px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt)"></span>
     <span style="font-size:11px;color:var(--txt2)" id="stockFechaLbl"></span>
   </div>
-  <div style="font-size:11.5px;color:var(--txt2);margin-bottom:.5rem">Tocá un estado para ver la comparativa Stock vs Ventas por origen y rubro.</div>
-  <div id="stockCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.7rem;margin-bottom:.9rem"></div>
-  <div id="stockCompare"></div>
+  <div style="font-size:11.5px;color:var(--txt2);margin-bottom:.5rem">Tocá un estado para ver las dos vistas · abrí cada rubro para ver sus estilos.</div>
+  <div id="stockCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.7rem;margin-bottom:1rem"></div>
+  <div class="k-card">
+    <div class="k-h" id="stkV1H" style="color:#4B5CC4">Valorizado al costo (USD)</div>
+    <div class="k-sub" id="stkV1sub">Stock actual vs Ventas — ambos a costo</div>
+    <div id="stkV1"></div>
+  </div>
+  <div class="k-card">
+    <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes (USD)</div>
+    <div class="k-sub">Stock actual: precio lista minorista vs costo galpón</div>
+    <div id="stkV2"></div>
+    <div class="k-immo" id="stkImmo"></div>
+  </div>
 </div>
 
 <script>
 // ════ MÓDULO STOCK VALORIZADO (Stock vs Ventas por estado/origen/rubro) ════
-var STOCK_D = { fecha:null, estados:[], origenes:[], stock:{}, ventas:{}, ventasMeses:[] };
+var STOCK_D = { fecha:null, estados:[], origenes:[], stockRows:[], ventasRows:[], ventasMeses:[], pricing:{}, dolar:1460 };
 var stockSelEstado = null, stockSelMes = null;
-var STOCK_ESTADO_COL = {'ACTIVO':'#1D9E75','DISCONTINUO':'#c8873c'};
-var STOCK_PAL = ['#4472c4','#8e6e9d','#5a9ca8','#b0576f','#BA7517'];
-var STOCK_ORI_COL = {'Importado':'#4472c4','Fábrica':'#c8873c','Proveedor Nacional':'#1D9E75'};
+var STOCK_ESTADO_COL = {'ACTIVO':'#4B5CC4','DISCONTINUO':'#B0568F','PRÓXIMO INGRESO':'#3E8FA6','NO VIGENTE':'#C08A3D','EXCEPCIÓN':'#8A6BB0','(SIN ESTADO)':'#7a7a85'};
+var STOCK_PAL = ['#4B5CC4','#B0568F','#3E8FA6','#C08A3D','#8A6BB0','#7a7a85'];
+var STOCK_ORI_COL = {'Importado':'#4B5CC4','Fábrica':'#B0568F','Proveedor Nacional':'#3E8FA6'};
 function stockEstadoColor(e,i){ return STOCK_ESTADO_COL[String(e).toUpperCase()] || STOCK_PAL[i % STOCK_PAL.length]; }
 function stockCap(s){ s=String(s||'').toLowerCase(); return s.charAt(0).toUpperCase()+s.slice(1); }
 function fUSDstock(v){ return 'USD '+Math.round(v||0).toLocaleString('es-AR'); }
@@ -3965,35 +3990,34 @@ async function handleStockFile(file){
     if(!stockSheet) throw new Error('No se encontró la hoja "Stock al ...". Hojas: '+wb.SheetNames.join(', '));
     if(!wb.SheetNames.includes('Ventas')) throw new Error('No se encontró la hoja "Ventas".');
     var num=function(v){ return typeof v==='number'?v:(v==null||v===''?0:(parseFloat(v)||0)); };
-    // Stock: encabezados fila 2 (idx 1), datos desde fila 3. H=Estado(7) F=Origen(5) B=Rubro(1) Q=Cant(16) S=Val(18)
+    var SS=function(v){ return v==null?'':String(v).trim(); };
+    // Stock: encab. fila 2 (idx1), datos fila 3. A=SKU(0) B=Rubro(1) D=Estilo(3) F=Origen(5) H=Estado(7) Q=Cant(16) S=Val USD(18)
     var rowsS=XLSX.utils.sheet_to_json(wb.Sheets[stockSheet],{header:1,raw:true,defval:null});
-    var stockAgg={}, estadosSet={}, origSet={};
+    var stockRows=[], estadosSet={}, origSet={};
     for(var i=2;i<rowsS.length;i++){ var r=rowsS[i]; if(!r) continue;
-      var est=r[7]!=null?String(r[7]).trim().toUpperCase():''; if(!est) continue;
-      var ori=r[5]!=null?String(r[5]).trim():'(Sin origen)';
-      var rub=r[1]!=null?String(r[1]).trim():'(Sin rubro)';
-      stockAddAgg(stockAgg, est, ori, rub, num(r[16]), num(r[18])); estadosSet[est]=1; origSet[ori]=1;
+      var cant=num(r[16]), val=num(r[18]); if(cant===0 && val===0) continue;
+      var est=SS(r[7]).toUpperCase()||'(SIN ESTADO)';
+      var ori=SS(r[5])||'(Sin origen)'; var rub=SS(r[1])||'(Sin rubro)'; var esti=SS(r[3])||'(sin estilo)';
+      stockRows.push([est,ori,rub,esti,cant,val,SS(r[0])]); estadosSet[est]=1; origSet[ori]=1;
     }
     var fecha=null; try{ var c1=(rowsS[0]&&rowsS[0][2]); if(typeof c1==='number'){var d=XLSX.SSF.parse_date_code(c1); fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');} }catch(e){}
     setStockProgress(65,'<span class="spin">&#8635;</span> Procesando ventas...');
     await new Promise(function(r){setTimeout(r,0);});
-    // Ventas: encabezados fila 1, datos desde fila 2. A=Fecha(0) B=Estado(1) I=Origen(8) D=Rubro(3) J=Cant(9) L=Val(11)
+    // Ventas: encab. fila 1, datos fila 2. A=Fecha(0) B=Estado(1) D=Rubro(3) F=Estilo(5) I=Origen(8) J=Cant(9) L=Val USD(11)
     var rowsV=XLSX.utils.sheet_to_json(wb.Sheets['Ventas'],{header:1,raw:true,defval:null});
-    var ventasByMonth={};
+    var ventasRows=[], mesesSet={};
     var vFecha=function(v){ if(typeof v==='number'){var d=XLSX.SSF.parse_date_code(v); return d.y+'-'+String(d.m).padStart(2,'0');} if(typeof v==='string'){var s=v.slice(0,7); return /^\d{4}-\d{2}$/.test(s)?s:null;} return null; };
     for(var j=1;j<rowsV.length;j++){ var rv=rowsV[j]; if(!rv||rv[0]==null) continue;
       var mes=vFecha(rv[0]); if(!mes) continue;
-      var est2=rv[1]!=null?String(rv[1]).trim().toUpperCase():''; if(!est2) continue;
-      var ori2=rv[8]!=null?String(rv[8]).trim():'(Sin origen)';
-      var rub2=rv[3]!=null?String(rv[3]).trim():'(Sin rubro)';
-      if(!ventasByMonth[mes]) ventasByMonth[mes]={};
-      stockAddAgg(ventasByMonth[mes], est2, ori2, rub2, num(rv[9]), num(rv[11]));
+      var est2=SS(rv[1]).toUpperCase()||'(SIN ESTADO)'; var ori2=SS(rv[8])||'(Sin origen)'; var rub2=SS(rv[3])||'(Sin rubro)'; var esti2=SS(rv[5])||'(sin estilo)';
+      ventasRows.push([mes,est2,ori2,rub2,esti2,num(rv[9]),num(rv[11])]); mesesSet[mes]=1;
     }
     var ORI_ORDER=['Importado','Fábrica','Proveedor Nacional'];
     var origenes=Object.keys(origSet).sort(function(a,b){var ia=ORI_ORDER.indexOf(a),ib=ORI_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
-    var EST_ORDER=['ACTIVO','DISCONTINUO'];
+    var EST_ORDER=['ACTIVO','DISCONTINUO','PRÓXIMO INGRESO','NO VIGENTE','EXCEPCIÓN'];
     var estados=Object.keys(estadosSet).sort(function(a,b){var ia=EST_ORDER.indexOf(a),ib=EST_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
-    STOCK_D={ fecha:fecha, estados:estados, origenes:origenes, stock:stockAgg, ventas:ventasByMonth, ventasMeses:Object.keys(ventasByMonth).sort() };
+    var prevP=(STOCK_D&&STOCK_D.pricing)||{}; var prevD=(STOCK_D&&STOCK_D.dolar)||1460;
+    STOCK_D={ fecha:fecha, estados:estados, origenes:origenes, stockRows:stockRows, ventasRows:ventasRows, ventasMeses:Object.keys(mesesSet).sort(), pricing:prevP, dolar:prevD };
     stockSelEstado=null; stockSelMes=null;
     setStockProgress(92,'<span class="spin">&#8635;</span> Actualizando...');
     await new Promise(function(r){setTimeout(r,0);});
@@ -4001,23 +4025,133 @@ async function handleStockFile(file){
     document.getElementById('stockBadge').className='ok-badge';
     document.getElementById('stockBadge').innerHTML='<i class="ti ti-check" style="font-size:10px"></i> Excel actualizado';
     try{ document.getElementById('stockUploadZone').querySelector('.upload-txt span').textContent='Archivo: '+file.name; }catch(e){}
-    setStockProgress(100,'<i class="ti ti-check" style="color:#8B4630"></i> Listo');
-    setTimeout(function(){document.getElementById('stockProgressBar').classList.remove('show'); document.getElementById('stockUploadStatus').innerHTML='<i class="ti ti-check" style="color:#8B4630"></i> Actualizado';},1200);
+    setStockProgress(100,'<i class="ti ti-check" style="color:#4B5CC4"></i> Listo');
+    setTimeout(function(){document.getElementById('stockProgressBar').classList.remove('show'); document.getElementById('stockUploadStatus').innerHTML='<i class="ti ti-check" style="color:#4B5CC4"></i> Actualizado';},1200);
   }catch(err){ setStockProgress(100,'<span style="color:#c0392b">&#9888; '+err.message+'</span>'); console.error(err); }
   finally{ zone.style.pointerEvents=''; }
 }
-(function(){ var z=document.getElementById('stockUploadZone'); if(!z) return;
-  z.addEventListener('dragover',function(e){e.preventDefault();z.classList.add('drag');});
-  z.addEventListener('dragleave',function(){z.classList.remove('drag');});
-  z.addEventListener('drop',function(e){e.preventDefault();z.classList.remove('drag');handleStockFile(e.dataTransfer.files[0]);});
+function setPricingProgress(pct,msg){ document.getElementById('pricingProgressBar').classList.add('show'); document.getElementById('pricingProgressFill').style.width=pct+'%'; document.getElementById('pricingUploadStatus').innerHTML=msg; }
+async function handlePricingFile(file){
+  if(!file) return; var zone=document.getElementById('pricingUploadZone'); zone.style.pointerEvents='none';
+  setPricingProgress(15,'<span class="spin">&#8635;</span> Leyendo...');
+  try{
+    var buf=await file.arrayBuffer();
+    setPricingProgress(45,'<span class="spin">&#8635;</span> Parseando...');
+    var wb=XLSX.read(buf,{type:'array',raw:true});
+    var sh=wb.SheetNames.find(function(n){return /^pricing$/i.test(String(n).trim());}) || wb.SheetNames.find(function(n){return /pricing/i.test(String(n).trim());});
+    if(!sh) throw new Error('No se encontró la hoja "Pricing". Hojas: '+wb.SheetNames.join(', '));
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:null});
+    var hdr=rows[0]||[]; var iSku=-1,iMin=-1;
+    for(var c=0;c<hdr.length;c++){ var t=String(hdr[c]==null?'':hdr[c]).trim().toLowerCase(); if(iSku<0&&t==='sku')iSku=c; if(iMin<0&&t.indexOf('precio final min')>=0)iMin=c; }
+    if(iSku<0) iSku=0;
+    if(iMin<0) throw new Error('No encontré la columna "Precio Final Min" en la hoja Pricing.');
+    var num=function(v){ return typeof v==='number'?v:(v==null||v===''?0:(parseFloat(v)||0)); };
+    var map={}, n=0;
+    for(var i=1;i<rows.length;i++){ var r=rows[i]; if(!r) continue; var sku=String(r[iSku]==null?'':r[iSku]).trim(); if(!sku) continue; var mn=num(r[iMin]); if(mn>0){ map[sku]=mn; n++; } }
+    if(!STOCK_D) STOCK_D={estados:[],origenes:[],stockRows:[],ventasRows:[],ventasMeses:[],pricing:{},dolar:1460};
+    STOCK_D.pricing=map; if(!STOCK_D.dolar)STOCK_D.dolar=1460;
+    setPricingProgress(90,'<span class="spin">&#8635;</span> Actualizando...');
+    await new Promise(function(r){setTimeout(r,0);});
+    renderStock();
+    try{ document.getElementById('pricingUploadZone').querySelector('.upload-txt span').textContent=n+' precios · '+file.name; }catch(e){}
+    setPricingProgress(100,'<i class="ti ti-check" style="color:#B0568F"></i> '+n+' precios cargados');
+    setTimeout(function(){document.getElementById('pricingProgressBar').classList.remove('show');},1500);
+  }catch(err){ setPricingProgress(100,'<span style="color:#c0392b">&#9888; '+err.message+'</span>'); console.error(err); }
+  finally{ zone.style.pointerEvents=''; }
+}
+function setStockDolar(v){ v=parseFloat(v)||0; if(v<=0) return; if(!STOCK_D)STOCK_D={pricing:{}}; STOCK_D.dolar=v; renderStock(); }
+(function(){
+  var z=document.getElementById('stockUploadZone');
+  if(z){ z.addEventListener('dragover',function(e){e.preventDefault();z.classList.add('drag');});
+    z.addEventListener('dragleave',function(){z.classList.remove('drag');});
+    z.addEventListener('drop',function(e){e.preventDefault();z.classList.remove('drag');handleStockFile(e.dataTransfer.files[0]);}); }
+  var p=document.getElementById('pricingUploadZone');
+  if(p){ p.addEventListener('dragover',function(e){e.preventDefault();p.classList.add('drag');});
+    p.addEventListener('dragleave',function(){p.classList.remove('drag');});
+    p.addEventListener('drop',function(e){e.preventDefault();p.classList.remove('drag');handlePricingFile(e.dataTransfer.files[0]);}); }
+  var sec=document.getElementById('secStock');
+  if(sec && !sec._stkTog){ sec._stkTog=1; sec.addEventListener('click',function(e){ var r=e.target.closest?e.target.closest('.k-rub'):null; if(!r||!sec.contains(r))return; var id=r.getAttribute('data-t'); r.classList.toggle('op'); sec.querySelectorAll('.r'+id).forEach(function(x){x.style.display=x.style.display==='none'?'':'none';}); }); }
 })();
 function setStockEstado(e){ stockSelEstado=e; renderStock(); }
 function setStockMes(m){ stockSelMes=m; renderStock(); }
+function stkNum(v){ return Math.round(v||0).toLocaleString('es-AR'); }
+function stkUSD(v){ return 'USD '+Math.round(v||0).toLocaleString('es-AR'); }
+function stkMgPct(c,v){ return v>0?((v-c)/v*100).toFixed(0)+'%':'—'; }
+function stkOrderKeys(keys, order){ return keys.sort(function(a,b){var ia=order.indexOf(a),ib=order.indexOf(b);ia=ia<0?99:ia;ib=ib<0?99:ib; if(ia!==ib)return ia-ib; return a<b?-1:1;}); }
+function stkUnion(a,b){ var s={}; for(var k in a)s[k]=1; for(var k in b)s[k]=1; return Object.keys(s); }
+function stkRubOrder(a,b){ var s={}; for(var k in a)s[k]=1; for(var k in b)s[k]=1; return Object.keys(s).sort(function(x,y){ return ((b[y]?b[y].val:0)+(a[y]?a[y].val:0))-((b[x]?b[x].val:0)+(a[x]?a[x].val:0)); }); }
+function stkTreeCosto(rows, isVentas, mes, estado){
+  var tree={}, tot={cant:0,val:0};
+  rows.forEach(function(a){
+    var est,ori,rub,esti,cant,val;
+    if(isVentas){ if(a[0]!==mes) return; est=a[1];ori=a[2];rub=a[3];esti=a[4];cant=a[5];val=a[6]; }
+    else { est=a[0];ori=a[1];rub=a[2];esti=a[3];cant=a[4];val=a[5]; }
+    if(est!==estado) return;
+    tot.cant+=cant; tot.val+=val;
+    var o=tree[ori]||(tree[ori]={cant:0,val:0,rubros:{}}); o.cant+=cant;o.val+=val;
+    var rr=o.rubros[rub]||(o.rubros[rub]={cant:0,val:0,estilos:{}}); rr.cant+=cant;rr.val+=val;
+    var ee=rr.estilos[esti]||(rr.estilos[esti]={cant:0,val:0}); ee.cant+=cant;ee.val+=val;
+  });
+  return {tree:tree,tot:tot};
+}
+function stkTreeMargin(estado, pricing, dolar){
+  var tree={}, tot={cant:0,costo:0,venta:0};
+  (STOCK_D.stockRows||[]).forEach(function(a){
+    if(a[0]!==estado) return; var ori=a[1],rub=a[2],esti=a[3],cant=a[4],costo=a[5],sku=a[6];
+    var mn=pricing[sku]||0; var venta=dolar>0?cant*mn/dolar:0;
+    tot.cant+=cant;tot.costo+=costo;tot.venta+=venta;
+    var o=tree[ori]||(tree[ori]={cant:0,costo:0,venta:0,rubros:{}}); o.cant+=cant;o.costo+=costo;o.venta+=venta;
+    var rr=o.rubros[rub]||(o.rubros[rub]={cant:0,costo:0,venta:0,estilos:{}}); rr.cant+=cant;rr.costo+=costo;rr.venta+=venta;
+    var ee=rr.estilos[esti]||(rr.estilos[esti]={cant:0,costo:0,venta:0}); ee.cant+=cant;ee.costo+=costo;ee.venta+=venta;
+  });
+  return {tree:tree,tot:tot};
+}
+function stkBuildV1(estado, mes){
+  var s=stkTreeCosto(STOCK_D.stockRows||[], false, null, estado);
+  var v=stkTreeCosto(STOCK_D.ventasRows||[], true, mes, estado);
+  var oris=stkOrderKeys(stkUnion(s.tree,v.tree), STOCK_D.origenes||[]);
+  var h='<div class="prov-table-wrap"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo</th><th style="background:#4B5CC4">Stock cant</th><th style="background:#4B5CC4">Stock USD</th><th style="background:#33323A">Ventas cant</th><th style="background:#33323A">Ventas USD</th></tr></thead><tbody>';
+  oris.forEach(function(ori,oi){
+    var so=s.tree[ori]||{cant:0,val:0,rubros:{}}, vo=v.tree[ori]||{cant:0,val:0,rubros:{}}; var oc=STOCK_ORI_COL[ori]||'#7a7a85';
+    h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+stkNum(so.cant)+'</td><td>'+stkUSD(so.val)+'</td><td>'+stkNum(vo.cant)+'</td><td>'+stkUSD(vo.val)+'</td></tr>';
+    stkRubOrder(so.rubros, vo.rubros).forEach(function(rub,ri){ var sr=so.rubros[rub]||{cant:0,val:0,estilos:{}}, vr=vo.rubros[rub]||{cant:0,val:0,estilos:{}}; var id='v1_'+oi+'_'+ri;
+      h+='<tr class="k-rub" data-t="'+id+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(sr.cant)+'</td><td>'+stkUSD(sr.val)+'</td><td>'+stkNum(vr.cant)+'</td><td>'+stkUSD(vr.val)+'</td></tr>';
+      stkUnion(sr.estilos, vr.estilos).sort().forEach(function(es){ var se=sr.estilos[es]||{cant:0,val:0}, ve=vr.estilos[es]||{cant:0,val:0};
+        h+='<tr class="k-est r'+id+'" style="display:none"><td>'+es+'</td><td>'+stkNum(se.cant)+'</td><td>'+stkUSD(se.val)+'</td><td>'+stkNum(ve.cant)+'</td><td>'+stkUSD(ve.val)+'</td></tr>'; });
+    });
+  });
+  h+='<tr class="k-tot"><td>Total '+stockCap(estado)+'</td><td>'+stkNum(s.tot.cant)+'</td><td>'+stkUSD(s.tot.val)+'</td><td>'+stkNum(v.tot.cant)+'</td><td>'+stkUSD(v.tot.val)+'</td></tr>';
+  return h+'</tbody></table></div>';
+}
+function stkBuildV2(estado, pricing, dolar){
+  var m=stkTreeMargin(estado, pricing, dolar);
+  var oris=stkOrderKeys(Object.keys(m.tree), STOCK_D.origenes||[]);
+  var h='<div class="prov-table-wrap"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo</th><th style="background:#B0568F">Stock cant</th><th style="background:#B0568F">Costo USD</th><th style="background:#B0568F">A venta USD</th><th style="background:#7A3E8F">Margen USD</th><th style="background:#7A3E8F">Mg %</th></tr></thead><tbody>';
+  oris.forEach(function(ori,oi){ var o=m.tree[ori]; var oc=STOCK_ORI_COL[ori]||'#7a7a85';
+    h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+stkNum(o.cant)+'</td><td>'+stkUSD(o.costo)+'</td><td>'+stkUSD(o.venta)+'</td><td>'+stkUSD(o.venta-o.costo)+'</td><td>'+stkMgPct(o.costo,o.venta)+'</td></tr>';
+    Object.keys(o.rubros).sort(function(a,b){return o.rubros[b].costo-o.rubros[a].costo;}).forEach(function(rub,ri){ var rr=o.rubros[rub]; var id='v2_'+oi+'_'+ri;
+      h+='<tr class="k-rub" data-t="'+id+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(rr.cant)+'</td><td>'+stkUSD(rr.costo)+'</td><td>'+stkUSD(rr.venta)+'</td><td>'+stkUSD(rr.venta-rr.costo)+'</td><td>'+stkMgPct(rr.costo,rr.venta)+'</td></tr>';
+      Object.keys(rr.estilos).sort().forEach(function(es){ var ee=rr.estilos[es];
+        h+='<tr class="k-est r'+id+'" style="display:none"><td>'+es+'</td><td>'+stkNum(ee.cant)+'</td><td>'+stkUSD(ee.costo)+'</td><td>'+stkUSD(ee.venta)+'</td><td>'+stkUSD(ee.venta-ee.costo)+'</td><td>'+stkMgPct(ee.costo,ee.venta)+'</td></tr>'; });
+    });
+  });
+  h+='<tr class="k-tot"><td>Total '+stockCap(estado)+'</td><td>'+stkNum(m.tot.cant)+'</td><td>'+stkUSD(m.tot.costo)+'</td><td>'+stkUSD(m.tot.venta)+'</td><td>'+stkUSD(m.tot.venta-m.tot.costo)+'</td><td>'+stkMgPct(m.tot.costo,m.tot.venta)+'</td></tr>';
+  return h+'</tbody></table></div>';
+}
+function stkRenderImmo(estado, pricing, dolar){
+  var el=document.getElementById('stkImmo'); if(!el) return;
+  var m=stkTreeMargin(estado, pricing, dolar); var c=m.tot.costo, v=m.tot.venta, mg=v-c, pct=v>0?mg/v*100:0;
+  var disc=/DISCON/.test(estado);
+  el.style.background=disc?'#FBEAF0':'#EEEDFE'; el.style.color=disc?'#72243E':'#3C3489';
+  el.innerHTML='<b>Capital inmovilizado en '+stockCap(estado)+':</b> '+stkUSD(c)+' al costo. A precio de lista vale '+stkUSD(v)+' → margen potencial '+stkUSD(mg)+' ('+pct.toFixed(0)+'%).'+(disc?' <b>Discontinuo:</b> margen que sólo se realiza si se liquida.':'');
+}
 function renderStock(){
-  var cardsEl=document.getElementById('stockCards'), cmpEl=document.getElementById('stockCompare'); if(!cardsEl) return;
-  var S=STOCK_D||{}; var estados=S.estados||[];
-  var mw=document.getElementById('stockMesWrap'), fl=document.getElementById('stockFechaLbl');
-  if(!estados.length){ cardsEl.innerHTML='<div class="prov-empty">Subí el archivo de Stock valorizado para ver la comparativa.</div>'; if(cmpEl)cmpEl.innerHTML=''; if(mw)mw.innerHTML=''; if(fl)fl.textContent=''; return; }
+  var S=STOCK_D||{}; var cardsEl=document.getElementById('stockCards'); if(!cardsEl) return;
+  var estados=S.estados||[];
+  var v1El=document.getElementById('stkV1'), v2El=document.getElementById('stkV2'), immoEl=document.getElementById('stkImmo');
+  var mw=document.getElementById('stockMesWrap'), fl=document.getElementById('stockFechaLbl'), di=document.getElementById('stockDolarInput');
+  if(di && document.activeElement!==di) di.value=S.dolar||1460;
+  if(!estados.length){ cardsEl.innerHTML='<div class="prov-empty">Subí el archivo de Stock valorizado para ver las vistas.</div>'; if(v1El)v1El.innerHTML='';if(v2El)v2El.innerHTML='';if(immoEl){immoEl.innerHTML='';immoEl.style.background='transparent';} if(mw)mw.innerHTML=''; if(fl)fl.textContent=''; return; }
   var meses=S.ventasMeses||[];
   if(!stockSelMes || meses.indexOf(stockSelMes)<0) stockSelMes = meses.length?meses[meses.length-1]:null;
   if(!stockSelEstado || estados.indexOf(stockSelEstado)<0) stockSelEstado=estados[0];
@@ -4025,43 +4159,22 @@ function renderStock(){
     ? '<select onchange="setStockMes(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+meses.map(function(m){return '<option value="'+m+'"'+(m===stockSelMes?' selected':'')+'>'+stockMesLabel(m)+'</option>';}).join('')+'</select>'
     : '<span style="font-size:12px;color:var(--txt2)">sin ventas</span>'; }
   if(fl) fl.textContent = S.fecha?('· stock al '+S.fecha.split('-').reverse().join('/')):'';
-  var vmes=(S.ventas&&stockSelMes)?(S.ventas[stockSelMes]||{}):{};
+  var stTot={}, vtTot={};
+  (S.stockRows||[]).forEach(function(a){var e=a[0];(stTot[e]=stTot[e]||{cant:0,val:0});stTot[e].cant+=a[4];stTot[e].val+=a[5];});
+  (S.ventasRows||[]).forEach(function(a){ if(a[0]!==stockSelMes)return; var e=a[1];(vtTot[e]=vtTot[e]||{cant:0,val:0});vtTot[e].cant+=a[5];vtTot[e].val+=a[6];});
   cardsEl.innerHTML = estados.map(function(e,i){
-    var col=stockEstadoColor(e,i); var st=S.stock[e]||{val:0,cant:0}; var vt=vmes[e]||{val:0,cant:0}; var act=e===stockSelEstado;
-    return '<div onclick="setStockEstado(\''+e+'\')" style="cursor:pointer;border-radius:14px;padding:13px 15px;border:1.5px solid '+col+';border-left:6px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 4px 14px rgba(0,0,0,.10)':'0 2px 8px rgba(0,0,0,.05)')+';transition:.12s">'
-      +'<div style="font-size:14px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:6px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
-      +'<div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap">'
-        +'<div><div style="font-size:10.5px;color:var(--txt2)">Stock</div><div style="font-size:16px;font-weight:700">'+fUSDstock(st.val)+'</div><div style="font-size:10px;color:var(--txt2)">'+fCantStock(st.cant)+' u.</div></div>'
-        +'<div><div style="font-size:10.5px;color:var(--txt2)">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:16px;font-weight:700">'+fUSDstock(vt.val)+'</div><div style="font-size:10px;color:var(--txt2)">'+fCantStock(vt.cant)+' u.</div></div>'
+    var col=STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length]; var st=stTot[e]||{cant:0,val:0}; var vt=vtTot[e]||{cant:0,val:0}; var act=e===stockSelEstado;
+    return '<div onclick="setStockEstado(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:14px;padding:12px 14px;border:1.5px solid '+col+';border-left:6px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 4px 14px rgba(0,0,0,.10)':'0 2px 8px rgba(0,0,0,.05)')+';transition:.12s">'
+      +'<div style="font-size:13.5px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:6px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
+      +'<div style="display:flex;gap:14px;margin-top:7px;flex-wrap:wrap">'
+        +'<div><div style="font-size:10px;color:var(--txt2)">Stock</div><div style="font-size:15px;font-weight:700">'+stkUSD(st.val)+'</div><div style="font-size:10px;color:var(--txt2)">'+stkNum(st.cant)+' u.</div></div>'
+        +'<div><div style="font-size:10px;color:var(--txt2)">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:15px;font-weight:700">'+stkUSD(vt.val)+'</div><div style="font-size:10px;color:var(--txt2)">'+stkNum(vt.cant)+' u.</div></div>'
       +'</div></div>';
   }).join('');
-  renderStockCompare(cmpEl, S, stockSelEstado, vmes);
-}
-function renderStockCompare(cmpEl, S, estado, vmes){
-  if(!cmpEl) return;
-  var idx=(S.estados||[]).indexOf(estado); var col=stockEstadoColor(estado, idx<0?0:idx);
-  var st=S.stock[estado]||{origenes:{},val:0,cant:0}; var vt=vmes[estado]||{origenes:{},val:0,cant:0};
-  var oset={}; (S.origenes||[]).forEach(function(o){oset[o]=1;}); Object.keys(st.origenes||{}).forEach(function(o){oset[o]=1;}); Object.keys(vt.origenes||{}).forEach(function(o){oset[o]=1;});
-  var oList=Object.keys(oset).sort(function(a,b){var ia=(S.origenes||[]).indexOf(a),ib=(S.origenes||[]).indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
-  var rows='';
-  oList.forEach(function(ori){
-    var so=(st.origenes&&st.origenes[ori])||{val:0,cant:0,rubros:{}}; var vo=(vt.origenes&&vt.origenes[ori])||{val:0,cant:0,rubros:{}};
-    var oc=STOCK_ORI_COL[ori]||'#7a7a7a', obg=(typeof chTint==='function')?chTint(oc,0.82):'var(--bg2)';
-    rows+='<tr class="stk-ori" style="background:'+obg+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+fCantStock(so.cant)+'</td><td>'+fUSDstock(so.val)+'</td><td>'+fCantStock(vo.cant)+'</td><td>'+fUSDstock(vo.val)+'</td></tr>';
-    var rset={}; Object.keys(so.rubros||{}).forEach(function(x){rset[x]=1;}); Object.keys(vo.rubros||{}).forEach(function(x){rset[x]=1;});
-    Object.keys(rset).sort().forEach(function(rub){
-      var sr=so.rubros[rub]||{cant:0,val:0}; var vr=vo.rubros[rub]||{cant:0,val:0};
-      rows+='<tr class="stk-rub"><td>'+rub+'</td><td>'+fCantStock(sr.cant)+'</td><td>'+fUSDstock(sr.val)+'</td><td>'+fCantStock(vr.cant)+'</td><td>'+fUSDstock(vr.val)+'</td></tr>';
-    });
-  });
-  cmpEl.innerHTML='<div class="cp">'
-    +'<div class="st" style="color:'+col+'"><i class="ti ti-arrows-left-right"></i>'+stockCap(estado)+' · Stock vs Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div>'
-    +'<div class="prov-table-wrap"><table class="stk-table">'
-      +'<thead><tr><th></th><th colspan="2" style="background:'+col+'">STOCK</th><th colspan="2" style="background:#2c2c2a">VENTAS</th></tr>'
-      +'<tr class="stk-sub"><th>Origen / Rubro</th><th>Cant.</th><th>USD</th><th>Cant.</th><th>USD</th></tr></thead>'
-      +'<tbody>'+rows
-      +'<tr class="stk-tot"><td>Total '+stockCap(estado)+'</td><td>'+fCantStock(st.cant)+'</td><td>'+fUSDstock(st.val)+'</td><td>'+fCantStock(vt.cant)+'</td><td>'+fUSDstock(vt.val)+'</td></tr>'
-      +'</tbody></table></div></div>';
+  if(v1El) v1El.innerHTML=stkBuildV1(stockSelEstado, stockSelMes);
+  var hasP=S.pricing && Object.keys(S.pricing).length;
+  if(v2El){ if(hasP){ v2El.innerHTML=stkBuildV2(stockSelEstado, S.pricing, S.dolar||1460); stkRenderImmo(stockSelEstado, S.pricing, S.dolar||1460); }
+    else { v2El.innerHTML='<div class="prov-empty">Cargá el archivo de <b>Pricing</b> (arriba) para ver la valorización a márgenes.</div>'; if(immoEl){immoEl.innerHTML='';immoEl.style.background='transparent';} } }
 }
 </script>
 
