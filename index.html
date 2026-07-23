@@ -3924,28 +3924,33 @@ renderCajas();
       <h1><i class="ti ti-packages" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:#8B4630"></i>Stock Valorizado MTM <span class="ok-badge" id="stockBadge"><i class="ti ti-check" style="font-size:10px"></i> Datos embebidos</span></h1>
       <p>Stock vs Ventas (al costo) y valorización a márgenes · por estado, origen, rubro y estilo</p>
     </div>
-    <div style="min-width:290px;display:flex;flex-direction:column;gap:8px">
-      <div class="upload-zone" id="stockUploadZone" style="border-color:#4B5CC4">
-        <input type="file" accept=".xlsx,.xls" id="stockFileInput" onchange="handleStockFile(this.files[0])">
-        <i class="ti ti-file-spreadsheet upload-icon" style="color:#4B5CC4"></i>
-        <div class="upload-txt"><strong>Actualizar Stock valorizado</strong><span>Hojas "Stock al..." y "Ventas"</span></div>
-        <div class="upload-status" id="stockUploadStatus"></div>
+    <div style="min-width:230px">
+      <button type="button" onclick="stkToggleUploads()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:700;color:#8B4630;background:var(--bg);border:1.5px solid #8B4630;border-radius:10px;padding:9px 12px;cursor:pointer;font-family:inherit"><i class="ti ti-upload" style="font-size:15px"></i>Actualizar archivos<i class="ti ti-chevron-down" id="stkUpChev" style="font-size:14px;transition:transform .15s"></i></button>
+      <div id="stkUploadPanel" style="display:none;margin-top:8px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="upload-zone" id="stockUploadZone" style="border-color:#4B5CC4">
+            <input type="file" accept=".xlsx,.xls" id="stockFileInput" onchange="handleStockFile(this.files[0])">
+            <i class="ti ti-file-spreadsheet upload-icon" style="color:#4B5CC4"></i>
+            <div class="upload-txt"><strong>Actualizar Stock valorizado</strong><span>Hojas "Stock al..." y "Ventas"</span></div>
+            <div class="upload-status" id="stockUploadStatus"></div>
+          </div>
+          <div class="progress-bar" id="stockProgressBar"><div class="progress-fill" id="stockProgressFill" style="width:0%;background:#4B5CC4"></div></div>
+          <div class="upload-zone" id="pricingUploadZone" style="border-color:#B0568F">
+            <input type="file" accept=".xlsx,.xls" id="pricingFileInput" onchange="handlePricingFile(this.files[0])">
+            <i class="ti ti-tag upload-icon" style="color:#B0568F"></i>
+            <div class="upload-txt"><strong>Cargar Pricing (márgenes)</strong><span>Hoja "Pricing" · precio final min. por SKU</span></div>
+            <div class="upload-status" id="pricingUploadStatus"></div>
+          </div>
+          <div class="progress-bar" id="pricingProgressBar"><div class="progress-fill" id="pricingProgressFill" style="width:0%;background:#B0568F"></div></div>
+          <div class="upload-zone" id="costosUploadZone" style="border-color:#3E8FA6">
+            <input type="file" accept=".xlsx,.xls" id="costosFileInput" onchange="handleCostosFile(this.files[0])">
+            <i class="ti ti-coin upload-icon" style="color:#3E8FA6"></i>
+            <div class="upload-txt"><strong>Cargar Costos (galpón)</strong><span>Hoja "Costo Pricing" · costo por SKU (último)</span></div>
+            <div class="upload-status" id="costosUploadStatus"></div>
+          </div>
+          <div class="progress-bar" id="costosProgressBar"><div class="progress-fill" id="costosProgressFill" style="width:0%;background:#3E8FA6"></div></div>
+        </div>
       </div>
-      <div class="progress-bar" id="stockProgressBar"><div class="progress-fill" id="stockProgressFill" style="width:0%;background:#4B5CC4"></div></div>
-      <div class="upload-zone" id="pricingUploadZone" style="border-color:#B0568F">
-        <input type="file" accept=".xlsx,.xls" id="pricingFileInput" onchange="handlePricingFile(this.files[0])">
-        <i class="ti ti-tag upload-icon" style="color:#B0568F"></i>
-        <div class="upload-txt"><strong>Cargar Pricing (márgenes)</strong><span>Hoja "Pricing" · precio final min. por SKU</span></div>
-        <div class="upload-status" id="pricingUploadStatus"></div>
-      </div>
-      <div class="progress-bar" id="pricingProgressBar"><div class="progress-fill" id="pricingProgressFill" style="width:0%;background:#B0568F"></div></div>
-      <div class="upload-zone" id="costosUploadZone" style="border-color:#3E8FA6">
-        <input type="file" accept=".xlsx,.xls" id="costosFileInput" onchange="handleCostosFile(this.files[0])">
-        <i class="ti ti-coin upload-icon" style="color:#3E8FA6"></i>
-        <div class="upload-txt"><strong>Cargar Costos (galpón)</strong><span>Hoja "Costo Pricing" · costo por SKU (último)</span></div>
-        <div class="upload-status" id="costosUploadStatus"></div>
-      </div>
-      <div class="progress-bar" id="costosProgressBar"><div class="progress-fill" id="costosProgressFill" style="width:0%;background:#3E8FA6"></div></div>
     </div>
   </div>
   <div style="display:flex;gap:1.2rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
@@ -4093,6 +4098,7 @@ async function handlePricingFile(file){
   finally{ zone.style.pointerEvents=''; }
 }
 function setStockDolar(v){ v=parseFloat(v)||0; if(v<=0) return; if(!STOCK_D)STOCK_D={pricing:{}}; STOCK_D.dolar=v; renderStock(); }
+function stkToggleUploads(){ var p=document.getElementById('stkUploadPanel'); if(!p)return; var open=(p.style.display==='none'||!p.style.display); p.style.display=open?'block':'none'; var c=document.getElementById('stkUpChev'); if(c)c.style.transform=open?'rotate(180deg)':''; }
 function setCostosProgress(pct,msg){ document.getElementById('costosProgressBar').classList.add('show'); document.getElementById('costosProgressFill').style.width=pct+'%'; document.getElementById('costosUploadStatus').innerHTML=msg; }
 async function handleCostosFile(file){
   if(!file) return; var zone=document.getElementById('costosUploadZone'); zone.style.pointerEvents='none';
