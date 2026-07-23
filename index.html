@@ -2753,15 +2753,15 @@ function renderRPTable(canalKey, dataObj, col){
   </table>`;
 }
 
-function renderRPRubroCards(canalKey, dataObj, col){
+function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
   const cats = RP_CAT_ORDER.filter(c=>dataObj[c]);
   if(!cats.length) return '<div class="prov-empty">Sin datos para este canal en el período</div>';
   let totVentas=0, totFC=0, totQty=0;
-  const rows = cats.map(cat=>{ const [v,fc,q,topSku]=dataObj[cat]; totVentas+=v; totFC+=fc; totQty+=q; return {cat,v,fc,q,topSku}; });
+  const rows = cats.map(cat=>{ const [v,fc,q]=dataObj[cat]; totVentas+=v; totFC+=fc; totQty+=q; return {cat,v,fc,q}; });
   const cards = rows.map(r=>{
     const ticket = r.v>0 ? r.fc/r.v : 0;
     const pct    = totFC>0 ? r.fc/totFC*100 : 0;
-    const foto   = rpFoto(r.cat, r.topSku);
+    const foto   = rpFoto(r.cat, (skuByCat&&skuByCat[r.cat])||'');
     const safe   = rpSafe(r.cat);
     const icon   = RP_CAT_ICON[r.cat]||'package';
     const photoInner = foto
@@ -2800,12 +2800,23 @@ function renderRP(){
     document.getElementById('rpCanalBlocks').innerHTML='<div class="prov-empty">Sin datos para el mes seleccionado</div>';
     return;
   }
+  // Un único producto estrella por rubro (misma foto/color en todos los canales):
+  // se toma el SKU top del canal con más unidades de ese rubro en el mes.
+  const skuByCat = {};
+  RP_CAT_ORDER.forEach(cat=>{
+    let bestSku='', bestQ=-1;
+    canales.forEach(c=>{
+      const cell = mesData[c] && mesData[c][cat];
+      if(cell){ const q=cell[2]||0, sku=cell[3]||''; if(sku && q>bestQ){ bestQ=q; bestSku=sku; } }
+    });
+    if(bestSku) skuByCat[cat]=bestSku;
+  });
   document.getElementById('rpCanalBlocks').innerHTML = canales.map(c=>{
     const col = CH_LIGHT[RP_CANAL_CHKEY[c]] || '#4472c4';
     return `
     <div class="rp-canal-block" style="background:${chTint(col,0.96)};border:1px solid ${chTint(col,0.35)};border-radius:14px;overflow:hidden;margin-bottom:14px">
       <div style="background:${chTint(col,0.80)};color:${col};padding:9px 14px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:7px"><i class="ti ti-${RP_CANAL_ICONS[c]||'building'}" style="font-size:15px"></i>${RP_CANAL_LABELS[c]}</div>
-      <div style="padding:12px 14px 14px">${renderRPRubroCards(c, mesData[c], col)}</div>
+      <div style="padding:12px 14px 14px">${renderRPRubroCards(c, mesData[c], col, skuByCat)}</div>
     </div>`;
   }).join('');
 }
