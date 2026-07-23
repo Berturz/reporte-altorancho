@@ -719,6 +719,28 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div id="rpMonthChips"></div>
   </div>
 
+  <style>
+  #rpCanalBlocks .rpc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:10px}
+  #rpCanalBlocks .rpc{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .15s}
+  #rpCanalBlocks .rpc:hover{box-shadow:0 2px 10px rgba(0,0,0,.09)}
+  #rpCanalBlocks .rpc-photo{position:relative;height:108px;display:flex;align-items:center;justify-content:center}
+  #rpCanalBlocks .rpc-img{width:100%;height:100%;object-fit:cover;display:block}
+  #rpCanalBlocks .rpc-ic{font-size:44px}
+  #rpCanalBlocks .rpc-chev{position:absolute;top:7px;right:9px;font-size:15px;opacity:.6;transition:transform .2s}
+  #rpCanalBlocks .rpc.open .rpc-chev{transform:rotate(180deg)}
+  #rpCanalBlocks .rpc-fotobtn{position:absolute;bottom:6px;right:6px;display:flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#374151;background:rgba(255,255,255,.92);border:1px solid #d1d5db;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit}
+  #rpCanalBlocks .rpc-inp{display:none}
+  #rpCanalBlocks .rpc-body{padding:8px 11px}
+  #rpCanalBlocks .rpc-rubro{font-size:12.5px;font-weight:700;color:#1f2937;line-height:1.2}
+  #rpCanalBlocks .rpc-prov{font-size:10.5px;color:#6b7280;margin-top:2px}
+  #rpCanalBlocks .rpc-det{max-height:0;overflow:hidden;transition:max-height .22s ease}
+  #rpCanalBlocks .rpc.open .rpc-det{max-height:280px}
+  #rpCanalBlocks .rpc-det-in{padding:2px 11px 10px}
+  #rpCanalBlocks .rpc-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-top:1px solid #f0f0f0}
+  #rpCanalBlocks .rpc-l{font-size:11.5px;color:#6b7280}
+  #rpCanalBlocks .rpc-v{font-size:13.5px;font-weight:700;color:#1f2937}
+  #rpCanalBlocks .rpc-total{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:8px 13px;border-radius:9px;font-size:12.5px;font-weight:600}
+  </style>
   <div id="rpCanalBlocks"></div>
 </div>
 
@@ -2635,6 +2657,32 @@ const RP_CAT_PROV = {
   'DECO/BAZAR FABRICA':'(Todos)',
 };
 const RP_CAT_ORDER = ['ILUMINACION IMPORTADA','ILUMINACION NACIONAL','ILUMINACION INALAMBRICA','SILLAS IMPORTADAS','MUEBLES NACIONALES','PROVEEDOR NACIONAL','DECO/NAVIDAD/BAZAR IMPORTADO','DECO/BAZAR FABRICA'];
+// ícono por defecto de cada rubro (se ve hasta que se cargue una foto)
+const RP_CAT_ICON = {
+  'ILUMINACION IMPORTADA':'bulb',
+  'ILUMINACION NACIONAL':'bulb',
+  'ILUMINACION INALAMBRICA':'flashlight',
+  'SILLAS IMPORTADAS':'armchair',
+  'MUEBLES NACIONALES':'sofa',
+  'PROVEEDOR NACIONAL':'building-warehouse',
+  'DECO/NAVIDAD/BAZAR IMPORTADO':'gift',
+  'DECO/BAZAR FABRICA':'building-factory-2',
+};
+// foto fija por rubro (misma que Top 5, catálogo Tienda Nube). Se puede setear con un clic; queda en Supabase al Guardar.
+const RP_CAT_PHOTO = {};
+function rpSafe(s){ return s.replace(/[^A-Za-z0-9]/g,'_'); }
+function rpFoto(rubro){ return prodImgCache['rp|'+rubro] || RP_CAT_PHOTO[rubro] || ''; }
+function rpTriggerImg(rubro, canal){ var inp=document.getElementById('rpinp_'+canal+'_'+rpSafe(rubro)); if(inp) inp.click(); }
+function handleRPImg(input, rubro){
+  if(!input.files[0]) return;
+  var r=new FileReader();
+  r.onload=function(e){
+    prodImgCache['rp|'+rubro]=e.target.result;
+    try{ prodImgUser['rp|'+rubro]=e.target.result; idbSet('prodfotos', prodImgUser); }catch(err){}
+    renderRP();
+  };
+  r.readAsDataURL(input.files[0]);
+}
 
 function getRPMeses(){ return Object.keys(RUBROPROV_D).sort(); }
 
@@ -2693,6 +2741,45 @@ function renderRPTable(canalKey, dataObj, col){
   </table>`;
 }
 
+function renderRPRubroCards(canalKey, dataObj, col){
+  const cats = RP_CAT_ORDER.filter(c=>dataObj[c]);
+  if(!cats.length) return '<div class="prov-empty">Sin datos para este canal en el período</div>';
+  let totVentas=0, totFC=0, totQty=0;
+  const rows = cats.map(cat=>{ const [v,fc,q]=dataObj[cat]; totVentas+=v; totFC+=fc; totQty+=q; return {cat,v,fc,q}; });
+  const cards = rows.map(r=>{
+    const ticket = r.v>0 ? r.fc/r.v : 0;
+    const pct    = totFC>0 ? r.fc/totFC*100 : 0;
+    const foto   = rpFoto(r.cat);
+    const safe   = rpSafe(r.cat);
+    const icon   = RP_CAT_ICON[r.cat]||'package';
+    const photoInner = foto
+      ? `<img src="${foto}" alt="${r.cat}" class="rpc-img">`
+      : `<i class="ti ti-${icon} rpc-ic" style="color:${col}"></i>`;
+    return `<div class="rpc" onclick="this.classList.toggle('open')">
+      <div class="rpc-photo" style="background:${chTint(col,0.86)}">
+        ${photoInner}
+        <span class="rpc-chev" style="color:${col}"><i class="ti ti-chevron-down"></i></span>
+        <button class="rpc-fotobtn" onclick="event.stopPropagation();rpTriggerImg('${r.cat}','${canalKey}')"><i class="ti ti-camera" style="font-size:11px"></i>${foto?'Cambiar':'Foto'}</button>
+        <input type="file" accept="image/*" id="rpinp_${canalKey}_${safe}" class="rpc-inp" onclick="event.stopPropagation()" onchange="handleRPImg(this,'${r.cat}')">
+      </div>
+      <div class="rpc-body"><div class="rpc-rubro">${r.cat}</div><div class="rpc-prov">${RP_CAT_PROV[r.cat]||''}</div></div>
+      <div class="rpc-det"><div class="rpc-det-in">
+        <div class="rpc-row"><span class="rpc-l">Cantidad</span><span class="rpc-v">${r.q.toLocaleString('es-AR')}</span></div>
+        <div class="rpc-row"><span class="rpc-l">Facturación</span><span class="rpc-v" style="color:${col}">${ffl(r.fc)}</span></div>
+        <div class="rpc-row"><span class="rpc-l">Ticket promedio</span><span class="rpc-v">${ffl(ticket)}</span></div>
+        <div class="rpc-row"><span class="rpc-l">Cantidad de ventas</span><span class="rpc-v">${r.v}</span></div>
+        <div class="rpc-row"><span class="rpc-l">%</span><span class="rpc-v">${pct.toFixed(2)}%</span></div>
+      </div></div>
+    </div>`;
+  }).join('');
+  const totalTicket = totVentas>0 ? totFC/totVentas : 0;
+  const totalHTML = `<div class="rpc-total" style="background:${chTint(col,0.88)};color:${col}">
+     <span>Total · ${totVentas} ventas · ${totQty.toLocaleString('es-AR')} u. · ticket ${ffl(totalTicket)}</span>
+     <span style="font-weight:800;font-size:13.5px">${ffl(totFC)}</span>
+   </div>`;
+  return `<div class="rpc-grid">${cards}</div>${totalHTML}`;
+}
+
 function renderRP(){
   if(!rpMes){ document.getElementById('rpCanalBlocks').innerHTML='<div class="prov-empty">Sin datos disponibles</div>'; return; }
   const mesData = RUBROPROV_D[rpMes] || {};
@@ -2704,9 +2791,9 @@ function renderRP(){
   document.getElementById('rpCanalBlocks').innerHTML = canales.map(c=>{
     const col = CH_LIGHT[RP_CANAL_CHKEY[c]] || '#4472c4';
     return `
-    <div class="rp-canal-block" style="background:${chTint(col,0.96)};border:1px solid ${chTint(col,0.35)};border-radius:14px;overflow:hidden">
+    <div class="rp-canal-block" style="background:${chTint(col,0.96)};border:1px solid ${chTint(col,0.35)};border-radius:14px;overflow:hidden;margin-bottom:14px">
       <div style="background:${chTint(col,0.80)};color:${col};padding:9px 14px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:7px"><i class="ti ti-${RP_CANAL_ICONS[c]||'building'}" style="font-size:15px"></i>${RP_CANAL_LABELS[c]}</div>
-      <div class="prov-table-wrap" style="border:none!important;border-radius:0;background:transparent">${renderRPTable(c, mesData[c], col)}</div>
+      <div style="padding:12px 14px 14px">${renderRPRubroCards(c, mesData[c], col)}</div>
     </div>`;
   }).join('');
 }
