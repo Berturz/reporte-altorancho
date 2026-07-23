@@ -4233,7 +4233,7 @@ function stkRenderImmo(estado, pricing, dolar){
 }
 function renderStock(){
   var S=STOCK_D||{}; var cardsEl=document.getElementById('stockCards'); if(!cardsEl) return;
-  var estados=S.estados||[];
+  var estados=(S.estados||[]).filter(function(e){return e!=='(SIN ESTADO)' && e!=='(VACIO)' && e!=='';});
   var v1El=document.getElementById('stkV1'), v2El=document.getElementById('stkV2'), immoEl=document.getElementById('stkImmo');
   var mw=document.getElementById('stockMesWrap'), fl=document.getElementById('stockFechaLbl'), di=document.getElementById('stockDolarInput');
   if(di && document.activeElement!==di) di.value=S.dolar||1460;
