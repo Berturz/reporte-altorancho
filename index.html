@@ -646,6 +646,10 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   #finCostFin .cf-badge{font-size:10px;font-weight:700;border-radius:999px;padding:1px 8px}
   #finCostFin .cf-list>*:last-child,#finCostFin .cf-subs .cf-row:last-child{border-bottom:0}
   </style>
+  <div id="costFinPerBar" style="display:none;gap:.5rem;align-items:center;margin:.1rem 0 .7rem;flex-wrap:wrap">
+    <span class="msl"><i class="ti ti-history" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Fecha de tasas</span>
+    <span id="costFinPerWrap"></span>
+  </div>
   <div id="finCostFin" style="display:none;gap:1.3rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1.3rem"></div>
   <div id="finResumen" style="margin-bottom:1.3rem"></div>
   <div id="finTop" style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start"></div>
@@ -907,12 +911,14 @@ async function handleFile(file) {
     // Convertir a array de arrays (más rápido que to_json)
     const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null });
 
-    // Costos de Financiación: bloques WEB y LOCAL → Valor (col A) + Financiación Total (col S = índice 18)
+    // Costos de Financiación: bloques WEB y LOCAL. Detecta columnas por nombre
+    // (Valor / Vigencia Desde / Vigencia Hasta / FINANCIACIÓN TOTAL) → guarda vigencia por fila.
     const newCOSTFIN = {web:[], local:[]};
     (function(){
       const shCF = wb.Sheets['Costos de Financiación']; if(!shCF) return;
       const rsCF = XLSX.utils.sheet_to_json(shCF, { header:1, raw:true, defval:null });
-      let target=null, collecting=false;
+      const nrm=function(x){return x==null?'':String(x).trim().toLowerCase();};
+      let target=null, collecting=false, ci={valor:0,desde:-1,hasta:-1,total:18};
       for(const r of rsCF){
         if(!r) continue;
         const a = r[0]!=null ? String(r[0]).trim() : '';
@@ -920,11 +926,25 @@ async function handleFile(file) {
         if(au==='WEB'){ target=newCOSTFIN.web; collecting=false; continue; }
         if(au==='LOCAL' || au==='LOCALES'){ target=newCOSTFIN.local; collecting=false; continue; }
         if(!target) continue;
-        if(au==='VALOR'){ collecting=true; continue; }   // fila de encabezado: arranca la data
+        if(au==='VALOR'){ // encabezado: ubicar columnas por título
+          ci={valor:0,desde:-1,hasta:-1,total:-1};
+          for(let c=0;c<r.length;c++){ const t=nrm(r[c]);
+            if(t==='valor') ci.valor=c;
+            else if(t.indexOf('vigencia desde')>=0 || t==='desde') ci.desde=c;
+            else if(t.indexOf('vigencia hasta')>=0 || t==='hasta') ci.hasta=c;
+            else if(t.indexOf('financiaci')>=0 && t.indexOf('total')>=0) ci.total=c;
+          }
+          if(ci.total<0) ci.total=18; // fallback formato viejo
+          collecting=true; continue;
+        }
         if(!collecting) continue;
         if(!a){ target=null; collecting=false; continue; } // fila vacía corta el bloque
-        const tot = typeof r[18]==='number' ? r[18] : parseFloat(r[18]);
-        if(!isNaN(tot)) target.push([a, tot]);
+        const val = ci.valor>=0 && r[ci.valor]!=null ? String(r[ci.valor]).trim() : a;
+        const tot = typeof r[ci.total]==='number' ? r[ci.total] : parseFloat(r[ci.total]);
+        if(isNaN(tot)) continue;
+        const d = (ci.desde>=0 && typeof r[ci.desde]==='number') ? r[ci.desde] : null;
+        const h = (ci.hasta>=0 && typeof r[ci.hasta]==='number') ? r[ci.hasta] : null;
+        target.push({v:val, d:d, h:h, t:tot});
       }
     })();
 
@@ -1324,11 +1344,47 @@ zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('d
 zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
 zone.addEventListener('drop', e=>{ e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
 // Cuadros WEB / Locales con la tabla de Costos de Financiación (Valor + Financiación total)
+// Historial por vigencia: cada fila trae Vigencia Desde/Hasta; el selector "Fecha de tasas"
+// muestra, por período, la tasa vigente de cada producto (los no modificados se arrastran).
+var costFinPeriodo=null;
+function setCostFinPeriodo(v){ costFinPeriodo=(v===''||v==null)?null:Number(v); renderCostFin(); }
+function cfNormRows(arr){ return (arr||[]).map(function(p){ return Array.isArray(p)?{v:p[0],d:null,h:null,t:p[1]}:p; }); }
+function cfFmtSerial(s){ try{var o=XLSX.SSF.parse_date_code(s); return String(o.d).padStart(2,'0')+'/'+String(o.m).padStart(2,'0')+'/'+String(o.y).slice(2);}catch(e){return ''+s;} }
+function cfPeriodos(cf){
+  var set={}; ['web','local'].forEach(function(k){(cf[k]||[]).forEach(function(p){ if(typeof p.d==='number') set[p.d]=1; });});
+  var bps=Object.keys(set).map(Number).sort(function(a,b){return a-b;});
+  if(!bps.length) return [];
+  var pers=[];
+  for(var i=0;i<bps.length;i++){ var label;
+    if(bps.length===1) label='Vigente';
+    else if(i===0) label='Hasta '+cfFmtSerial(bps[1]-1);
+    else label='Desde '+cfFmtSerial(bps[i]);
+    pers.push({ref:bps[i], label:label});
+  }
+  return pers;
+}
+function cfApplicable(rows, ref){
+  var best={};
+  (rows||[]).forEach(function(p){ var d=(typeof p.d==='number')?p.d:-1; if(d>ref) return; if(!(p.v in best)||d>=best[p.v].d) best[p.v]={d:d,t:p.t}; });
+  var seen={}, out=[];
+  (rows||[]).forEach(function(p){ if(seen[p.v]||!best[p.v]) return; seen[p.v]=1; out.push([p.v,best[p.v].t]); });
+  return out;
+}
 function renderCostFin(){
   var el=document.getElementById('finCostFin'); if(!el) return;
-  var cf=(typeof COSTFIN_D!=='undefined'&&COSTFIN_D)?COSTFIN_D:{web:[],local:[]};
+  var cfRaw=(typeof COSTFIN_D!=='undefined'&&COSTFIN_D)?COSTFIN_D:{web:[],local:[]};
+  var cf={web:cfNormRows(cfRaw.web), local:cfNormRows(cfRaw.local)};
+  var pers=cfPeriodos(cf);
+  var bar=document.getElementById('costFinPerBar'), pw=document.getElementById('costFinPerWrap');
+  if(pers.length){ if(costFinPeriodo==null || !pers.some(function(p){return p.ref===costFinPeriodo;})) costFinPeriodo=pers[pers.length-1].ref; }
+  var perLabel=''; for(var pi=0;pi<pers.length;pi++){ if(pers[pi].ref===costFinPeriodo) perLabel=pers[pi].label; }
+  if(pw){ pw.innerHTML = pers.length ? '<select onchange="setCostFinPeriodo(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+pers.map(function(p){return '<option value="'+p.ref+'"'+(p.ref===costFinPeriodo?' selected':'')+'>'+p.label+'</option>';}).join('')+'</select>' : ''; }
+  if(bar) bar.style.display = pers.length>1 ? 'flex' : 'none';
+  var ref = (costFinPeriodo!=null)?costFinPeriodo:(pers.length?pers[pers.length-1].ref:1e15);
+  var cfWeb=cfApplicable(cf.web, ref), cfLocal=cfApplicable(cf.local, ref);
   var tint=(typeof chTint==='function')?chTint:function(h){return h;};
   var pct=function(t){return (t*100).toFixed(2)+'%';};
+  var cfSub='Tasas vigentes'+(perLabel?' · '+perLabel:'');
   function fam(v){ var u=v.trim().toUpperCase();
     if(u.indexOf('MERCADO PAGO')===0) return 'Mercado Pago';
     if(u.indexOf('PAGONUBE')===0) return 'Pagonube';
@@ -1353,10 +1409,10 @@ function renderCostFin(){
     }).join('');
     return '<div style="flex:1;min-width:260px">'
       +'<div class="rp-canal-title" style="color:'+color+';border-bottom:2px solid '+tint(color,0.45)+';padding-bottom:.15rem"><i class="ti ti-credit-card" style="color:'+color+'"></i>'+titulo+'</div>'
-      +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .55rem">Tasas de financiación actuales</div>'
+      +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .55rem">'+cfSub+'</div>'
       +'<div class="cf-list">'+body+'</div></div>';
   }
-  var html=box('WEB','#7B6BC8',cf.web,['debito','mercado credito'])+box('Locales','#4E9DAC',cf.local,['gocuotas','mercado credito']);
+  var html=box('WEB','#7B6BC8',cfWeb,['debito','mercado credito'])+box('Locales','#4E9DAC',cfLocal,['gocuotas','mercado credito']);
   el.innerHTML=html;
   el.style.display=html?'flex':'none';
 }
