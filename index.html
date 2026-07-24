@@ -646,8 +646,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   #finCostFin .cf-badge{font-size:10px;font-weight:700;border-radius:999px;padding:1px 8px}
   #finCostFin .cf-list>*:last-child,#finCostFin .cf-subs .cf-row:last-child{border-bottom:0}
   </style>
-  <div id="costFinPerBar" style="display:none;gap:.5rem;align-items:center;margin:.1rem 0 .7rem;flex-wrap:wrap">
-    <span class="msl"><i class="ti ti-history" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Fecha de tasas</span>
+  <div id="costFinPerBar" style="display:none;gap:.6rem;align-items:center;margin:.1rem 0 .85rem;flex-wrap:wrap;background:#EEEDFE;border:1px solid #CECBF6;border-left:4px solid #7B6BC8;border-radius:10px;padding:7px 13px;width:fit-content">
+    <span style="font-size:11.5px;font-weight:800;color:#534AB7;display:flex;align-items:center;gap:5px;letter-spacing:.02em"><i class="ti ti-history" style="font-size:13px"></i>FECHA DE TASAS</span>
     <span id="costFinPerWrap"></span>
   </div>
   <div id="finCostFin" style="display:none;gap:1.3rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1.3rem"></div>
@@ -1378,7 +1378,7 @@ function renderCostFin(){
   var bar=document.getElementById('costFinPerBar'), pw=document.getElementById('costFinPerWrap');
   if(pers.length){ if(costFinPeriodo==null || !pers.some(function(p){return p.ref===costFinPeriodo;})) costFinPeriodo=pers[pers.length-1].ref; }
   var perLabel=''; for(var pi=0;pi<pers.length;pi++){ if(pers[pi].ref===costFinPeriodo) perLabel=pers[pi].label; }
-  if(pw){ pw.innerHTML = pers.length ? '<select onchange="setCostFinPeriodo(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+pers.map(function(p){return '<option value="'+p.ref+'"'+(p.ref===costFinPeriodo?' selected':'')+'>'+p.label+'</option>';}).join('')+'</select>' : ''; }
+  if(pw){ pw.innerHTML = pers.length ? '<select onchange="setCostFinPeriodo(this.value)" style="font-size:13px;font-weight:700;padding:5px 12px;border-radius:8px;border:1.5px solid #7B6BC8;background:#fff;color:#3C3489;cursor:pointer">'+pers.map(function(p){return '<option value="'+p.ref+'"'+(p.ref===costFinPeriodo?' selected':'')+'>'+p.label+'</option>';}).join('')+'</select>' : ''; }
   if(bar) bar.style.display = pers.length>1 ? 'flex' : 'none';
   var ref = (costFinPeriodo!=null)?costFinPeriodo:(pers.length?pers[pers.length-1].ref:1e15);
   var cfWeb=cfApplicable(cf.web, ref), cfLocal=cfApplicable(cf.local, ref);
