@@ -2434,13 +2434,11 @@ function aggProd(dates, key){
 var _photoModelIdx = null;
 function resolveProdFoto(skus){
   if(!skus || typeof PHOTO_MAP==='undefined') return {url:'',sku:null};
-  // probar los colores de MÁS a MENOS vendido y usar el 1º que tenga foto (así la foto = color top disponible)
-  var order=Object.keys(skus).sort(function(a,b){return (skus[b]||0)-(skus[a]||0);});
-  for(var i=0;i<order.length;i++){ if(PHOTO_MAP[order[i]]) return {url:PHOTO_MAP[order[i]], sku:order[i]}; }
-  if(!order.length) return {url:'',sku:null};
-  // fallback: mismo modelo, cualquier color (no se conoce el color exacto de la foto)
-  if(!_photoModelIdx){ _photoModelIdx={}; for(var k in PHOTO_MAP){ var m=k.slice(0,6); if(!_photoModelIdx[m])_photoModelIdx[m]=PHOTO_MAP[k]; } }
-  return {url:_photoModelIdx[order[0].slice(0,6)]||'', sku:null};
+  // regla: SIEMPRE la foto del color MÁS vendido. Si ese color no tiene foto, no se muestra nada (queda visible el SKU faltante para cargarlo).
+  var top=null, mx=-1;
+  for(var s in skus){ if(skus[s]>mx){ mx=skus[s]; top=s; } }
+  if(!top) return {url:'',sku:null};
+  return {url: PHOTO_MAP[top]||'', sku: top};
 }
 function renderTop5(wrapId, items, canalKey){
   const wrap = document.getElementById(wrapId);
@@ -2459,22 +2457,23 @@ function renderTop5(wrapId, items, canalKey){
     const foto = resolveProdFoto(p.skus);
     const cached = prodImgCache[imgKey];
     const imgSrc = cached || foto.url || '';
-    // color que realmente muestra la foto (para resaltar el mismo en la lista); null si es foto cargada a mano o fallback de modelo
+    const hasPhoto = !!imgSrc;
+    // color del más vendido (= el que debería mostrar la foto). null si es foto cargada a mano.
     const photoColor = cached ? null : (foto.sku ? String(foto.sku).slice(-2).toUpperCase() : null);
     const cl = colorList(p.skus);
     const emph = photoColor || (cl[0] ? cl[0][0] : null);
     const colsHtml = cl.slice(0,6).map((x)=>{
       const on = x[0]===emph;
-      const cam = (on && photoColor) ? '<i class="ti ti-camera" style="font-size:8px;vertical-align:1px;margin-right:1px"></i>' : '';
+      const cam = (on && photoColor && hasPhoto) ? '<i class="ti ti-camera" style="font-size:8px;vertical-align:1px;margin-right:1px"></i>' : '';
       return `<span style="color:${on?chCol:'var(--txt2)'};font-weight:${on?'800':'700'}">${cam}${x[0]}</span>`;
     }).join('<span style="color:var(--txt2);opacity:.45"> · </span>') + (cl.length>6?`<span style="color:var(--txt2);opacity:.7"> +${cl.length-6}</span>`:'');
-    const colsTitle = 'Colores vendidos · ' + cl.map(x=>`${x[0]}: ${x[1].toLocaleString('es-AR')}`).join('  ·  ') + (photoColor?`   (📷 foto: ${photoColor})`:'');
+    const colsTitle = 'Colores vendidos · ' + cl.map(x=>`${x[0]}: ${x[1].toLocaleString('es-AR')}`).join('  ·  ') + ((photoColor&&hasPhoto)?`   (📷 foto: ${photoColor})`:'');
     return `
     <div class="top5-card">
       <div class="top5-img-wrap">
         ${imgSrc
           ? `<img src="${imgSrc}" alt="${p.modelo}">`
-          : `<div class="top5-img-placeholder"><i class="ti ti-photo"></i><span>Sin foto</span></div>`
+          : `<div class="top5-img-placeholder"><i class="ti ti-photo-off"></i><span>Falta foto${foto.sku?'<br>'+foto.sku:''}</span></div>`
         }
         <span class="top5-rank" style="color:${chCol}">#${i+1}</span>
       </div>
