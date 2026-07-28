@@ -269,22 +269,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 /* ── TOP 5 PRODUCTOS ── */
 .top5-wrap{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.6rem}
 .top5-card{background:var(--bg2);border-radius:var(--rl);overflow:hidden;display:flex;flex-direction:column}
-.top5-img-wrap{position:relative;width:100%;aspect-ratio:1/1;background:var(--bg3);overflow:hidden;cursor:pointer}
+.top5-img-wrap{position:relative;width:100%;aspect-ratio:1/1;background:var(--bg3);overflow:hidden}
 .top5-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
 .top5-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:var(--txt2);font-size:10px;text-align:center;padding:8px}
 .top5-img-placeholder i{font-size:22px;opacity:.35}
-.top5-rank{position:absolute;top:7px;left:8px;font-size:18px;font-weight:700;color:rgba(255,255,255,.85);text-shadow:0 1px 4px rgba(0,0,0,.5);line-height:1}
+.top5-rank{position:absolute;top:7px;left:8px;font-size:24px;font-weight:800;line-height:1;padding:2px 10px;border-radius:10px;background:rgba(255,255,255,.9)}
 .top5-upload-btn{position:absolute;bottom:5px;right:5px;background:rgba(0,0,0,.45);border:none;border-radius:5px;padding:3px 6px;font-size:10px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:3px}
 .top5-upload-btn:hover{background:rgba(0,0,0,.7)}
 .top5-upload-input{display:none}
-.top5-body{padding:.5rem .6rem;flex:1;display:flex;flex-direction:column;gap:3px}
-.top5-name{font-size:11px;font-weight:600;color:var(--txt);line-height:1.3}
-.top5-estilo{font-size:10px;color:var(--txt2)}
-.top5-stats{display:flex;gap:6px;margin-top:3px}
+.top5-body{padding:.55rem .5rem .35rem;flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}
+.top5-name{font-size:11.5px;font-weight:600;color:var(--txt);line-height:1.25;height:29px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.top5-estilo{font-size:10px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.top5-colors{font-size:10.5px;font-weight:700;letter-spacing:.4px;margin-top:2px;line-height:1;min-height:11px}
+.top5-metric{margin-top:7px}
 .top5-qty{font-size:22px;font-weight:700;color:var(--txt);line-height:1}
-.top5-qty-lbl{font-size:10.5px;color:var(--txt2)}
-.top5-mg{font-size:22px;font-weight:700;line-height:1}
-.top5-mg-lbl{font-size:10.5px;color:var(--txt2)}
+.top5-qty-lbl{font-size:10.5px;color:var(--txt2);margin-top:1px}
+.top5-mg{font-size:20px;font-weight:700;line-height:1}
+.top5-mg-lbl{font-size:10.5px;color:var(--txt2);margin-top:1px}
 .top5-bar-wrap{padding:0 .6rem .55rem;margin-top:auto}
 .top5-bar-bg{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .top5-bar-fill{height:100%;border-radius:3px;transition:width .4s}
@@ -2446,36 +2447,35 @@ function renderTop5(wrapId, items, canalKey){
   if(!items.length){ wrap.innerHTML='<div style="font-size:11px;color:var(--txt2);padding:.5rem">Sin datos para el período seleccionado</div>'; return; }
   const maxQty = items[0].qty;
   const BAR_COLORS = ['#4472c4','#1D9E75','#BA7517','#7F77DD','#D85A30'];
+  function colorList(skus){
+    var by={}; for(var s in (skus||{})){ var c=String(s).slice(-2).toUpperCase(); by[c]=(by[c]||0)+(skus[s]||0); }
+    return Object.keys(by).map(function(c){return [c,by[c]];}).sort(function(a,b){return b[1]-a[1];});
+  }
+  const chCol = canalKey==='lt' ? '#D07C34' : '#4472c4';
   wrap.innerHTML = items.map((p,i)=>{
     const mg = p.mg;
     const mgColor = mg>=2.2 ? '#0f6e56' : '#854f0b';
     const imgKey = `${canalKey}|${p.modelo}|${p.estilo}`;
     const imgSrc = prodImgCache[imgKey] || resolveProdFoto(p.skus) || '';
     const barW = maxQty>0 ? Math.round((p.qty/maxQty)*100) : 0;
+    const cl = colorList(p.skus);
+    const colsHtml = cl.slice(0,6).map((x,ci)=>`<span style="color:${ci===0?BAR_COLORS[i]:'var(--txt2)'}">${x[0]}</span>`).join('<span style="color:var(--txt2);opacity:.45"> · </span>') + (cl.length>6?`<span style="color:var(--txt2);opacity:.7"> +${cl.length-6}</span>`:'');
+    const colsTitle = cl.map(x=>`${x[0]}: ${x[1].toLocaleString('es-AR')}`).join('  ·  ');
     return `
     <div class="top5-card">
-      <div class="top5-img-wrap" onclick="triggerImgUpload('${imgKey}','${wrapId}','${canalKey}')">
+      <div class="top5-img-wrap">
         ${imgSrc
           ? `<img src="${imgSrc}" alt="${p.modelo}">`
-          : `<div class="top5-img-placeholder"><i class="ti ti-photo"></i><span>Clic para<br>agregar foto</span></div>`
+          : `<div class="top5-img-placeholder"><i class="ti ti-photo"></i><span>Sin foto</span></div>`
         }
-        <span class="top5-rank">#${i+1}</span>
-        <button class="top5-upload-btn" onclick="event.stopPropagation();triggerImgUpload('${imgKey}','${wrapId}','${canalKey}')">
-          <i class="ti ti-upload" style="font-size:9px"></i>${imgSrc?'Cambiar':'Foto'}
-        </button>
-        <input type="file" accept="image/*" class="top5-upload-input" id="inp_${imgKey.replace(/\|/g,'_')}"
-               onchange="handleProdImg(this,'${imgKey}','${wrapId}','${canalKey}')">
+        <span class="top5-rank" style="color:${chCol}">#${i+1}</span>
       </div>
       <div class="top5-body">
         <div class="top5-name">${p.modelo}</div>
         <div class="top5-estilo">${p.estilo}</div>
-        <div class="top5-stats">
-          <div><div class="top5-qty">${p.qty.toLocaleString('es-AR')}</div><div class="top5-qty-lbl">unidades</div></div>
-          <div style="margin-left:auto;text-align:right"><div class="top5-mg" style="color:${mgColor}">${mg.toFixed(2)}</div><div class="top5-mg-lbl">margen</div></div>
-        </div>
-      </div>
-      <div class="top5-bar-wrap">
-        <div class="top5-bar-bg"><div class="top5-bar-fill" style="width:${barW}%;background:${BAR_COLORS[i]}"></div></div>
+        <div class="top5-colors" title="Colores vendidos · ${colsTitle}">${colsHtml}</div>
+        <div class="top5-metric"><div class="top5-qty">${p.qty.toLocaleString('es-AR')}</div><div class="top5-qty-lbl">unidades</div></div>
+        <div class="top5-metric"><div class="top5-mg" style="color:${mgColor}">${mg.toFixed(2)}</div><div class="top5-mg-lbl">margen</div></div>
       </div>
     </div>`;
   }).join('');
