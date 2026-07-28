@@ -4599,7 +4599,7 @@ function renderIMPO(){
       impoCell(r,'desp','ars')+impoCell(r,'nac','ars')+impoCell(r,'fleten','ars')+
       '<td class="ctr">'+fDMY(r.etd)+'</td>'+
       '<td class="ctr">'+fDMY(r.arribo)+'</td>'+
-      '<td class="com">'+r.com+'</td>'+
+      '<td class="com"'+(((r.com||'').trim().toUpperCase().indexOf('LLEG')===0)?' style="color:#0f7a34;font-weight:700"':'')+'>'+r.com+'</td>'+
       '<td class="ctr">'+r.pago+'</td>'+
     '</tr>';
   }).join('');
