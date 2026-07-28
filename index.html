@@ -287,6 +287,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .top5-mg{font-size:20px;font-weight:700;line-height:1}
 .top5-mg-lbl{font-size:10.5px;color:var(--txt2);margin-top:1px}
 .top5-colors{font-size:10.5px;line-height:1.55;margin-top:9px;padding-top:8px;border-top:.5px solid var(--brd);width:100%}
+.topfc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.7rem}
+.topfc-card{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;padding-bottom:.55rem}
+.topfc-fc{font-size:18px;font-weight:800;color:#4472c4;margin-top:.55rem;line-height:1}
+.topfc-name{font-size:12px;line-height:1.2;height:29px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:0 .45rem;margin:3px 0 5px}
+.topfc-name b{font-weight:700;color:var(--txt)}
+.topfc-name span{color:var(--txt2)}
+.topfc-img{position:relative;width:100%;aspect-ratio:1/1;background:var(--bg3);overflow:hidden}
+.topfc-img img{width:100%;height:100%;object-fit:cover;display:block}
+.topfc-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;color:var(--txt2);font-size:10px;text-align:center;padding:8px}
+.topfc-ph i{font-size:20px;opacity:.4}
+.topfc-rank{position:absolute;top:6px;left:7px;font-size:16px;font-weight:800;color:#4472c4;background:rgba(255,255,255,.9);border-radius:8px;padding:1px 8px;line-height:1}
+.topfc-metric{margin-top:6px;font-size:10.5px;color:var(--txt2)}
+.topfc-metric b{font-size:16px;font-weight:700;display:block;line-height:1;color:var(--txt);margin-bottom:1px}
 .top5-bar-wrap{padding:0 .6rem .55rem;margin-top:auto}
 .top5-bar-bg{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .top5-bar-fill{height:100%;border-radius:3px;transition:width .4s}
@@ -689,11 +702,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 
 <!-- SECCIÓN 5: MODELOS CON MAYOR APORTE A LA FACTURACIÓN -->
 <div class="sec" id="secTopFC">
-  <div class="sec-hdr"><i class="ti ti-stairs-up"></i>Modelos con mayor aporte a la facturación <span class="sec-sub">(Lett + AR) · todos los rubros · controlado por el calendario</span></div>
-  <div class="leg" id="legTopFC" style="margin-bottom:.5rem"></div>
-  <div style="position:relative;width:100%;height:340px">
-    <canvas id="cTopFC"></canvas>
-  </div>
+  <div class="sec-hdr"><i class="ti ti-stairs-up"></i>Modelos con mayor aporte a la facturación <span class="sec-sub">(Lett + AR) · todos los rubros · Top 12 por facturación · controlado por el calendario</span></div>
+  <div id="topFCGrid" class="topfc-grid"></div>
 </div>
 
 <!-- SECCIÓN 6: APORTE POR PROVEEDOR -->
@@ -1087,10 +1097,12 @@ async function handleFile(file) {
         if (rubro !== 'ENVIOS' && modelo2 && estilo2 && modelo2.toUpperCase() !== 'N/A' && estilo2.toUpperCase() !== 'N/A') {
           if (!newTOPFC[dia]) newTOPFC[dia] = {};
           const tKey = `${modelo2}|${estilo2}`;
-          if (!newTOPFC[dia][tKey]) newTOPFC[dia][tKey]=[0,0,0];
+          if (!newTOPFC[dia][tKey]) newTOPFC[dia][tKey]=[0,0,0,{}];
           newTOPFC[dia][tKey][0] += qty2;
           newTOPFC[dia][tKey][1] += fc;
           newTOPFC[dia][tKey][2] += cmv;
+          const _skuT = row[COL.SKU] ? String(row[COL.SKU]).trim() : '';
+          if(_skuT && _skuT.toUpperCase()!=='N/A'){ if(!newTOPFC[dia][tKey][3]) newTOPFC[dia][tKey][3]={}; newTOPFC[dia][tKey][3][_skuT] = (newTOPFC[dia][tKey][3][_skuT]||0) + qty2; }
         }
       }
 
@@ -2529,8 +2541,9 @@ function aggTopFC(dates, topN){
   for(const d of dates){
     const v = TOPFC_D[d]||{};
     for(const[k,vals] of Object.entries(v)){
-      if(!totals[k]) totals[k]=[0,0,0];
+      if(!totals[k]) totals[k]=[0,0,0,{}];
       totals[k][0]+=vals[0]; totals[k][1]+=vals[1]; totals[k][2]+=vals[2];
+      if(vals[3]){ for(const s in vals[3]){ totals[k][3][s]=(totals[k][3][s]||0)+vals[3][s]; } }
     }
   }
   return Object.entries(totals)
@@ -2540,7 +2553,8 @@ function aggTopFC(dates, topN){
         modelo: k.slice(0,sep),
         estilo: k.slice(sep+1),
         qty: vals[0], fc: vals[1], cmv: vals[2],
-        mg: vals[2]>0 ? vals[1]/vals[2] : 0
+        mg: vals[2]>0 ? vals[1]/vals[2] : 0,
+        skus: vals[3]||{}
       };
     })
     .filter(o=>o.modelo && o.estilo && o.modelo.toUpperCase()!=='N/A' && o.estilo.toUpperCase()!=='N/A')
@@ -2552,103 +2566,28 @@ let topFCChart=null;
 function renderTopFC(){
   const dates = getRange();
   const items = aggTopFC(dates, 12);
-  if(!items.length){
-    document.getElementById('legTopFC').innerHTML='<span style="font-size:11px;color:var(--txt2)">Sin datos para el período seleccionado</span>';
-    if(topFCChart){topFCChart.destroy();topFCChart=null;}
-    return;
-  }
-  const labels = items.map(p=>`${p.modelo}\n${p.estilo}`);
-  const fcData = items.map(p=>p.fc);
-  const mgData = items.map(p=>parseFloat(p.mg.toFixed(2)));
-  const qtyData = items.map(p=>p.qty);
-  // Escalar cantidad a un eje secundario que comparta visualmente con margen (normalizado a 0-maxQty)
-  const maxQty = Math.max(...qtyData,1);
-  const maxMg  = Math.max(...mgData,1);
-
-  document.getElementById('legTopFC').innerHTML = `
-    <span class="li"><span class="ld" style="background:#4472c4"></span>Facturación s/IVA</span>
-    <span class="li"><span class="ldn" style="background:#5DCAA5"></span>Margen</span>
-    <span class="li"><span class="ldn" style="background:#D88A3D"></span>Cantidad</span>`;
-
-  if(topFCChart) topFCChart.destroy();
-  const ctx = document.getElementById('cTopFC').getContext('2d');
-  topFCChart = new Chart(ctx, {
-    type:'bar',
-    data:{
-      labels,
-      datasets:[
-        {label:'Facturación s/IVA', data:fcData, backgroundColor:chTint('#4472c4',0.45), borderColor:'#4472c4', borderWidth:1.5, borderRadius:4, yAxisID:'yFC', order:3},
-        {label:'Margen', data:mgData, type:'line', yAxisID:'yMG', order:1,
-          borderColor:'#5DCAA5', backgroundColor:'#5DCAA5',
-          pointBackgroundColor:'#5DCAA5', pointRadius:5, pointHoverRadius:7,
-          borderWidth:2, tension:0.25},
-        {label:'Cantidad', data:qtyData, type:'line', yAxisID:'yQTY', order:2,
-          borderColor:'#D88A3D', backgroundColor:'#D88A3D',
-          pointBackgroundColor:'#D88A3D', pointRadius:0, pointHoverRadius:0,
-          borderWidth:2, tension:0.25, showLine:true}
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      layout:{padding:{top:30}},
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          mode:'index', intersect:false,
-          callbacks:{
-            label(c){
-              if(c.dataset.label==='Facturación s/IVA') return ` FC: ${ffl(c.raw)}`;
-              if(c.dataset.label==='Margen') return ` Margen: ${c.raw.toFixed(2)}x`;
-              if(c.dataset.label==='Cantidad') return ` Cantidad: ${c.raw}`;
-              return c.raw;
-            }
-          }
-        },
-        datalabels:false
-      },
-      scales:{
-        x:{ticks:{autoSkip:false,maxRotation:50,minRotation:40,font:{size:11,weight:'600'},color:'#2c2c2a'},grid:{display:false}},
-        yFC:{position:'left',ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}},
-        yMG:{position:'right',min:0,max:Math.max(4,Math.ceil(maxMg)+0.5),
-             ticks:{callback:v=>v.toFixed(1),font:{size:9}},grid:{display:false}},
-        yQTY:{display:false,min:0,max:maxQty*1.15}
-      }
-    },
-    plugins:[{
-      id:'qtyBadges',
-      afterDatasetsDraw(chart){
-        const ctx = chart.ctx;
-        ctx.save();
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        function badge(x,cy,txt,bg,fs){
-          ctx.font='bold '+fs+'px -apple-system, sans-serif';
-          const tw=ctx.measureText(txt).width, pad=5, bw=tw+pad*2, bh=fs+7;
-          ctx.fillStyle=bg;
-          ctx.beginPath(); ctx.roundRect(x-bw/2, cy-bh/2, bw, bh, 4); ctx.fill();
-          ctx.fillStyle='#fff'; ctx.fillText(txt, x, cy+0.5);
+  const el = document.getElementById('topFCGrid'); if(!el) return;
+  if(!items.length){ el.innerHTML='<div style="font-size:11px;color:var(--txt2);padding:.5rem">Sin datos para el período seleccionado</div>'; return; }
+  el.innerHTML = items.map((p,i)=>{
+    const mg = p.mg;
+    const mgColor = mg>=2.2 ? '#0f6e56' : '#854f0b';
+    const foto = resolveProdFoto(p.skus||{});
+    const imgSrc = foto.url || '';
+    return `
+    <div class="topfc-card">
+      <div class="topfc-fc">${fmt(p.fc)}</div>
+      <div class="topfc-name"><b>${p.modelo}</b> <span>· ${p.estilo}</span></div>
+      <div class="topfc-img">
+        ${imgSrc
+          ? `<img src="${imgSrc}" alt="${p.modelo}">`
+          : `<div class="topfc-ph"><i class="ti ti-photo-off"></i><span>Falta foto${foto.sku?'<br>'+foto.sku:''}</span></div>`
         }
-        const m0=chart.getDatasetMeta(0), m1=chart.getDatasetMeta(1), m2=chart.getDatasetMeta(2);
-        m0.data.forEach((bar,i)=>{
-          const x=bar.x;
-          const gy=m1.data[i].y, oy=m2.data[i].y;
-          // importe (azul) arriba de la barra
-          let iy=bar.y-14;
-          // margen (verde) arriba del punto de margen
-          let my=gy-16;
-          // si importe y margen se pisan, apilar margen encima del importe
-          if(Math.abs(iy-my)<19){ my=Math.min(iy,my)-20; }
-          // cantidad (rojo) debajo del punto de cantidad
-          let cy=oy+16;
-          // si cantidad choca con margen o importe, bajarla
-          if(Math.abs(cy-my)<19 || Math.abs(cy-iy)<19) cy=Math.max(my,iy,oy)+20;
-          badge(x, iy, fmt(fcData[i]), '#4472c4', 12);
-          badge(x, my, mgData[i].toFixed(2), '#5a9ca8', 12);
-          badge(x, cy, String(qtyData[i]), '#D64545', 13);
-        });
-        ctx.restore();
-      }
-    }]
-  });
+        <span class="topfc-rank">#${i+1}</span>
+      </div>
+      <div class="topfc-metric"><b>${p.qty.toLocaleString('es-AR')}</b>unidades</div>
+      <div class="topfc-metric"><b style="color:${mgColor}">${mg.toFixed(2)}</b>margen</div>
+    </div>`;
+  }).join('');
 }
 
 
