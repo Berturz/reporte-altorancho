@@ -2434,11 +2434,18 @@ function aggProd(dates, key){
 var _photoModelIdx = null;
 function resolveProdFoto(skus){
   if(!skus || typeof PHOTO_MAP==='undefined') return {url:'',sku:null};
-  // regla: SIEMPRE la foto del color MÁS vendido. Si ese color no tiene foto, no se muestra nada (queda visible el SKU faltante para cargarlo).
-  var top=null, mx=-1;
-  for(var s in skus){ if(skus[s]>mx){ mx=skus[s]; top=s; } }
-  if(!top) return {url:'',sku:null};
-  return {url: PHOTO_MAP[top]||'', sku: top};
+  // regla: SIEMPRE la foto del COLOR más vendido (agrupando por color = últimas 2 letras, igual que la lista).
+  // Si ese color no tiene foto, no se muestra nada (queda visible el SKU faltante para cargarlo).
+  var byColor={}, skuByColor={};
+  for(var s in skus){ var c=String(s).slice(-2).toUpperCase(); byColor[c]=(byColor[c]||0)+(skus[s]||0); (skuByColor[c]=skuByColor[c]||[]).push(s); }
+  var topColor=null, mx=-1;
+  for(var c in byColor){ if(byColor[c]>mx){ mx=byColor[c]; topColor=c; } }
+  if(!topColor) return {url:'',sku:null};
+  // dentro del color top, preferir un SKU que tenga foto; si no, el de mayor cantidad
+  var list=skuByColor[topColor].sort(function(a,b){return (skus[b]||0)-(skus[a]||0);});
+  var withPhoto=list.filter(function(s){return PHOTO_MAP[s];});
+  var chosen = withPhoto.length ? withPhoto[0] : list[0];
+  return {url: PHOTO_MAP[chosen]||'', sku: chosen};
 }
 function renderTop5(wrapId, items, canalKey){
   const wrap = document.getElementById(wrapId);
@@ -2455,11 +2462,10 @@ function renderTop5(wrapId, items, canalKey){
     const mgColor = mg>=2.2 ? '#0f6e56' : '#854f0b';
     const imgKey = `${canalKey}|${p.modelo}|${p.estilo}`;
     const foto = resolveProdFoto(p.skus);
-    const cached = prodImgCache[imgKey];
-    const imgSrc = cached || foto.url || '';
+    // foto SIEMPRE automática por color más vendido (se ignora cualquier foto vieja cargada a mano)
+    const imgSrc = foto.url || '';
     const hasPhoto = !!imgSrc;
-    // color del más vendido (= el que debería mostrar la foto). null si es foto cargada a mano.
-    const photoColor = cached ? null : (foto.sku ? String(foto.sku).slice(-2).toUpperCase() : null);
+    const photoColor = foto.sku ? String(foto.sku).slice(-2).toUpperCase() : null;
     const cl = colorList(p.skus);
     const emph = photoColor || (cl[0] ? cl[0][0] : null);
     const colsHtml = cl.slice(0,6).map((x)=>{
