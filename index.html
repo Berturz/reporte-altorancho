@@ -2433,14 +2433,14 @@ function aggProd(dates, key){
 // si ese color no tiene foto, cae a otro color del mismo modelo (primeros 6 díg).
 var _photoModelIdx = null;
 function resolveProdFoto(skus){
-  if(!skus || typeof PHOTO_MAP==='undefined') return '';
-  var top=null, mx=-1;
-  for(var s in skus){ if(skus[s]>mx){ mx=skus[s]; top=s; } }
-  if(!top) return '';
-  if(PHOTO_MAP[top]) return PHOTO_MAP[top];
-  // fallback: mismo modelo, cualquier color
+  if(!skus || typeof PHOTO_MAP==='undefined') return {url:'',sku:null};
+  // probar los colores de MÁS a MENOS vendido y usar el 1º que tenga foto (así la foto = color top disponible)
+  var order=Object.keys(skus).sort(function(a,b){return (skus[b]||0)-(skus[a]||0);});
+  for(var i=0;i<order.length;i++){ if(PHOTO_MAP[order[i]]) return {url:PHOTO_MAP[order[i]], sku:order[i]}; }
+  if(!order.length) return {url:'',sku:null};
+  // fallback: mismo modelo, cualquier color (no se conoce el color exacto de la foto)
   if(!_photoModelIdx){ _photoModelIdx={}; for(var k in PHOTO_MAP){ var m=k.slice(0,6); if(!_photoModelIdx[m])_photoModelIdx[m]=PHOTO_MAP[k]; } }
-  return _photoModelIdx[top.slice(0,6)] || '';
+  return {url:_photoModelIdx[order[0].slice(0,6)]||'', sku:null};
 }
 function renderTop5(wrapId, items, canalKey){
   const wrap = document.getElementById(wrapId);
@@ -2456,11 +2456,19 @@ function renderTop5(wrapId, items, canalKey){
     const mg = p.mg;
     const mgColor = mg>=2.2 ? '#0f6e56' : '#854f0b';
     const imgKey = `${canalKey}|${p.modelo}|${p.estilo}`;
-    const imgSrc = prodImgCache[imgKey] || resolveProdFoto(p.skus) || '';
-    const barW = maxQty>0 ? Math.round((p.qty/maxQty)*100) : 0;
+    const foto = resolveProdFoto(p.skus);
+    const cached = prodImgCache[imgKey];
+    const imgSrc = cached || foto.url || '';
+    // color que realmente muestra la foto (para resaltar el mismo en la lista); null si es foto cargada a mano o fallback de modelo
+    const photoColor = cached ? null : (foto.sku ? String(foto.sku).slice(-2).toUpperCase() : null);
     const cl = colorList(p.skus);
-    const colsHtml = cl.slice(0,6).map((x,ci)=>`<span style="color:${ci===0?BAR_COLORS[i]:'var(--txt2)'}">${x[0]}</span>`).join('<span style="color:var(--txt2);opacity:.45"> · </span>') + (cl.length>6?`<span style="color:var(--txt2);opacity:.7"> +${cl.length-6}</span>`:'');
-    const colsTitle = cl.map(x=>`${x[0]}: ${x[1].toLocaleString('es-AR')}`).join('  ·  ');
+    const emph = photoColor || (cl[0] ? cl[0][0] : null);
+    const colsHtml = cl.slice(0,6).map((x)=>{
+      const on = x[0]===emph;
+      const cam = (on && photoColor) ? '<i class="ti ti-camera" style="font-size:8px;vertical-align:1px;margin-right:1px"></i>' : '';
+      return `<span style="color:${on?chCol:'var(--txt2)'};font-weight:${on?'800':'700'}">${cam}${x[0]}</span>`;
+    }).join('<span style="color:var(--txt2);opacity:.45"> · </span>') + (cl.length>6?`<span style="color:var(--txt2);opacity:.7"> +${cl.length-6}</span>`:'');
+    const colsTitle = 'Colores vendidos · ' + cl.map(x=>`${x[0]}: ${x[1].toLocaleString('es-AR')}`).join('  ·  ') + (photoColor?`   (📷 foto: ${photoColor})`:'');
     return `
     <div class="top5-card">
       <div class="top5-img-wrap">
@@ -2473,7 +2481,7 @@ function renderTop5(wrapId, items, canalKey){
       <div class="top5-body">
         <div class="top5-name">${p.modelo}</div>
         <div class="top5-estilo">${p.estilo}</div>
-        <div class="top5-colors" title="Colores vendidos · ${colsTitle}">${colsHtml}</div>
+        <div class="top5-colors" title="${colsTitle}">${colsHtml}</div>
         <div class="top5-metric"><div class="top5-qty">${p.qty.toLocaleString('es-AR')}</div><div class="top5-qty-lbl">unidades</div></div>
         <div class="top5-metric"><div class="top5-mg" style="color:${mgColor}">${mg.toFixed(2)}</div><div class="top5-mg-lbl">margen</div></div>
       </div>
