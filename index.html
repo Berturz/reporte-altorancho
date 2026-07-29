@@ -744,7 +744,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   #rpCanalBlocks .rpc-ic{font-size:38px}
   #rpCanalBlocks .rpc-fotobtn{position:absolute;bottom:6px;right:6px;display:flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#374151;background:rgba(255,255,255,.92);border:1px solid #d1d5db;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit}
   #rpCanalBlocks .rpc-inp{display:none}
-  #rpCanalBlocks .rpc-body{padding:7px 9px}
+  #rpCanalBlocks .rpc-body{padding:7px 9px;text-align:center}
   #rpCanalBlocks .rpc-rubro{font-size:11.5px;font-weight:700;color:#1f2937;line-height:1.18;min-height:27px}
   #rpCanalBlocks .rpc-prov{font-size:10px;color:#6b7280;margin-top:2px;line-height:1.15;min-height:23px}
   #rpCanalBlocks .rpc-det-in{padding:2px 9px 9px;margin-top:auto}
@@ -2868,7 +2868,7 @@ function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
         ${emblem}
         <span style="position:absolute;bottom:6px;right:7px;font-size:9.5px;font-weight:600;color:${origCol};background:rgba(255,255,255,.78);border-radius:6px;padding:1px 7px">${origTxt}</span>
       </div>
-      <div class="rpc-body"><div class="rpc-rubro">${r.cat}</div><div class="rpc-prov">${RP_CAT_PROV[r.cat]||''}</div></div>
+      <div class="rpc-body"><div class="rpc-rubro" style="color:${origCol}">${r.cat}</div><div class="rpc-prov">${RP_CAT_PROV[r.cat]||''}</div></div>
       <div class="rpc-det"><div class="rpc-det-in">
         <div class="rpc-row"><span class="rpc-l">Cantidad</span><span class="rpc-v">${r.q.toLocaleString('es-AR')}</span></div>
         <div class="rpc-row"><span class="rpc-l">Facturación</span><span class="rpc-v" style="color:${col}">${ffl(r.fc)}</span></div>
