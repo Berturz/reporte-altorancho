@@ -4567,7 +4567,17 @@ function renderLog(){
       <div class="progress-bar" id="impoProgressBar"><div class="progress-fill" id="impoProgressFill" style="width:0%"></div></div>
     </div>
   </div>
-  <div class="prov-table-wrap" id="impoTableWrap" style="overflow-x:auto;margin-top:.6rem"></div>
+  <style>
+  #secIMPO .impo-card{border:1.5px solid var(--brd);border-radius:12px;padding:11px 13px;cursor:pointer;background:var(--bg);transition:.12s}
+  #secIMPO .impo-card.act{box-shadow:0 3px 12px rgba(0,0,0,.10)}
+  #secIMPO .impo-ct{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+  #secIMPO .impo-cv{font-size:21px;font-weight:800;margin-top:4px}
+  #secIMPO .impo-cs{font-size:11px;color:var(--txt2);margin-top:1px}
+  #secIMPO #impoCards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:.7rem 0}
+  @media(max-width:640px){#secIMPO #impoCards{grid-template-columns:1fr}}
+  </style>
+  <div id="impoCards"></div>
+  <div class="prov-table-wrap" id="impoTableWrap" style="overflow-x:auto;margin-top:.4rem"></div>
 </div>
 
 <script>
@@ -4594,34 +4604,70 @@ function impoCell(r,key,cur){
   var txt = cur==='usd' ? fUSD(v) : fARS(v);
   return '<td class="num'+(f?' pf':'')+'" style="'+bg+'">'+txt+'</td>';
 }
-function renderIMPO(){
-  var wrap=document.getElementById('impoTableWrap'); if(!wrap) return;
+var impoSel='gen';
+function setImpoSel(k){ impoSel=k; renderIMPO(); }
+function impoIsLleg(r){ return (r.com||'').trim().toUpperCase().indexOf('LLEG')===0; }
+function impoComStyle(r){ var u=(r.com||'').trim().toUpperCase(); if(u.indexOf('LLEG')===0)return 'color:#0f7a34;font-weight:700'; if(u.indexOf('VIAJE')>=0)return 'color:#3C3489;font-weight:700'; if(u.indexOf('PRODUC')>=0)return 'color:#8a5a00;font-weight:700'; return u?'color:#2c2c2a;font-weight:700':''; }
+var IMPO_PEND_OTROS=[['trib','Tributos'],['fleteint','Flete int.'],['desp','Despach.'],['nac','Gastos Nac.'],['fleten','Flete nac.']];
+function impoFobPend(r){ return impoFill(r,'fob')==='y'; }
+function impoPendList(r){ var out=[]; if(impoFobPend(r)) out.push('FOB'); IMPO_PEND_OTROS.forEach(function(c){ if(!(r[c[0]]>0)) out.push(c[1]); }); return out; }
+function impoIsPend(r){ return impoFobPend(r) || IMPO_PEND_OTROS.some(function(c){return !(r[c[0]]>0);}); }
+function impoArrKey(r){ var a=r.arribo; if(a instanceof Date) return a.getTime(); if(typeof a==='number') return a; if(typeof a==='string'){ var m=a.match(/(\d{1,2})\D(\d{1,2})\D(\d{2,4})/); if(m){var y=m[3].length===2?'20'+m[3]:m[3]; return new Date(+y,+m[2]-1,+m[1]).getTime();} } return Infinity; }
+function impoTblGeneral(){
   var USDh='background:#5a9ca8;color:#fff', ARSh='background:#c8ab6f;color:#2c2c2a';
-  if(!IMPO_D||!IMPO_D.length){ wrap.innerHTML='<div class="prov-empty" style="padding:1rem">Sin datos. Subí el archivo de IMPO.</div>'; return; }
   var tot={unid:0,fob:0,trib:0,fleteint:0,desp:0,nac:0,fleten:0};
   IMPO_D.forEach(function(r){tot.unid+=r.unid||0;tot.fob+=r.fob||0;tot.trib+=r.trib||0;tot.fleteint+=r.fleteint||0;tot.desp+=r.desp||0;tot.nac+=r.nac||0;tot.fleten+=r.fleten||0;});
   var body=IMPO_D.map(function(r){
     return '<tr>'+
-      '<td class="prov">'+r.prov+'</td>'+
-      '<td class="ctr">'+r.emb+'</td>'+
-      '<td class="tipo">'+r.tipo+'</td>'+
-      '<td class="ctr">'+r.cont+'</td>'+
-      '<td class="num">'+fIntN(r.unid)+'</td>'+
-      impoCell(r,'fob','usd')+impoCell(r,'trib','ars')+impoCell(r,'fleteint','usd')+
-      impoCell(r,'desp','ars')+impoCell(r,'nac','ars')+impoCell(r,'fleten','ars')+
-      '<td class="ctr">'+fDMY(r.etd)+'</td>'+
-      '<td class="ctr">'+fDMY(r.arribo)+'</td>'+
-      '<td class="com" style="'+(((r.com||'').trim().toUpperCase().indexOf('LLEG')===0)?'color:#0f7a34;font-weight:700':(((r.com||'').trim().toUpperCase().indexOf('VIAJE')>=0)?'color:#3C3489;font-weight:700':''))+'">'+r.com+'</td>'+
-      '<td class="ctr">'+r.pago+'</td>'+
-    '</tr>';
+      '<td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="ctr">'+r.cont+'</td><td class="num">'+fIntN(r.unid)+'</td>'+
+      impoCell(r,'fob','usd')+impoCell(r,'trib','ars')+impoCell(r,'fleteint','usd')+impoCell(r,'desp','ars')+impoCell(r,'nac','ars')+impoCell(r,'fleten','ars')+
+      '<td class="ctr">'+fDMY(r.etd)+'</td><td class="ctr">'+fDMY(r.arribo)+'</td>'+
+      '<td class="com" style="'+impoComStyle(r)+'">'+(r.com||'')+'</td><td class="ctr">'+r.pago+'</td></tr>';
   }).join('');
-  var totrow='<tr class="cobr-total-row">'+
-    '<td>TOTAL</td><td></td><td></td><td></td>'+
-    '<td class="num">'+fIntN(tot.unid)+'</td>'+
+  var totrow='<tr class="cobr-total-row"><td>TOTAL</td><td></td><td></td><td></td><td class="num">'+fIntN(tot.unid)+'</td>'+
     '<td class="num">'+fUSD(tot.fob)+'</td><td class="num">'+fARS(tot.trib)+'</td><td class="num">'+fUSD(tot.fleteint)+'</td>'+
-    '<td class="num">'+fARS(tot.desp)+'</td><td class="num">'+fARS(tot.nac)+'</td><td class="num">'+fARS(tot.fleten)+'</td>'+
-    '<td></td><td></td><td></td><td></td></tr>';
-  wrap.innerHTML='<style>'+
+    '<td class="num">'+fARS(tot.desp)+'</td><td class="num">'+fARS(tot.nac)+'</td><td class="num">'+fARS(tot.fleten)+'</td><td></td><td></td><td></td><td></td></tr>';
+  return '<div style="display:flex;gap:1rem;font-size:11px;margin-bottom:.4rem;color:var(--txt2)">'+
+    '<span><span style="display:inline-block;width:11px;height:11px;background:#00B050;border-radius:3px;vertical-align:-1px"></span> Pagado</span>'+
+    '<span><span style="display:inline-block;width:11px;height:11px;background:#FFC000;border-radius:3px;vertical-align:-1px"></span> Pendiente de pago</span></div>'+
+    '<table class="imt"><thead><tr>'+
+    '<th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>CANT<br>CONT</th><th style="text-align:right">UNID.</th>'+
+    '<th style="text-align:right;'+USDh+'">FOB<br>(USD)</th><th style="text-align:right;'+ARSh+'">Tributos<br>($)</th><th style="text-align:right;'+USDh+'">Flete Int.<br>(USD)</th>'+
+    '<th style="text-align:right;'+ARSh+'">Despach.<br>($)</th><th style="text-align:right;'+ARSh+'">Gastos Nac.<br>($)</th><th style="text-align:right;'+ARSh+'">Flete Nac.<br>($)</th>'+
+    '<th>ETD</th><th>Arribo</th><th style="text-align:left">Coment.</th><th>Pago<br>(mes)</th></tr></thead><tbody>'+body+totrow+'</tbody></table>';
+}
+function impoTblNoLlego(){
+  var rows=IMPO_D.filter(function(r){return !impoIsLleg(r);}).sort(function(a,b){return impoArrKey(a)-impoArrKey(b);});
+  if(!rows.length) return '<div class="prov-empty" style="padding:1rem">Todo llegó.</div>';
+  var body=rows.map(function(r){
+    return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="num">'+fIntN(r.unid)+'</td><td class="num">'+fUSD(r.fob)+'</td><td class="ctr">'+fDMY(r.etd)+'</td><td class="ctr"><b>'+fDMY(r.arribo)+'</b></td><td class="com" style="'+impoComStyle(r)+'">'+(r.com||'')+'</td></tr>';
+  }).join('');
+  return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th style="text-align:right">UNID.</th><th style="text-align:right">FOB (USD)</th><th>ETD</th><th>Arribo</th><th style="text-align:left">Estado</th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+function impoTblPend(){
+  var rows=IMPO_D.filter(impoIsPend);
+  if(!rows.length) return '<div class="prov-empty" style="padding:1rem">Sin pendientes de pago.</div>';
+  var body=rows.map(function(r){ var pend=impoPendList(r);
+    var fobCell = r.fob>0 ? (impoFobPend(r)?'<span class="pf" style="background:#FFC000;color:#5a3d00;padding:1px 5px">'+fUSD(r.fob)+'</span>':fUSD(r.fob)) : '';
+    return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="ctr">'+fDMY(r.arribo)+'</td><td class="num">'+fobCell+'</td><td style="text-align:left">'+pend.map(function(p){return '<span class="imchip">'+p+'</span>';}).join(' ')+'</td></tr>';
+  }).join('');
+  return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>Arribo</th><th style="text-align:right">FOB (USD)</th><th style="text-align:left">Conceptos pendientes</th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+function renderIMPO(){
+  var wrap=document.getElementById('impoTableWrap'); var cardsEl=document.getElementById('impoCards'); if(!wrap) return;
+  if(!IMPO_D||!IMPO_D.length){ wrap.innerHTML='<div class="prov-empty" style="padding:1rem">Sin datos. Subí el archivo de IMPO.</div>'; if(cardsEl)cardsEl.innerHTML=''; return; }
+  var nNol=IMPO_D.filter(function(r){return !impoIsLleg(r);}).length;
+  var nPen=IMPO_D.filter(impoIsPend).length;
+  var CARDS=[
+    {k:'gen',t:'Detalle general',ic:'ti-table',v:IMPO_D.length+' embarques',s:'cuadro completo',col:'#5a9ca8'},
+    {k:'nol',t:'Aún no llegó',ic:'ti-ship',v:nNol+' embarques',s:'ordenado por arribo',col:'#3C3489'},
+    {k:'pen',t:'Pendientes de pago',ic:'ti-alert-triangle',v:nPen+' embarques',s:'FOB amarillo + conceptos vacíos',col:'#BA7517'}
+  ];
+  if(cardsEl){ cardsEl.innerHTML=CARDS.map(function(c){var on=c.k===impoSel;
+    return '<div class="impo-card'+(on?' act':'')+'" onclick="setImpoSel(\''+c.k+'\')" style="border-color:'+c.col+';border-left:5px solid '+c.col+';'+(on?'background:'+c.col+'14':'')+'">'
+     +'<div class="impo-ct" style="color:'+c.col+'"><i class="ti '+c.ic+'"></i>'+c.t+'</div>'
+     +'<div class="impo-cv" style="color:'+c.col+'">'+c.v+'</div><div class="impo-cs">'+c.s+'</div></div>'; }).join(''); }
+  var styleBlock='<style>'+
     '#impoTableWrap .imt{border-collapse:collapse;font-size:10px;width:100%}'+
     '#impoTableWrap .imt th,#impoTableWrap .imt td{padding:3px 6px;border-bottom:1px solid var(--brd);vertical-align:middle}'+
     '#impoTableWrap .imt th{position:sticky;top:0;font-size:9px;line-height:1.15;font-weight:700}'+
@@ -4630,23 +4676,11 @@ function renderIMPO(){
     '#impoTableWrap .imt .ctr{text-align:center;white-space:nowrap}'+
     '#impoTableWrap .imt .prov{font-weight:600;max-width:130px}'+
     '#impoTableWrap .imt .tipo{max-width:150px;line-height:1.15}'+
-    '#impoTableWrap .imt .com{max-width:90px;line-height:1.15}'+
+    '#impoTableWrap .imt .com{max-width:110px;line-height:1.15}'+
+    '#impoTableWrap .imt .imchip{display:inline-block;font-size:9px;font-weight:700;background:#fff3cf;color:#7a5600;border:1px solid #f0d999;border-radius:6px;padding:0 6px;margin:1px 2px}'+
     '#impoTableWrap .imt tbody tr:hover{background:var(--info-bg)}'+
-    '</style>'+
-    '<div style="display:flex;gap:1rem;font-size:11px;margin-bottom:.4rem;color:var(--txt2)">'+
-    '<span><span style="display:inline-block;width:11px;height:11px;background:#00B050;border-radius:3px;vertical-align:-1px"></span> Pagado</span>'+
-    '<span><span style="display:inline-block;width:11px;height:11px;background:#FFC000;border-radius:3px;vertical-align:-1px"></span> Pendiente de pago</span></div>'+
-    '<table class="imt">'+
-    '<thead><tr>'+
-    '<th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>CANT<br>CONT</th><th style="text-align:right">UNID.</th>'+
-    '<th style="text-align:right;'+USDh+'">FOB<br>(USD)</th>'+
-    '<th style="text-align:right;'+ARSh+'">Tributos<br>($)</th>'+
-    '<th style="text-align:right;'+USDh+'">Flete Int.<br>(USD)</th>'+
-    '<th style="text-align:right;'+ARSh+'">Despach.<br>($)</th>'+
-    '<th style="text-align:right;'+ARSh+'">Gastos Nac.<br>($)</th>'+
-    '<th style="text-align:right;'+ARSh+'">Flete Nac.<br>($)</th>'+
-    '<th>ETD</th><th>Arribo</th><th style="text-align:left">Coment.</th><th>Pago<br>(mes)</th>'+
-    '</tr></thead><tbody>'+body+totrow+'</tbody></table>';
+    '</style>';
+  wrap.innerHTML=styleBlock+(impoSel==='nol'?impoTblNoLlego():impoSel==='pen'?impoTblPend():impoTblGeneral());
 }
 async function handleIMPOFile(file){
   if(!file) return;
