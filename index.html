@@ -2693,7 +2693,54 @@ const RP_CAT_IMG = {
   'ILUMINACION IMPORTADA':'IME005NM',   // Grimm
   'ILUMINACION NACIONAL':'IME005NM',    // Grimm
   'ILUMINACION INALAMBRICA':'IME041PR', // hongo inalámbrico
+  'SILLAS IMPORTADAS':'MSI026GR',       // silla
+  'MUEBLES NACIONALES':'MMC011NE',      // mueble nacional
 };
+// Recorte automático del fondo: flood-fill desde los bordes borrando el color de fondo (gris/blanco) → PNG transparente real (producto + cable, sin recuadro)
+const rpCutCache={};
+function rpCutout(url){
+  return new Promise(function(resolve){
+    if(rpCutCache[url]!==undefined){ resolve(rpCutCache[url]); return; }
+    var img=new Image(); img.crossOrigin='anonymous';
+    var to=setTimeout(function(){ rpCutCache[url]=''; resolve(''); },9000);
+    img.onload=function(){ clearTimeout(to);
+      try{
+        var MAX=440, w=img.naturalWidth, h=img.naturalHeight, sc=Math.min(1,MAX/Math.max(w,h));
+        w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        var cx=c.getContext('2d'); cx.drawImage(img,0,0,w,h);
+        var id=cx.getImageData(0,0,w,h), p=id.data;
+        function at(x,y){var i=(y*w+x)*4;return [p[i],p[i+1],p[i+2]];}
+        var cs=[at(1,1),at(w-2,1),at(1,h-2),at(w-2,h-2)];
+        var bg=[0,1,2].map(function(k){return (cs[0][k]+cs[1][k]+cs[2][k]+cs[3][k])/4;});
+        var tol2=46*46*3, vis=new Uint8Array(w*h), st=[];
+        for(var x=0;x<w;x++){ st.push(x); st.push((h-1)*w+x); }
+        for(var y=0;y<h;y++){ st.push(y*w); st.push(y*w+w-1); }
+        while(st.length){
+          var idx=st.pop(); if(vis[idx])continue; vis[idx]=1;
+          var j=idx*4, dr=p[j]-bg[0], dg=p[j+1]-bg[1], db=p[j+2]-bg[2];
+          if(dr*dr+dg*dg+db*db>tol2) continue;
+          p[j+3]=0;
+          var xx=idx%w, yy=(idx/w)|0;
+          if(xx>0)st.push(idx-1); if(xx<w-1)st.push(idx+1);
+          if(yy>0)st.push(idx-w); if(yy<h-1)st.push(idx+w);
+        }
+        cx.putImageData(id,0,0);
+        var out=c.toDataURL('image/png'); rpCutCache[url]=out; resolve(out);
+      }catch(e){ rpCutCache[url]=''; resolve(''); }
+    };
+    img.onerror=function(){ clearTimeout(to); rpCutCache[url]=''; resolve(''); };
+    img.src=url;
+  });
+}
+function rpApplyCutouts(){
+  var ims=document.querySelectorAll('#rpCanalBlocks img.rpc-cut');
+  for(var i=0;i<ims.length;i++){ (function(im){
+    if(im.dataset.done) return;
+    var url=im.getAttribute('data-url'); if(!url) return;
+    rpCutout(url).then(function(cut){ im.dataset.done='1'; im.src=cut||url; im.style.opacity='1'; });
+  })(ims[i]); }
+}
 // foto fija por rubro (misma que Top 5, catálogo Tienda Nube). Se puede setear con un clic; queda en Supabase al Guardar.
 const RP_CAT_PHOTO = {};
 // SKU forzado por rubro: si se define, esa foto gana sobre el "más vendido" automático.
@@ -2803,8 +2850,9 @@ function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
     const origCol= orig==='cn' ? '#993c1d' : '#185fa5';
     const imgSku = RP_CAT_IMG[r.cat];
     const imgUrl = (imgSku && typeof PHOTO_MAP!=='undefined') ? (PHOTO_MAP[imgSku]||'') : '';
+    const cut = imgUrl ? rpCutCache[imgUrl] : '';
     const emblem = imgUrl
-      ? `<img src="${imgUrl}" alt="${r.cat}" style="max-width:86%;max-height:86%;object-fit:contain;mix-blend-mode:multiply;filter:brightness(1.08) contrast(1.05)">`
+      ? `<img class="rpc-cut" data-url="${imgUrl}" alt="${r.cat}"${cut?` src="${cut}"`:''} style="max-width:86%;max-height:86%;object-fit:contain;opacity:${cut?1:0};transition:opacity .25s">`
       : `<i class="ti ti-${icon} rpc-ic" style="color:#1f2937"></i>`;
     return `<div class="rpc">
       <div class="rpc-photo" style="background:${flagBg}">
@@ -2862,6 +2910,7 @@ function renderRP(){
       <div style="padding:12px 14px 14px">${renderRPRubroCards(c, mesData[c], col, skuByCat)}</div>
     </div>`;
   }).join('');
+  try{ rpApplyCutouts(); }catch(e){}
 }
 
 
