@@ -3989,8 +3989,7 @@ renderCajas();
   #secStock .k-card{background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px;margin-bottom:14px}
   #secStock .k-h{font-weight:800;font-size:14px;margin:0}
   #secStock .k-sub{font-size:11.5px;color:var(--txt2);margin:2px 0 10px}
-  #secStock .stk-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-  @media(max-width:900px){#secStock .stk-cols{grid-template-columns:1fr}}
+  #secStock .stk-cols{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
   #secStock .k-tbl{width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
   #secStock .k-tbl th{font-weight:700;font-size:10px;text-align:right;padding:.4rem .45rem;white-space:nowrap;color:#fff}
   #secStock .k-tbl th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
@@ -4057,8 +4056,8 @@ renderCajas();
       <div id="stkV1"></div>
     </div>
     <div class="k-card">
-      <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes (USD)</div>
-      <div class="k-sub">Stock actual: precio lista minorista vs costo galpón</div>
+      <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes</div>
+      <div class="k-sub">Por rubro · margen prom. (Mg Final May/Min) × costo galpón · selector de estado propio</div>
       <div id="stkV2"></div>
       <div class="k-immo" id="stkImmo"></div>
     </div>
@@ -4111,6 +4110,7 @@ async function handleStockFile(file){
       mod:findCol(HS,[function(t){return t==='modelo';}],4),
       ori:findCol(HS,[function(t){return t.indexOf('origen')>=0;}],5),
       est:findCol(HS,[function(t){return t==='estado';}],7),
+      prov:findCol(HS,[function(t){return t==='proveedor';}],6),
       cant:findCol(HS,[function(t){return t.indexOf('total cantidad')>=0;},function(t){return t==='cantidad';}],16),
       val:findCol(HS,[function(t){return t.indexOf('total valorizado')>=0;},function(t){return t.indexOf('valorizado')>=0;}],18) };
     var stockRows=[], estadosSet={}, origSet={};
@@ -4118,7 +4118,7 @@ async function handleStockFile(file){
       var cant=num(r[cS.cant]), val=num(r[cS.val]); if(cant===0 && val===0) continue;
       var est=SS(r[cS.est]).toUpperCase()||'(SIN ESTADO)';
       var ori=SS(r[cS.ori])||'(Sin origen)'; var rub=SS(r[cS.rub])||'(Sin rubro)'; var esti=SS(r[cS.esti])||'(sin estilo)';
-      stockRows.push([est,ori,rub,esti,SS(r[cS.mod]),cant,val,SS(r[cS.sku])]); estadosSet[est]=1; origSet[ori]=1;
+      stockRows.push([est,ori,rub,esti,SS(r[cS.mod]),cant,val,SS(r[cS.sku]),SS(r[cS.prov])]); estadosSet[est]=1; origSet[ori]=1;
     }
     var fecha=null; try{ var c1=(rowsS[0]&&rowsS[0][2]); if(typeof c1==='number'){var d=XLSX.SSF.parse_date_code(c1); fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');} }catch(e){}
     setStockProgress(65,'<span class="spin">&#8635;</span> Procesando ventas...');
@@ -4175,13 +4175,16 @@ async function handlePricingFile(file){
     var sh=wb.SheetNames.find(function(n){return /^pricing$/i.test(String(n).trim());}) || wb.SheetNames.find(function(n){return /pricing/i.test(String(n).trim());});
     if(!sh) throw new Error('No se encontró la hoja "Pricing". Hojas: '+wb.SheetNames.join(', '));
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:null});
-    var hdr=rows[0]||[]; var iSku=-1,iMin=-1;
-    for(var c=0;c<hdr.length;c++){ var t=String(hdr[c]==null?'':hdr[c]).trim().toLowerCase(); if(iSku<0&&t==='sku')iSku=c; if(iMin<0&&t.indexOf('precio final min')>=0)iMin=c; }
+    var hdr=rows[0]||[]; var iSku=-1,iMgMay=-1,iMgMin=-1;
+    for(var c=0;c<hdr.length;c++){ var t=String(hdr[c]==null?'':hdr[c]).trim().toLowerCase();
+      if(iSku<0&&t==='sku')iSku=c;
+      if(iMgMay<0&&t==='mg final may')iMgMay=c;
+      if(iMgMin<0&&t==='mg final min')iMgMin=c; }
     if(iSku<0) iSku=0;
-    if(iMin<0) throw new Error('No encontré la columna "Precio Final Min" en la hoja Pricing.');
+    if(iMgMay<0||iMgMin<0) throw new Error('No encontré las columnas "Mg Final May" y "Mg Final Min" en la hoja Pricing.');
     var num=function(v){ return typeof v==='number'?v:(v==null||v===''?0:(parseFloat(v)||0)); };
     var map={}, n=0;
-    for(var i=1;i<rows.length;i++){ var r=rows[i]; if(!r) continue; var sku=String(r[iSku]==null?'':r[iSku]).trim(); if(!sku) continue; var mn=num(r[iMin]); if(mn>0){ map[sku]=mn; n++; } }
+    for(var i=1;i<rows.length;i++){ var r=rows[i]; if(!r) continue; var sku=String(r[iSku]==null?'':r[iSku]).trim(); if(!sku) continue; var mM=num(r[iMgMay]), mm=num(r[iMgMin]); if(mM>0||mm>0){ map[sku]={mgMay:mM,mgMin:mm}; n++; } }
     if(!STOCK_D) STOCK_D={estados:[],origenes:[],stockRows:[],ventasRows:[],ventasMeses:[],pricing:{},dolar:1460};
     STOCK_D.pricing=map; if(!STOCK_D.dolar)STOCK_D.dolar=1460; if(stockPeriodo)STOCK_HIST[stockPeriodo]=STOCK_D;
     setPricingProgress(90,'<span class="spin">&#8635;</span> Actualizando...');
@@ -4336,6 +4339,92 @@ function stkRenderImmo(estado, pricing, dolar){
   el.style.background=disc?'#FBEAF0':'#EEEDFE'; el.style.color=disc?'#72243E':'#3C3489';
   el.innerHTML='<b>Capital inmovilizado en '+stockCap(estado)+':</b> '+stkUSD(c)+' al costo. A precio de lista vale '+stkUSD(v)+' → margen potencial '+stkUSD(mg)+' ('+pct.toFixed(0)+'%).'+(disc?' <b>Discontinuo:</b> margen que sólo se realiza si se liquida.':'');
 }
+// ── Valorización a márgenes (rubro/proveedor, margen prom Mg Final May/Min × costo galpón) ──
+var stockSelEstadoMg=null, stockMgCur='USD', stockMgSin=null, stkMgSinData={costo:[],precio:[]};
+function setStockMgEst(e){ stockSelEstadoMg=e; stockMgSin=null; renderStock(); }
+function setStockMgCur(c){ stockMgCur=c; renderStock(); }
+function setStockMgSin(k){ stockMgSin=(stockMgSin===k?null:k); renderStock(); }
+function stkRpCat(rub,ori,prov){
+  var R=(rub||'').toUpperCase(), O=(ori||'').trim(), P=(prov||'').trim().toUpperCase();
+  var IN_NAC={'MIX':1,'HIERROS':1}, INALAMB={'LUX LIGHTING':1}, SILLAS={'WENDY FURNITURE':1,'URUN':1}, MUE_NAC={'CARPINTERIA':1,'MIX':1,'HIERROS':1};
+  if(R.indexOf('ILUMINAC')>=0){ if(INALAMB[P])return 'ILUMINACION INALAMBRICA'; if(O==='Importado')return 'ILUMINACION IMPORTADA'; if(IN_NAC[P]||O==='Fábrica')return 'ILUMINACION NACIONAL'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
+  else if(R.indexOf('MUEBLE')>=0){ if(SILLAS[P])return 'SILLAS IMPORTADAS'; if(MUE_NAC[P])return 'MUEBLES NACIONALES'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
+  else { if(O==='Importado')return 'DECO/NAVIDAD/BAZAR IMPORTADO'; if(O==='Fábrica')return 'DECO/BAZAR FABRICA'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
+  return '(SIN CLASIF)';
+}
+function stkMgTree(estado){
+  var P=(STOCK_D&&STOCK_D.pricing)||{};
+  var agg={}, sin={costo:[],precio:[]}, tot={cant:0,costo:0,val:0};
+  (STOCK_D.stockRows||[]).forEach(function(a){
+    if(a[0]!==estado) return;
+    var ori=a[1],rub=a[2],cant=a[5],valS=a[6],sku=a[7],prov=a[8]||'';
+    var cat=stkRpCat(rub,ori,prov);
+    var costoUSD=stkRowCostoUSD(sku,cant,valS);
+    var pr=P[sku]; var mgMay=pr?(pr.mgMay||0):0, mgMin=pr?(pr.mgMin||0):0;
+    var okCosto=costoUSD>0, okMg=(mgMay>0||mgMin>0);
+    if(!okCosto) sin.costo.push([prov,sku,cat,cant]);
+    if(!okMg) sin.precio.push([prov,sku,cat,cant]);
+    if(!okCosto||!okMg) return;
+    var aM=mgMay>0?mgMay:mgMin, bM=mgMin>0?mgMin:mgMay; var mprom=(aM+bM)/2; var valUSD=costoUSD*mprom;
+    var g=agg[cat]||(agg[cat]={cant:0,costo:0,val:0,mgMayW:0,costoMay:0,mgMinW:0,costoMin:0});
+    g.cant+=cant; g.costo+=costoUSD; g.val+=valUSD;
+    if(mgMay>0){ g.mgMayW+=costoUSD*mgMay; g.costoMay+=costoUSD; }
+    if(mgMin>0){ g.mgMinW+=costoUSD*mgMin; g.costoMin+=costoUSD; }
+    tot.cant+=cant; tot.costo+=costoUSD; tot.val+=valUSD;
+  });
+  return {agg:agg, sin:sin, tot:tot};
+}
+function stkBuildMg(estado){
+  var T=stkMgTree(estado), dol=(STOCK_D.dolar||1460), cur=stockMgCur;
+  var money=function(usd){ return cur==='ARS' ? '$ '+stkNum(usd*dol) : 'USD '+stkNum(usd); };
+  var mk=function(v){ return v>0?v.toFixed(2).replace('.',',')+'x':'—'; };
+  var order=(typeof RP_CAT_ORDER!=='undefined')?RP_CAT_ORDER.slice():[]; if(order.indexOf('(SIN CLASIF)')<0) order.push('(SIN CLASIF)');
+  var cats=order.filter(function(c){return T.agg[c];});
+  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr><th>Rubro</th><th style="text-align:left">Proveedor</th><th style="background:#B0568F">Cant.</th><th style="background:#B0568F">Costo galpón ('+cur+')</th><th style="background:#B0568F">Mg May</th><th style="background:#B0568F">Mg Min</th><th style="background:#7A3E8F">Margen prom.</th><th style="background:#7A3E8F">Valor total ('+cur+')</th></tr></thead><tbody>';
+  cats.forEach(function(c){ var g=T.agg[c]; var prov=(typeof RP_CAT_PROV!=='undefined'&&RP_CAT_PROV[c])||''; var mprom=g.costo>0?g.val/g.costo:0; var mM=g.costoMay>0?g.mgMayW/g.costoMay:0, mm=g.costoMin>0?g.mgMinW/g.costoMin:0;
+    h+='<tr><td style="font-weight:600">'+c+'</td><td style="text-align:left;color:var(--txt2);font-size:11px">'+prov+'</td><td>'+stkNum(g.cant)+'</td><td>'+money(g.costo)+'</td><td>'+mk(mM)+'</td><td>'+mk(mm)+'</td><td style="font-weight:700;color:#7a244f">'+mk(mprom)+'</td><td>'+money(g.val)+'</td></tr>';
+  });
+  var tp=T.tot.costo>0?T.tot.val/T.tot.costo:0;
+  h+='<tr class="k-tot"><td>Total '+stockCap(estado)+'</td><td></td><td>'+stkNum(T.tot.cant)+'</td><td>'+money(T.tot.costo)+'</td><td></td><td></td><td>'+mk(tp)+'</td><td>'+money(T.tot.val)+'</td></tr>';
+  return h+'</tbody></table></div>';
+}
+function stkMgDescargar(){ var arr=stkMgSinData[stockMgSin]||[]; if(!arr.length)return;
+  var head=['Proveedor','SKU','Rubro','Estado','Cantidad'];
+  var lines=[head].concat(arr.map(function(r){return [r[0],r[1],r[2],stockSelEstadoMg,r[3]];}));
+  var csv=lines.map(function(x){return x.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob); var a=document.createElement('a');
+  a.href=url; a.download='sin_dato_'+stockMgSin+'_'+String(stockSelEstadoMg||'').toLowerCase().replace(/ /g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function stkRenderMg(){
+  var el=document.getElementById('stkV2'); if(!el) return;
+  var S=STOCK_D||{}; var estados=(S.estados||[]).filter(function(e){return e!=='(SIN ESTADO)'&&e!=='(VACIO)'&&e!=='';});
+  if(!estados.length){ el.innerHTML=''; return; }
+  if(!stockSelEstadoMg || estados.indexOf(stockSelEstadoMg)<0) stockSelEstadoMg=(stockSelEstado&&estados.indexOf(stockSelEstado)>=0)?stockSelEstado:estados[0];
+  var chips=estados.map(function(e,i){ var col=STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length]; var on=e===stockSelEstadoMg;
+    return '<span onclick="setStockMgEst(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:999px;border:1.5px solid '+col+';'+(on?'background:'+col+';color:#fff':'color:'+col+';background:var(--bg)')+';display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0"><span style="width:8px;height:8px;border-radius:50%;background:'+(on?'#fff':col)+';display:inline-block"></span>'+stockCap(e)+'</span>';
+  }).join('');
+  var toggle=['ARS','USD'].map(function(c){var on=c===stockMgCur;return '<span onclick="setStockMgCur(\''+c+'\')" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:6px 16px;border-radius:999px;border:1.5px solid #B0568F;'+(on?'background:#B0568F;color:#fff':'background:var(--bg);color:#B0568F')+';margin-right:6px">'+c+'</span>';}).join('');
+  var src='<span style="margin-left:auto;font-size:11px;font-weight:700;color:#7a244f;background:'+chTint('#B0568F',0.9)+';border:1px solid '+chTint('#B0568F',0.55)+';border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-tag"></i>Márgenes y costo: Pricing</span>';
+  var html='<div style="display:flex;flex-wrap:wrap;align-items:center;margin-bottom:6px">'+chips+'</div>'
+    +'<div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:10px">'+toggle+src+'</div>';
+  var hasP=S.pricing && Object.keys(S.pricing).length;
+  if(!hasP){ el.innerHTML=html+'<div class="prov-empty">Cargá el archivo de <b>Pricing</b> (arriba) para ver la valorización a márgenes.</div>'; return; }
+  html+=stkBuildMg(stockSelEstadoMg);
+  var T=stkMgTree(stockSelEstadoMg); stkMgSinData=T.sin;
+  var uSum=function(x){return x.reduce(function(s,r){return s+r[3];},0);};
+  var card=function(k,t,ic){ var arr=T.sin[k]; var on=stockMgSin===k;
+    return '<div onclick="setStockMgSin(\''+k+'\')" style="cursor:pointer;flex:1;min-width:150px;border:1.5px solid #E0A93B;border-left:5px solid #E0A93B;border-radius:12px;padding:9px 12px;background:'+(on?'#fff7e6':'var(--bg)')+'"><div style="font-size:12px;font-weight:700;color:#8a5a00"><i class="ti '+ic+'"></i> '+t+'</div><div style="font-size:16px;font-weight:800;color:#8a5a00;margin-top:2px">'+stkNum(arr.length)+' SKUs · '+stkNum(uSum(arr))+' u</div></div>'; };
+  html+='<div style="margin-top:12px"><div style="font-size:11.5px;font-weight:700;color:#8a5a00;margin-bottom:6px"><i class="ti ti-alert-triangle"></i> Sin dato en Pricing · no valorizadas</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+card('costo','Falta costo','ti-coin-off')+card('precio','Falta precio / margen','ti-tag-off')+'</div>';
+  if(stockMgSin){ var arr=T.sin[stockMgSin];
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0 4px"><span style="font-size:11.5px;font-weight:700;color:#8a5a00">'+(stockMgSin==='costo'?'Falta costo':'Falta precio / margen')+' · '+arr.length+' SKUs</span>'+(arr.length?'<button onclick="stkMgDescargar()" style="font-size:11.5px;font-weight:700;color:#4a3200;background:#E0A93B;border:none;border-radius:8px;padding:5px 11px;cursor:pointer"><i class="ti ti-download"></i> Descargar CSV</button>':'')+'</div>'
+      +'<div class="prov-table-wrap" style="overflow-x:auto;max-height:280px;overflow-y:auto"><table class="k-tbl"><thead><tr><th style="text-align:left">Proveedor</th><th style="text-align:left">SKU</th><th style="text-align:left">Rubro</th><th style="text-align:right">Cant.</th></tr></thead><tbody>'
+      +(arr.length?arr.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td style="text-align:right">'+stkNum(r[3])+'</td></tr>';}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--txt2);padding:.6rem">Sin SKUs</td></tr>')
+      +'</tbody></table></div>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
 function renderStock(){
   var cardsEl=document.getElementById('stockCards'); if(!cardsEl) return;
   var pers=Object.keys(STOCK_HIST).sort();
@@ -4368,9 +4457,8 @@ function renderStock(){
       +'</div></div>';
   }).join('');
   if(v1El) v1El.innerHTML=stkBuildV1(stockSelEstado, stockSelMes);
-  var hasP=S.pricing && Object.keys(S.pricing).length;
-  if(v2El){ if(hasP){ v2El.innerHTML=stkBuildV2(stockSelEstado, S.pricing, S.dolar||1460); stkRenderImmo(stockSelEstado, S.pricing, S.dolar||1460); }
-    else { v2El.innerHTML='<div class="prov-empty">Cargá el archivo de <b>Pricing</b> (arriba) para ver la valorización a márgenes.</div>'; if(immoEl){immoEl.innerHTML='';immoEl.style.background='transparent';} } }
+  if(immoEl){ immoEl.innerHTML=''; immoEl.style.background='transparent'; }
+  stkRenderMg();
 }
 </script>
 
