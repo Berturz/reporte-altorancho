@@ -4578,6 +4578,7 @@ function renderLog(){
   #secIMPO .impo-cs{font-size:11px;color:var(--txt2);margin-top:1px}
   #secIMPO #impoCards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:.7rem 0}
   @media(max-width:640px){#secIMPO #impoCards{grid-template-columns:1fr}}
+  #secIMPO #impoTableWrap{border:1px solid var(--brd);border-radius:12px;padding:9px 11px;background:var(--bg);margin-top:.4rem}
   </style>
   <div id="impoCards"></div>
   <div class="prov-table-wrap" id="impoTableWrap" style="overflow-x:auto;margin-top:.4rem"></div>
@@ -4650,8 +4651,8 @@ function impoTblNoLlego(){
 function impoTblPend(){
   var rows=IMPO_D.filter(impoIsPend);
   if(!rows.length) return '<div class="prov-empty" style="padding:1rem">Sin pendientes de pago.</div>';
-  var body=rows.map(function(r){ var pend=impoPendList(r);
-    var fobCell = r.fob>0 ? (impoFobPend(r)?'<span class="pf" style="background:#FFC000;color:#5a3d00;padding:1px 5px">'+fUSD(r.fob)+'</span>':fUSD(r.fob)) : '';
+  var body=rows.map(function(r){ var pend=impoPendList(r); var ff=impoFill(r,'fob');
+    var fobCell = r.fob>0 ? (ff==='g'?'<span class="pf" style="background:#00B050;color:#08301a;padding:1px 5px">'+fUSD(r.fob)+'</span>': ff==='y'?'<span class="pf" style="background:#FFC000;color:#5a3d00;padding:1px 5px">'+fUSD(r.fob)+'</span>': fUSD(r.fob)) : '';
     return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="ctr">'+fDMY(r.arribo)+'</td><td class="num">'+fobCell+'</td><td style="text-align:left">'+pend.map(function(p){return '<span class="imchip">'+p+'</span>';}).join(' ')+'</td></tr>';
   }).join('');
   return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>Arribo</th><th style="text-align:right">FOB (USD)</th><th style="text-align:left">Conceptos pendientes</th></tr></thead><tbody>'+body+'</tbody></table>';
