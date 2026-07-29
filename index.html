@@ -2682,7 +2682,7 @@ const RP_CAT_ICON = {
   'ILUMINACION INALAMBRICA':'bulb',
   'SILLAS IMPORTADAS':'armchair',
   'MUEBLES NACIONALES':'sofa',
-  'PROVEEDOR NACIONAL':'building-warehouse',
+  'PROVEEDOR NACIONAL':'glass+cup+tools-kitchen-2',
   'DECO/NAVIDAD/BAZAR IMPORTADO':'gift',
   'DECO/BAZAR FABRICA':'building-factory-2',
 };
@@ -2695,6 +2695,7 @@ const RP_CAT_IMG = {
   'ILUMINACION INALAMBRICA':'IME041PR', // hongo inalámbrico
   'SILLAS IMPORTADAS':'MSI026GR',       // silla
   'MUEBLES NACIONALES':'MMC011NE',      // mueble nacional
+  'DECO/BAZAR FABRICA':'DBA020NE',      // deco/bazar fábrica
 };
 // Recorte automático del fondo: flood-fill desde los bordes borrando el color de fondo (gris/blanco) → PNG transparente real (producto + cable, sin recuadro)
 const rpCutCache={};
@@ -2713,7 +2714,7 @@ function rpCutout(url){
         function at(x,y){var i=(y*w+x)*4;return [p[i],p[i+1],p[i+2]];}
         var cs=[at(1,1),at(w-2,1),at(1,h-2),at(w-2,h-2)];
         var bg=[0,1,2].map(function(k){return (cs[0][k]+cs[1][k]+cs[2][k]+cs[3][k])/4;});
-        var tol2=46*46*3, vis=new Uint8Array(w*h), st=[];
+        var tol2=48*48*3, vis=new Uint8Array(w*h), st=[];
         for(var x=0;x<w;x++){ st.push(x); st.push((h-1)*w+x); }
         for(var y=0;y<h;y++){ st.push(y*w); st.push(y*w+w-1); }
         while(st.length){
@@ -2853,7 +2854,9 @@ function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
     const cut = imgUrl ? rpCutCache[imgUrl] : '';
     const emblem = imgUrl
       ? `<img class="rpc-cut" data-url="${imgUrl}" alt="${r.cat}"${cut?` src="${cut}"`:''} style="max-width:86%;max-height:86%;object-fit:contain;opacity:${cut?1:0};transition:opacity .25s">`
-      : `<i class="ti ti-${icon} rpc-ic" style="color:#1f2937"></i>`;
+      : (String(icon).indexOf('+')>=0
+          ? `<span style="display:inline-flex;gap:6px;align-items:center;color:#1f2937">${String(icon).split('+').map(function(ic){return '<i class="ti ti-'+ic+'" style="font-size:27px"></i>';}).join('')}</span>`
+          : `<i class="ti ti-${icon} rpc-ic" style="color:#1f2937"></i>`);
     return `<div class="rpc">
       <div class="rpc-photo" style="background:${flagBg}">
         ${stars}
