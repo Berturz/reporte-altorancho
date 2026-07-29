@@ -2481,12 +2481,11 @@ function renderTop5(wrapId, items, canalKey){
     const photoColor = foto.sku ? String(foto.sku).slice(-2).toUpperCase() : null;
     const cl = colorList(p.skus);
     const emph = photoColor || (cl[0] ? cl[0][0] : null);
-    const N = 6;
-    const colsHtml = cl.slice(0,N).map((x)=>{
+    const colsHtml = cl.map((x)=>{
       const on = x[0]===emph;
       const cam = (on && photoColor && hasPhoto) ? '<i class="ti ti-camera" style="font-size:8px;vertical-align:1px;margin-right:1px"></i>' : '';
       return `<span style="white-space:nowrap"><span style="color:${on?chCol:'var(--txt)'};font-weight:800">${cam}${x[0]}</span> <span style="color:var(--txt2)">${x[1].toLocaleString('es-AR')}</span></span>`;
-    }).join('<span style="color:var(--txt2);opacity:.4"> · </span>') + (cl.length>N?`<span style="color:var(--txt2);opacity:.7"> +${cl.length-N}</span>`:'');
+    }).join('<span style="color:var(--txt2);opacity:.4"> · </span>');
     const colsTitle = 'Colores vendidos · ' + cl.map(x=>`${x[0]}: ${x[1].toLocaleString('es-AR')}`).join('  ·  ') + ((photoColor&&hasPhoto)?`   (📷 foto: ${photoColor})`:'');
     return `
     <div class="top5-card">
