@@ -3989,9 +3989,10 @@ renderCajas();
   #secStock .k-card{background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px;margin-bottom:14px}
   #secStock .k-h{font-weight:800;font-size:14px;margin:0}
   #secStock .k-sub{font-size:11.5px;color:var(--txt2);margin:2px 0 10px}
-  #secStock .stk-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-  @media(max-width:1000px){#secStock .stk-cols{grid-template-columns:1fr}}
-  #secStock .stk-estcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem;margin-bottom:.85rem}
+  #secStock .stk-cols{display:block}
+  #secStock .stk-row{display:grid;grid-template-columns:240px 1fr;gap:14px;align-items:start}
+  @media(max-width:760px){#secStock .stk-row{grid-template-columns:1fr}}
+  #secStock .stk-estcol{display:flex;flex-direction:column;gap:8px}
   #secStock .k-tbl{width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
   #secStock .k-tbl th{font-weight:700;font-size:10px;text-align:right;padding:.4rem .45rem;white-space:nowrap;color:#fff}
   #secStock .k-tbl th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
@@ -4053,15 +4054,19 @@ renderCajas();
   <div class="stk-cols">
     <div class="k-card">
       <div class="k-h" id="stkV1H" style="color:#4B5CC4">Valorizado al costo (USD)</div>
-      <div class="k-sub" id="stkV1sub">Stock actual vs Ventas — ambos a costo</div>
-      <div id="stockCards" class="stk-estcards"></div>
-      <div id="stkV1"></div>
+      <div class="k-sub" id="stkV1sub">Stock actual vs Ventas — ambos a costo · selector propio</div>
+      <div class="stk-row">
+        <div id="stockCards" class="stk-estcol"></div>
+        <div id="stkV1" style="min-width:0;overflow-x:auto"></div>
+      </div>
     </div>
     <div class="k-card">
       <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes</div>
-      <div class="k-sub">Por rubro · margen prom. (Mg Final May/Min) × costo galpón</div>
-      <div id="stockCardsMg" class="stk-estcards"></div>
-      <div id="stkV2"></div>
+      <div class="k-sub">Por rubro · margen prom. (Mg Final May/Min) × costo galpón · selector propio</div>
+      <div class="stk-row">
+        <div id="stockCardsMg" class="stk-estcol"></div>
+        <div id="stkV2" style="min-width:0"></div>
+      </div>
       <div class="k-immo" id="stkImmo"></div>
     </div>
   </div>
@@ -4436,7 +4441,7 @@ function stkRenderMg(){
     +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+card('costo','Falta costo','ti-coin-off')+card('precio','Falta precio / margen','ti-tag-off')+'</div>';
   if(stockMgSin){ var arr=T.sin[stockMgSin];
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0 4px"><span style="font-size:11.5px;font-weight:700;color:#8a5a00">'+(stockMgSin==='costo'?'Falta costo':'Falta precio / margen')+' · '+arr.length+' SKUs</span>'+(arr.length?'<button onclick="stkMgDescargar()" style="font-size:11.5px;font-weight:700;color:#4a3200;background:#E0A93B;border:none;border-radius:8px;padding:5px 11px;cursor:pointer"><i class="ti ti-download"></i> Descargar CSV</button>':'')+'</div>'
-      +'<div class="prov-table-wrap" style="overflow-x:auto;max-height:280px;overflow-y:auto"><table class="k-tbl"><thead><tr><th style="text-align:left">Proveedor</th><th style="text-align:left">SKU</th><th style="text-align:left">Rubro</th><th style="text-align:right">Cant.</th></tr></thead><tbody>'
+      +'<div class="prov-table-wrap" style="overflow-x:auto;max-height:280px;overflow-y:auto"><table class="k-tbl"><thead><tr><th style="text-align:left;background:#E0A93B;color:#4a3200">Proveedor</th><th style="text-align:left;background:#E0A93B;color:#4a3200">SKU</th><th style="text-align:left;background:#E0A93B;color:#4a3200">Rubro</th><th style="text-align:right;background:#E0A93B;color:#4a3200">Cant.</th></tr></thead><tbody>'
       +(arr.length?arr.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td style="text-align:right">'+stkNum(r[3])+'</td></tr>';}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--txt2);padding:.6rem">Sin SKUs</td></tr>')
       +'</tbody></table></div>';
   }
