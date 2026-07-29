@@ -4392,23 +4392,28 @@ function stkBuildMg(estado){
 }
 function stkMgDescargar(){ var arr=stkMgSinData[stockMgSin]||[]; if(!arr.length)return;
   var head=['Proveedor','SKU','Rubro','Estado','Cantidad'];
-  var lines=[head].concat(arr.map(function(r){return [r[0],r[1],r[2],(stockSelEstado==='__ALL__'?'Todos':stockSelEstado),r[3]];}));
+  var lines=[head].concat(arr.map(function(r){return [r[0],r[1],r[2],(stockSelEstadoMg==='__ALL__'?'Todos':stockSelEstadoMg),r[3]];}));
   var csv=lines.map(function(x){return x.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
   var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob); var a=document.createElement('a');
-  a.href=url; a.download='sin_dato_'+stockMgSin+'_'+String(stockSelEstado==='__ALL__'?'todos':stockSelEstado||'').toLowerCase().replace(/ /g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  a.href=url; a.download='sin_dato_'+stockMgSin+'_'+String(stockSelEstadoMg==='__ALL__'?'todos':stockSelEstadoMg||'').toLowerCase().replace(/ /g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 function stkRenderMg(){
   var el=document.getElementById('stkV2'); if(!el) return;
   var S=STOCK_D||{}; var estados=(S.estados||[]).filter(function(e){return e!=='(SIN ESTADO)'&&e!=='(VACIO)'&&e!=='';});
   if(!estados.length){ el.innerHTML=''; return; }
-  var estado=stockSelEstado; if(estado!=='__ALL__' && estados.indexOf(estado)<0) estado=estados[0];
+  if(!stockSelEstadoMg || (stockSelEstadoMg!=='__ALL__' && estados.indexOf(stockSelEstadoMg)<0)) stockSelEstadoMg=estados[0];
+  var chipsArr=[['__ALL__','Todos','#8B4630']].concat(estados.map(function(e,i){return [e,stockCap(e),STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length]];}));
+  var chips=chipsArr.map(function(x){var v=x[0],lbl=x[1],col=x[2];var on=v===stockSelEstadoMg;
+    return '<span onclick="setStockMgEst(\''+v.replace(/'/g,"\\'")+'\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:999px;border:1.5px solid '+col+';'+(on?'background:'+col+';color:#fff':'color:'+col+';background:var(--bg)')+';display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0"><span style="width:8px;height:8px;border-radius:50%;background:'+(on?'#fff':col)+';display:inline-block"></span>'+lbl+'</span>';
+  }).join('');
   var toggle=['ARS','USD'].map(function(c){var on=c===stockMgCur;return '<span onclick="setStockMgCur(\''+c+'\')" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:6px 16px;border-radius:999px;border:1.5px solid #B0568F;'+(on?'background:#B0568F;color:#fff':'background:var(--bg);color:#B0568F')+';margin-right:6px">'+c+'</span>';}).join('');
   var src='<span style="margin-left:auto;font-size:11px;font-weight:700;color:#7a244f;background:'+chTint('#B0568F',0.9)+';border:1px solid '+chTint('#B0568F',0.55)+';border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-tag"></i>Márgenes y costo: Pricing</span>';
-  var html='<div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:10px">'+toggle+src+'</div>';
+  var html='<div style="display:flex;flex-wrap:wrap;align-items:center;margin-bottom:6px">'+chips+'</div>'
+    +'<div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:10px">'+toggle+src+'</div>';
   var hasP=S.pricing && Object.keys(S.pricing).length;
   if(!hasP){ el.innerHTML=html+'<div class="prov-empty">Cargá el archivo de <b>Pricing</b> (arriba) para ver la valorización a márgenes.</div>'; return; }
-  html+=stkBuildMg(estado);
-  var T=stkMgTree(estado); stkMgSinData=T.sin;
+  html+=stkBuildMg(stockSelEstadoMg);
+  var T=stkMgTree(stockSelEstadoMg); stkMgSinData=T.sin;
   var uSum=function(x){return x.reduce(function(s,r){return s+r[3];},0);};
   var card=function(k,t,ic){ var arr=T.sin[k]; var on=stockMgSin===k;
     return '<div onclick="setStockMgSin(\''+k+'\')" style="cursor:pointer;flex:1;min-width:150px;border:1.5px solid #E0A93B;border-left:5px solid #E0A93B;border-radius:12px;padding:9px 12px;background:'+(on?'#fff7e6':'var(--bg)')+'"><div style="font-size:12px;font-weight:700;color:#8a5a00"><i class="ti '+ic+'"></i> '+t+'</div><div style="font-size:16px;font-weight:800;color:#8a5a00;margin-top:2px">'+stkNum(arr.length)+' SKUs · '+stkNum(uSum(arr))+' u</div></div>'; };
