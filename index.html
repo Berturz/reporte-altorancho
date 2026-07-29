@@ -4637,8 +4637,8 @@ function impoTblGeneral(){
     '<span><span style="display:inline-block;width:11px;height:11px;background:#ffe9a8;border:1px solid #e6c96a;border-radius:3px;vertical-align:-1px"></span> Pendiente de pago</span></div>'+
     '<table class="imt"><thead><tr>'+
     '<th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>CANT<br>CONT</th><th style="text-align:right">UNID.</th>'+
-    '<th style="text-align:right">FOB<br>(USD)</th><th style="text-align:right">Tributos<br>($)</th><th style="text-align:right">Flete Int.<br>(USD)</th>'+
-    '<th style="text-align:right">Despach.<br>($)</th><th style="text-align:right">Gastos Nac.<br>($)</th><th style="text-align:right">Flete Nac.<br>($)</th>'+
+    '<th style="text-align:right;'+USDh+'">FOB<br>(USD)</th><th style="text-align:right;'+ARSh+'">Tributos<br>($)</th><th style="text-align:right;'+USDh+'">Flete Int.<br>(USD)</th>'+
+    '<th style="text-align:right;'+ARSh+'">Despach.<br>($)</th><th style="text-align:right;'+ARSh+'">Gastos Nac.<br>($)</th><th style="text-align:right;'+ARSh+'">Flete Nac.<br>($)</th>'+
     '<th>ETD</th><th>Arribo</th><th style="text-align:left">Coment.</th><th>Pago<br>(mes)</th></tr></thead><tbody>'+body+totrow+'</tbody></table>';
 }
 function impoTblNoLlego(){
@@ -4675,7 +4675,9 @@ function renderIMPO(){
   var styleBlock='<style>'+
     '#impoTableWrap .imt{border-collapse:collapse;font-size:11px;width:100%}'+
     '#impoTableWrap .imt td{padding:4px 7px;border-bottom:.5px solid var(--brd);vertical-align:middle}'+
-    '#impoTableWrap .imt th{position:sticky;top:0;font-size:9.5px;line-height:1.15;font-weight:500;padding:5px 7px;background:var(--bg2);color:var(--txt2);white-space:nowrap}'+
+    '#impoTableWrap .imt th{position:sticky;top:0;font-size:10.5px;line-height:1.15;font-weight:800;padding:6px 7px;background:#4a6b73;color:#fff;white-space:nowrap}'+
+    '#impoTableWrap .imt tr.cobr-total-row td{background:#e6f0f2;font-weight:800;font-size:12px;color:#173;border-top:2px solid #5a9ca8}'+
+    '#impoTableWrap .imt tr.cobr-total-row td:first-child{color:#2c6b74}'+
     '#impoTableWrap .imt .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}'+
     '#impoTableWrap .imt .pf{font-weight:600;border-radius:4px}'+
     '#impoTableWrap .imt .ctr{text-align:center;white-space:nowrap}'+
