@@ -3991,6 +3991,7 @@ renderCajas();
   #secStock .k-sub{font-size:11.5px;color:var(--txt2);margin:2px 0 10px}
   #secStock .stk-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   @media(max-width:1000px){#secStock .stk-cols{grid-template-columns:1fr}}
+  #secStock .stk-estcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem;margin-bottom:.85rem}
   #secStock .k-tbl{width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
   #secStock .k-tbl th{font-weight:700;font-size:10px;text-align:right;padding:.4rem .45rem;white-space:nowrap;color:#fff}
   #secStock .k-tbl th:first-child{text-align:left;background:var(--bg3);color:var(--txt2)}
@@ -4048,17 +4049,18 @@ renderCajas();
     <span><span class="msl"><i class="ti ti-currency-dollar" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Dólar de cierre</span> <input type="number" id="stockDolarInput" onchange="setStockDolar(this.value)" style="width:92px;font-size:13px;font-weight:600;padding:5px 9px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt)"></span>
     <span style="font-size:11px;color:var(--txt2)" id="stockFechaLbl"></span>
   </div>
-  <div style="font-size:11.5px;color:var(--txt2);margin-bottom:.5rem">Tocá un estado para ver las dos vistas · abrí cada rubro para ver sus estilos.</div>
-  <div id="stockCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:.7rem;margin-bottom:1rem"></div>
+  <div style="font-size:11.5px;color:var(--txt2);margin-bottom:.6rem">Cada cuadro tiene su propio selector de estado · abrí cada rubro para ver el detalle.</div>
   <div class="stk-cols">
     <div class="k-card">
       <div class="k-h" id="stkV1H" style="color:#4B5CC4">Valorizado al costo (USD)</div>
       <div class="k-sub" id="stkV1sub">Stock actual vs Ventas — ambos a costo</div>
+      <div id="stockCards" class="stk-estcards"></div>
       <div id="stkV1"></div>
     </div>
     <div class="k-card">
       <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes</div>
-      <div class="k-sub">Por rubro · margen prom. (Mg Final May/Min) × costo galpón · selector de estado propio</div>
+      <div class="k-sub">Por rubro · margen prom. (Mg Final May/Min) × costo galpón</div>
+      <div id="stockCardsMg" class="stk-estcards"></div>
       <div id="stkV2"></div>
       <div class="k-immo" id="stkImmo"></div>
     </div>
@@ -4398,19 +4400,32 @@ function stkMgDescargar(){ var arr=stkMgSinData[stockMgSin]||[]; if(!arr.length)
   a.href=url; a.download='sin_dato_'+stockMgSin+'_'+String(stockSelEstadoMg==='__ALL__'?'todos':stockSelEstadoMg||'').toLowerCase().replace(/ /g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 function stkRenderMg(){
-  var el=document.getElementById('stkV2'); if(!el) return;
+  var el=document.getElementById('stkV2'); var cardsEl=document.getElementById('stockCardsMg'); if(!el) return;
   var S=STOCK_D||{}; var estados=(S.estados||[]).filter(function(e){return e!=='(SIN ESTADO)'&&e!=='(VACIO)'&&e!=='';});
-  if(!estados.length){ el.innerHTML=''; return; }
+  if(!estados.length){ el.innerHTML=''; if(cardsEl)cardsEl.innerHTML=''; return; }
   if(!stockSelEstadoMg || (stockSelEstadoMg!=='__ALL__' && estados.indexOf(stockSelEstadoMg)<0)) stockSelEstadoMg=estados[0];
-  var chipsArr=[['__ALL__','Todos','#8B4630']].concat(estados.map(function(e,i){return [e,stockCap(e),STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length]];}));
-  var chips=chipsArr.map(function(x){var v=x[0],lbl=x[1],col=x[2];var on=v===stockSelEstadoMg;
-    return '<span onclick="setStockMgEst(\''+v.replace(/'/g,"\\'")+'\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:999px;border:1.5px solid '+col+';'+(on?'background:'+col+';color:#fff':'color:'+col+';background:var(--bg)')+';display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0"><span style="width:8px;height:8px;border-radius:50%;background:'+(on?'#fff':col)+';display:inline-block"></span>'+lbl+'</span>';
-  }).join('');
+  var dol=S.dolar||1460, cur=stockMgCur, hasP=S.pricing && Object.keys(S.pricing).length;
+  var mgMoney=function(usd){ return cur==='ARS'?'$ '+stkNum(usd*dol):'USD '+stkNum(usd); };
+  var mkp=function(v){ return v>0?v.toFixed(2).replace('.',',')+'x':'—'; };
+  if(cardsEl){
+    if(!hasP){ cardsEl.innerHTML=''; }
+    else {
+      var totBy={}, allT={cant:0,costo:0,val:0};
+      estados.forEach(function(e){ var T=stkMgTree(e).tot; totBy[e]=T; allT.cant+=T.cant; allT.costo+=T.costo; allT.val+=T.val; });
+      var card=function(v,lbl,col,t){ var act=v===stockSelEstadoMg; var mp=t.costo>0?t.val/t.costo:0;
+        return '<div onclick="setStockMgEst(\''+v.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:11px;padding:9px 11px;border:1.5px solid '+col+';border-left:5px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+'">'
+          +'<div style="font-size:12.5px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:5px;margin-bottom:5px">'+lbl+(act?' <i class="ti ti-eye" style="font-size:11px"></i>':'')+'</div>'
+          +'<div style="display:flex;gap:14px;flex-wrap:wrap">'
+            +'<div><div style="font-size:10.5px;color:var(--txt2);font-weight:600">Valor</div><div style="font-size:15px;font-weight:800">'+mgMoney(t.val)+'</div><div style="font-size:11px;color:var(--txt);font-weight:700">mkup '+mkp(mp)+'</div></div>'
+            +'<div><div style="font-size:10.5px;color:var(--txt2);font-weight:600">Costo</div><div style="font-size:15px;font-weight:800">'+mgMoney(t.costo)+'</div><div style="font-size:11px;color:var(--txt2)">'+stkNum(t.cant)+' u.</div></div>'
+          +'</div></div>';
+      };
+      cardsEl.innerHTML=card('__ALL__','Todos los estados','#8B4630',allT)+estados.map(function(e,i){return card(e,stockCap(e),STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length],totBy[e]);}).join('');
+    }
+  }
   var toggle=['ARS','USD'].map(function(c){var on=c===stockMgCur;return '<span onclick="setStockMgCur(\''+c+'\')" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:6px 16px;border-radius:999px;border:1.5px solid #B0568F;'+(on?'background:#B0568F;color:#fff':'background:var(--bg);color:#B0568F')+';margin-right:6px">'+c+'</span>';}).join('');
   var src='<span style="margin-left:auto;font-size:11px;font-weight:700;color:#7a244f;background:'+chTint('#B0568F',0.9)+';border:1px solid '+chTint('#B0568F',0.55)+';border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-tag"></i>Márgenes y costo: Pricing</span>';
-  var html='<div style="display:flex;flex-wrap:wrap;align-items:center;margin-bottom:6px">'+chips+'</div>'
-    +'<div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:10px">'+toggle+src+'</div>';
-  var hasP=S.pricing && Object.keys(S.pricing).length;
+  var html='<div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:10px">'+toggle+src+'</div>';
   if(!hasP){ el.innerHTML=html+'<div class="prov-empty">Cargá el archivo de <b>Pricing</b> (arriba) para ver la valorización a márgenes.</div>'; return; }
   html+=stkBuildMg(stockSelEstadoMg);
   var T=stkMgTree(stockSelEstadoMg); stkMgSinData=T.sin;
