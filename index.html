@@ -1874,14 +1874,16 @@ function makeVBarChart(canvasId, entries, base){
   const pctData=entries.map(([,v])=>total>0?+(v/total*100).toFixed(2):0);
   const raw=entries.map(([,v])=>v);
   // Ajuste dinámico según cantidad de medios (letras grandes, en negro)
+  const lbls=entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN'));
+  const maxLen=lbls.reduce(function(m,s){return Math.max(m,s.length);},0);
   const barMax = n<=8?64 : n<=12?46 : n<=16?34 : 26;
   const xFont  = n<=10?13 : n<=14?12 : 11;
-  const rot    = n<=6?0 : 90;
+  const rot    = (maxLen>12 || n>6) ? 90 : (n>3 ? 45 : 0); // rota si los nombres son largos o hay muchos
   const lblFont= n<=10?15 : n<=14?13 : 12;
   const showLbl= n<=24;
   const INK='#111827';
   charts[canvasId]=new Chart(el.getContext('2d'),{type:'bar',
-    data:{labels:entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN')),datasets:[{data:pctData,rawData:raw,backgroundColor:chTint(base,0.58),borderColor:base,borderWidth:1.5,borderRadius:4,maxBarThickness:barMax}]},
+    data:{labels:lbls,datasets:[{data:pctData,rawData:raw,backgroundColor:chTint(base,0.58),borderColor:base,borderWidth:1.5,borderRadius:4,maxBarThickness:barMax}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw.toFixed(1).replace('.',',')+'%  ('+fmt(c.dataset.rawData[c.dataIndex])+')';}}}},
       scales:{x:{ticks:{font:{size:xFont,weight:'700'},color:INK,maxRotation:rot,minRotation:rot,autoSkip:false},grid:{display:false}},y:{ticks:{callback:v=>v+'%',font:{size:11,weight:'700'},color:INK},grid:{color:'rgba(128,128,128,0.1)'}}}},
