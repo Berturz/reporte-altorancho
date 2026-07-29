@@ -1874,11 +1874,12 @@ function makeVBarChart(canvasId, entries, base){
   const pctData=entries.map(([,v])=>total>0?+(v/total*100).toFixed(2):0);
   const raw=entries.map(([,v])=>v);
   // Ajuste dinámico según cantidad de medios (letras grandes, en negro)
-  const lbls=entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN'));
-  const maxLen=lbls.reduce(function(m,s){return Math.max(m,s.length);},0);
+  const raw0=entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN'));
+  const wrapLbl=function(s){ if(s.length<=13) return s; var w=s.split(' '),l1='',l2=''; for(var i=0;i<w.length;i++){ if(!l2 && (l1?l1+' '+w[i]:w[i]).length<=13){ l1=l1?l1+' '+w[i]:w[i]; } else { l2=l2?l2+' '+w[i]:w[i]; } } return l2?[l1,l2]:l1; };
+  const lbls=raw0.map(wrapLbl); // nombres largos en 2 líneas, para que se lean completos
   const barMax = n<=8?64 : n<=12?46 : n<=16?34 : 26;
   const xFont  = n<=10?13 : n<=14?12 : 11;
-  const rot    = (maxLen>12 || n>6) ? 90 : (n>3 ? 45 : 0); // rota si los nombres son largos o hay muchos
+  const rot    = n<=8?0 : 45; // derechos con pocos medios; 45° si hay muchos
   const lblFont= n<=10?15 : n<=14?13 : 12;
   const showLbl= n<=24;
   const INK='#111827';
@@ -1934,7 +1935,7 @@ function renderFin(){
     }
     return '<div style="background:'+tint+';border-left:5px solid '+base+';border-radius:14px;padding:16px 18px">'
       +head
-      +'<div style="position:relative;width:100%;height:225px;margin-top:6px"><canvas id="'+canvasId+'"></canvas></div></div>';
+      +'<div style="position:relative;width:100%;height:260px;margin-top:6px"><canvas id="'+canvasId+'"></canvas></div></div>';
   }
   document.getElementById('finResumen').innerHTML =
     '<div style="font-size:12px;font-weight:700;color:#8a8880;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Costo de financiación · '+pLabel+'</div>'
