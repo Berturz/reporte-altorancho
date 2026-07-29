@@ -4604,10 +4604,11 @@ function impoFill(r,key){
 }
 function impoCell(r,key,cur){
   var v=r[key]||0, f=impoFill(r,key);
-  var bg = f==='g' ? 'background:#00B050;color:#08301a' : (f==='y' ? 'background:#FFC000;color:#5a3d00' : '');
-  var txt = cur==='usd' ? fUSD(v) : fARS(v);
-  return '<td class="num'+(f?' pf':'')+'" style="'+bg+'">'+txt+'</td>';
+  if(v>0){ var bg = f==='g' ? 'background:#d6f0df;color:#0f5a2a' : (f==='y' ? 'background:#ffe9a8;color:#7a5600' : '');
+    return '<td class="num'+(f?' pf':'')+'" style="'+bg+'">'+(cur==='usd'?fUSD(v):fARS(v))+'</td>'; }
+  return '<td class="num pf" style="background:#ffe9a8;color:#7a5600">pend.</td>';
 }
+function impoBadge(r){ var u=(r.com||'').trim().toUpperCase(); if(!u) return ''; var cls=u.indexOf('LLEG')===0?'b-lleg':u.indexOf('VIAJE')>=0?'b-viaje':u.indexOf('PRODUC')>=0?'b-prod':'b-otro'; return '<span class="imb '+cls+'">'+r.com+'</span>'; }
 var impoSel='gen';
 function setImpoSel(k){ impoSel=k; renderIMPO(); }
 function impoIsLleg(r){ return (r.com||'').trim().toUpperCase().indexOf('LLEG')===0; }
@@ -4626,25 +4627,25 @@ function impoTblGeneral(){
       '<td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="ctr">'+r.cont+'</td><td class="num">'+fIntN(r.unid)+'</td>'+
       impoCell(r,'fob','usd')+impoCell(r,'trib','ars')+impoCell(r,'fleteint','usd')+impoCell(r,'desp','ars')+impoCell(r,'nac','ars')+impoCell(r,'fleten','ars')+
       '<td class="ctr">'+fDMY(r.etd)+'</td><td class="ctr">'+fDMY(r.arribo)+'</td>'+
-      '<td class="com" style="'+impoComStyle(r)+'">'+(r.com||'')+'</td><td class="ctr">'+r.pago+'</td></tr>';
+      '<td class="com">'+impoBadge(r)+'</td><td class="ctr">'+r.pago+'</td></tr>';
   }).join('');
   var totrow='<tr class="cobr-total-row"><td>TOTAL</td><td></td><td></td><td></td><td class="num">'+fIntN(tot.unid)+'</td>'+
     '<td class="num">'+fUSD(tot.fob)+'</td><td class="num">'+fARS(tot.trib)+'</td><td class="num">'+fUSD(tot.fleteint)+'</td>'+
     '<td class="num">'+fARS(tot.desp)+'</td><td class="num">'+fARS(tot.nac)+'</td><td class="num">'+fARS(tot.fleten)+'</td><td></td><td></td><td></td><td></td></tr>';
   return '<div style="display:flex;gap:1rem;font-size:11px;margin-bottom:.4rem;color:var(--txt2)">'+
-    '<span><span style="display:inline-block;width:11px;height:11px;background:#00B050;border-radius:3px;vertical-align:-1px"></span> Pagado</span>'+
-    '<span><span style="display:inline-block;width:11px;height:11px;background:#FFC000;border-radius:3px;vertical-align:-1px"></span> Pendiente de pago</span></div>'+
+    '<span><span style="display:inline-block;width:11px;height:11px;background:#d6f0df;border:1px solid #9ecfb0;border-radius:3px;vertical-align:-1px"></span> Pagado</span>'+
+    '<span><span style="display:inline-block;width:11px;height:11px;background:#ffe9a8;border:1px solid #e6c96a;border-radius:3px;vertical-align:-1px"></span> Pendiente de pago</span></div>'+
     '<table class="imt"><thead><tr>'+
     '<th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>CANT<br>CONT</th><th style="text-align:right">UNID.</th>'+
-    '<th style="text-align:right;'+USDh+'">FOB<br>(USD)</th><th style="text-align:right;'+ARSh+'">Tributos<br>($)</th><th style="text-align:right;'+USDh+'">Flete Int.<br>(USD)</th>'+
-    '<th style="text-align:right;'+ARSh+'">Despach.<br>($)</th><th style="text-align:right;'+ARSh+'">Gastos Nac.<br>($)</th><th style="text-align:right;'+ARSh+'">Flete Nac.<br>($)</th>'+
+    '<th style="text-align:right">FOB<br>(USD)</th><th style="text-align:right">Tributos<br>($)</th><th style="text-align:right">Flete Int.<br>(USD)</th>'+
+    '<th style="text-align:right">Despach.<br>($)</th><th style="text-align:right">Gastos Nac.<br>($)</th><th style="text-align:right">Flete Nac.<br>($)</th>'+
     '<th>ETD</th><th>Arribo</th><th style="text-align:left">Coment.</th><th>Pago<br>(mes)</th></tr></thead><tbody>'+body+totrow+'</tbody></table>';
 }
 function impoTblNoLlego(){
   var rows=IMPO_D.filter(function(r){return !impoIsLleg(r);}).sort(function(a,b){return impoArrKey(a)-impoArrKey(b);});
   if(!rows.length) return '<div class="prov-empty" style="padding:1rem">Todo llegó.</div>';
   var body=rows.map(function(r){
-    return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="num">'+fIntN(r.unid)+'</td><td class="num">'+fUSD(r.fob)+'</td><td class="ctr">'+fDMY(r.etd)+'</td><td class="ctr"><b>'+fDMY(r.arribo)+'</b></td><td class="com" style="'+impoComStyle(r)+'">'+(r.com||'')+'</td></tr>';
+    return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="num">'+fIntN(r.unid)+'</td><td class="num">'+fUSD(r.fob)+'</td><td class="ctr">'+fDMY(r.etd)+'</td><td class="ctr"><b>'+fDMY(r.arribo)+'</b></td><td class="com">'+impoBadge(r)+'</td></tr>';
   }).join('');
   return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th style="text-align:right">UNID.</th><th style="text-align:right">FOB (USD)</th><th>ETD</th><th>Arribo</th><th style="text-align:left">Estado</th></tr></thead><tbody>'+body+'</tbody></table>';
 }
@@ -4672,16 +4673,21 @@ function renderIMPO(){
      +'<div class="impo-ct" style="color:'+c.col+'"><i class="ti '+c.ic+'"></i>'+c.t+'</div>'
      +'<div class="impo-cv" style="color:'+c.col+'">'+c.v+'</div><div class="impo-cs">'+c.s+'</div></div>'; }).join(''); }
   var styleBlock='<style>'+
-    '#impoTableWrap .imt{border-collapse:collapse;font-size:10px;width:100%}'+
-    '#impoTableWrap .imt th,#impoTableWrap .imt td{padding:3px 6px;border-bottom:1px solid var(--brd);vertical-align:middle}'+
-    '#impoTableWrap .imt th{position:sticky;top:0;font-size:9px;line-height:1.15;font-weight:700}'+
+    '#impoTableWrap .imt{border-collapse:collapse;font-size:11px;width:100%}'+
+    '#impoTableWrap .imt td{padding:4px 7px;border-bottom:.5px solid var(--brd);vertical-align:middle}'+
+    '#impoTableWrap .imt th{position:sticky;top:0;font-size:9.5px;line-height:1.15;font-weight:500;padding:5px 7px;background:var(--bg2);color:var(--txt2);white-space:nowrap}'+
     '#impoTableWrap .imt .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}'+
-    '#impoTableWrap .imt .pf{font-weight:600;border-radius:3px}'+
+    '#impoTableWrap .imt .pf{font-weight:600;border-radius:4px}'+
     '#impoTableWrap .imt .ctr{text-align:center;white-space:nowrap}'+
-    '#impoTableWrap .imt .prov{font-weight:600;max-width:130px}'+
-    '#impoTableWrap .imt .tipo{max-width:150px;line-height:1.15}'+
-    '#impoTableWrap .imt .com{max-width:110px;line-height:1.15}'+
-    '#impoTableWrap .imt .imchip{display:inline-block;font-size:9px;font-weight:700;background:#fff3cf;color:#7a5600;border:1px solid #f0d999;border-radius:6px;padding:0 6px;margin:1px 2px}'+
+    '#impoTableWrap .imt .prov{font-weight:600;max-width:150px;line-height:1.15}'+
+    '#impoTableWrap .imt .tipo{max-width:160px;line-height:1.15}'+
+    '#impoTableWrap .imt .com{max-width:130px;line-height:1.15}'+
+    '#impoTableWrap .imt .imchip{display:inline-block;font-size:9.5px;font-weight:600;background:#fff3cf;color:#7a5600;border:1px solid #f0d999;border-radius:6px;padding:1px 6px;margin:1px 2px}'+
+    '#impoTableWrap .imt .imb{font-size:10px;font-weight:700;border-radius:999px;padding:1px 9px;white-space:nowrap}'+
+    '#impoTableWrap .imt .b-lleg{background:#d6f0df;color:#0f7a34}'+
+    '#impoTableWrap .imt .b-viaje{background:#e6e4f7;color:#3C3489}'+
+    '#impoTableWrap .imt .b-prod{background:#f7ecd2;color:#8a5a00}'+
+    '#impoTableWrap .imt .b-otro{background:var(--bg2);color:#5a5a5a;border:1px solid var(--brd)}'+
     '#impoTableWrap .imt tbody tr:hover{background:var(--info-bg)}'+
     '</style>';
   wrap.innerHTML=styleBlock+(impoSel==='nol'?impoTblNoLlego():impoSel==='pen'?impoTblPend():impoTblGeneral());
