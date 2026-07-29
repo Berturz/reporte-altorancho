@@ -4381,6 +4381,7 @@ function stkMgTree(estado){
     if(mgMin>0){ g.mgMinW+=costoUSD*mgMin; g.costoMin+=costoUSD; }
     tot.cant+=cant; tot.costo+=costoUSD; tot.val+=valUSD;
   });
+  sin.costo.sort(function(a,b){return b[3]-a[3];}); sin.precio.sort(function(a,b){return b[3]-a[3];});
   return {agg:agg, sin:sin, tot:tot};
 }
 function stkBuildMg(estado){
