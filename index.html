@@ -1869,15 +1869,22 @@ const CF_ASUMIDO={may:0.08, min:0.22};
 function makeVBarChart(canvasId, entries, base){
   if(charts[canvasId])charts[canvasId].destroy();
   const el=document.getElementById(canvasId); if(!el)return;
+  const n=entries.length;
   const total=entries.reduce((s,[,v])=>s+v,0);
   const pctData=entries.map(([,v])=>total>0?+(v/total*100).toFixed(2):0);
   const raw=entries.map(([,v])=>v);
+  // Ajuste dinámico según cantidad de medios
+  const barMax = n<=8?64 : n<=12?42 : n<=16?30 : 22;
+  const xFont  = n<=8?10 : n<=14?9 : 8;
+  const rot    = n<=6?0 : 90;
+  const lblFont= n<=8?11 : n<=14?9 : 8;
+  const showLbl= n<=22;
   charts[canvasId]=new Chart(el.getContext('2d'),{type:'bar',
-    data:{labels:entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN')),datasets:[{data:pctData,rawData:raw,backgroundColor:chTint(base,0.58),borderColor:base,borderWidth:1.5,borderRadius:4,maxBarThickness:64}]},
+    data:{labels:entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN')),datasets:[{data:pctData,rawData:raw,backgroundColor:chTint(base,0.58),borderColor:base,borderWidth:1.5,borderRadius:4,maxBarThickness:barMax}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw.toFixed(1).replace('.',',')+'%  ('+fmt(c.dataset.rawData[c.dataIndex])+')';}}}},
-      scales:{x:{ticks:{font:{size:10,weight:'700'},color:base,maxRotation:35,minRotation:0},grid:{display:false}},y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}},
-    plugins:[{id:'vlbl',afterDatasetsDraw:function(ch){var m=ch.getDatasetMeta(0),dd=ch.data.datasets[0],cx=ch.ctx;cx.save();cx.font='800 11px Calibri,"Segoe UI",sans-serif';cx.fillStyle=base;cx.textAlign='center';cx.textBaseline='bottom';m.data.forEach(function(b,i){var v=dd.data[i];if(v==null)return;cx.fillText(v.toFixed(1).replace('.',',')+'%',b.x,b.y-4);});cx.restore();}}]});
+      scales:{x:{ticks:{font:{size:xFont,weight:'700'},color:base,maxRotation:rot,minRotation:rot,autoSkip:false},grid:{display:false}},y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}}},
+    plugins:[{id:'vlbl',afterDatasetsDraw:function(ch){if(!showLbl)return;var m=ch.getDatasetMeta(0),dd=ch.data.datasets[0],cx=ch.ctx;cx.save();cx.font='800 '+lblFont+'px Calibri,"Segoe UI",sans-serif';cx.fillStyle=base;cx.textAlign='center';cx.textBaseline='bottom';m.data.forEach(function(b,i){var v=dd.data[i];if(v==null)return;cx.fillText(v.toFixed(1).replace('.',',')+'%',b.x,b.y-4);});cx.restore();}}]});
 }
 function renderFin(){
   const pLabel=MES_LABEL[finMes]||finMes;
