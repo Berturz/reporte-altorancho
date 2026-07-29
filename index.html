@@ -1888,7 +1888,7 @@ function renderFin(){
   const lettPct=fa.ll>0?(fa.cl+fa.dl)/fa.ll:0, arPct=fa.la>0?(fa.ma+fa.da)/fa.la:0;
   const webPct=fw.la>0?(fw.ma+fw.da)/fw.la:0, locPct=fl.la>0?(fl.ma+fl.da)/fl.la:0;
   const lettPrev=faP.ll>0?(faP.cl+faP.dl)/faP.ll:null, arPrev=faP.la>0?(faP.ma+faP.da)/faP.la:null;
-  const topE=function(o){return Object.entries(o).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]).slice(0,8);};
+  const topE=function(o){return Object.entries(o).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]);};
   const sumV=function(o){return Object.values(o).reduce((a,b)=>a+b,0);};
   const mlE=topE(fa.ml), mrE=topE(fa.mr), wE=topE(fw.mr), lE=topE(fl.mr);
   const COL={may:'#8B4630',min:'#4472c4',web:'#7B6BC8',loc:'#4E9DAC'};
