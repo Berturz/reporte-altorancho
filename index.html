@@ -711,17 +711,17 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <div class="sec-hdr"><i class="ti ti-truck-delivery"></i>Aporte por Proveedor (Lett + AR) <span class="sec-sub">· controlado por el calendario</span></div>
 
   <div style="margin-bottom:1rem">
-    <div class="prov-title" style="font-size:17px;font-weight:800;font-style:normal;color:#4472c4;border-left:5px solid #4472c4;background:#eaf0fb;padding:8px 14px;border-radius:10px;margin-bottom:.5rem">Aporte por Proveedor (Lett + AR) – Importado TOP</div>
+    <div class="prov-title" style="font-size:14px;font-weight:800;font-style:normal;color:#4472c4;border-left:5px solid #4472c4;background:#eaf0fb;padding:8px 14px;border-radius:10px;margin-bottom:.5rem">Aporte por Proveedor (Lett + AR) – Importado TOP</div>
     <div class="prov-table-wrap" id="provTableImp"></div>
   </div>
 
   <div style="margin-bottom:1rem">
-    <div class="prov-title" style="font-size:17px;font-weight:800;font-style:normal;color:#c8873c;border-left:5px solid #c8873c;background:#f9efe1;padding:8px 14px;border-radius:10px;margin-bottom:.5rem">Aporte semanal por Proveedor (Lett + AR) – Fábrica</div>
+    <div class="prov-title" style="font-size:14px;font-weight:800;font-style:normal;color:#c8873c;border-left:5px solid #c8873c;background:#f9efe1;padding:8px 14px;border-radius:10px;margin-bottom:.5rem">Aporte semanal por Proveedor (Lett + AR) – Fábrica</div>
     <div class="prov-table-wrap" id="provTableFab"></div>
   </div>
 
   <div>
-    <div class="prov-title" style="font-size:17px;font-weight:800;font-style:normal;color:#1D9E75;border-left:5px solid #1D9E75;background:#e6f5ee;padding:8px 14px;border-radius:10px;margin-bottom:.5rem">Aporte semanal por Proveedor (Lett + AR) – Proveedor Nacional TOP</div>
+    <div class="prov-title" style="font-size:14px;font-weight:800;font-style:normal;color:#1D9E75;border-left:5px solid #1D9E75;background:#e6f5ee;padding:8px 14px;border-radius:10px;margin-bottom:.5rem">Aporte semanal por Proveedor (Lett + AR) – Proveedor Nacional TOP</div>
     <div class="prov-table-wrap" id="provTableNac"></div>
   </div>
 </div>
@@ -4473,19 +4473,19 @@ function renderStock(){
   var allSt={cant:0,val:0}, allVt={cant:0,val:0};
   estados.forEach(function(e){var s=stTot[e]||{};allSt.cant+=s.cant||0;allSt.val+=s.val||0;var v=vtTot[e]||{};allVt.cant+=v.cant||0;allVt.val+=v.val||0;});
   var todoCol='#8B4630', todoAct=stockSelEstado==='__ALL__';
-  var todoCard='<div onclick="setStockEstado(\'__ALL__\')" style="cursor:pointer;border-radius:11px;padding:10px 12px;border:1.5px solid '+todoCol+';border-left:5px solid '+todoCol+';background:'+(todoAct?chTint(todoCol,0.85):'var(--bg)')+';box-shadow:'+(todoAct?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+';transition:.12s">'
-    +'<div style="font-size:13px;font-weight:800;color:'+todoCol+';display:flex;align-items:center;gap:5px;margin-bottom:6px">Todos los estados'+(todoAct?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
-    +'<div style="display:flex;gap:18px;flex-wrap:wrap">'
-      +'<div><div style="font-size:11.5px;color:var(--txt2);font-weight:600">Stock</div><div style="font-size:17px;font-weight:800">'+stkUSD(allSt.val)+'</div><div style="font-size:12.5px;color:var(--txt);font-weight:700">'+stkNum(allSt.cant)+' u.</div></div>'
-      +'<div><div style="font-size:11.5px;color:var(--txt2);font-weight:600">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:17px;font-weight:800">'+stkUSD(allVt.val)+'</div><div style="font-size:12.5px;color:var(--txt);font-weight:700">'+stkNum(allVt.cant)+' u.</div></div>'
+  var todoCard='<div onclick="setStockEstado(\'__ALL__\')" style="cursor:pointer;border-radius:10px;padding:7px 10px;border:1.5px solid '+todoCol+';border-left:5px solid '+todoCol+';background:'+(todoAct?chTint(todoCol,0.85):'var(--bg)')+';box-shadow:'+(todoAct?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+';transition:.12s">'
+    +'<div style="font-size:13px;font-weight:800;color:'+todoCol+';display:flex;align-items:center;gap:5px;margin-bottom:3px">Todos los estados'+(todoAct?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
+      +'<div><div style="font-size:10px;color:var(--txt2);font-weight:600">Stock</div><div style="font-size:14px;font-weight:800">'+stkUSD(allSt.val)+'</div><div style="font-size:10.5px;color:var(--txt);font-weight:700">'+stkNum(allSt.cant)+' u.</div></div>'
+      +'<div><div style="font-size:10px;color:var(--txt2);font-weight:600">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:14px;font-weight:800">'+stkUSD(allVt.val)+'</div><div style="font-size:10.5px;color:var(--txt);font-weight:700">'+stkNum(allVt.cant)+' u.</div></div>'
     +'</div></div>';
   cardsEl.innerHTML = todoCard + estados.map(function(e,i){
     var col=STOCK_ESTADO_COL[e]||STOCK_PAL[i%STOCK_PAL.length]; var st=stTot[e]||{cant:0,val:0}; var vt=vtTot[e]||{cant:0,val:0}; var act=e===stockSelEstado;
-    return '<div onclick="setStockEstado(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:11px;padding:10px 12px;border:1.5px solid '+col+';border-left:5px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+';transition:.12s">'
-      +'<div style="font-size:13px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:5px;margin-bottom:6px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
-      +'<div style="display:flex;gap:18px;flex-wrap:wrap">'
-        +'<div><div style="font-size:11.5px;color:var(--txt2);font-weight:600">Stock</div><div style="font-size:17px;font-weight:800">'+stkUSD(st.val)+'</div><div style="font-size:12.5px;color:var(--txt);font-weight:700">'+stkNum(st.cant)+' u.</div></div>'
-        +'<div><div style="font-size:11.5px;color:var(--txt2);font-weight:600">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:17px;font-weight:800">'+stkUSD(vt.val)+'</div><div style="font-size:12.5px;color:var(--txt);font-weight:700">'+stkNum(vt.cant)+' u.</div></div>'
+    return '<div onclick="setStockEstado(\''+e.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border-radius:10px;padding:7px 10px;border:1.5px solid '+col+';border-left:5px solid '+col+';background:'+(act?chTint(col,0.85):'var(--bg)')+';box-shadow:'+(act?'0 3px 11px rgba(0,0,0,.10)':'0 1px 5px rgba(0,0,0,.05)')+';transition:.12s">'
+      +'<div style="font-size:13px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:5px;margin-bottom:3px">'+stockCap(e)+(act?' <i class="ti ti-eye" style="font-size:12px"></i>':'')+'</div>'
+      +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
+        +'<div><div style="font-size:10px;color:var(--txt2);font-weight:600">Stock</div><div style="font-size:14px;font-weight:800">'+stkUSD(st.val)+'</div><div style="font-size:10.5px;color:var(--txt);font-weight:700">'+stkNum(st.cant)+' u.</div></div>'
+        +'<div><div style="font-size:10px;color:var(--txt2);font-weight:600">Ventas '+(stockSelMes?stockMesLabel(stockSelMes):'')+'</div><div style="font-size:14px;font-weight:800">'+stkUSD(vt.val)+'</div><div style="font-size:10.5px;color:var(--txt);font-weight:700">'+stkNum(vt.cant)+' u.</div></div>'
       +'</div></div>';
   }).join('');
   if(v1El) v1El.innerHTML=stkBuildV1(stockSelEstado, stockSelMes);
