@@ -4278,8 +4278,8 @@ function stkTreeCosto(rows, isVentas, mes, estado){
   var tree={}, tot={cant:0,val:0};
   rows.forEach(function(a){
     var est,ori,rub,esti,mod,cant,val;
-    if(isVentas){ if(a[0]!==mes) return; est=a[1]; if(estado!=='__ALL__'&&est!==estado)return; ori=a[2];rub=a[3];esti=a[4];mod=a[5];cant=a[6];val=stkRowCostoUSD(a[8],cant,a[7]); }
-    else { est=a[0]; if(estado!=='__ALL__'&&est!==estado)return; ori=a[1];rub=a[2];esti=a[3];mod=a[4];cant=a[5];val=stkRowCostoUSD(a[7],cant,a[6]); }
+    if(isVentas){ if(a[0]!==mes) return; est=a[1]; if(!stkEstOk(est,estado))return; ori=a[2];rub=a[3];esti=a[4];mod=a[5];cant=a[6];val=stkRowCostoUSD(a[8],cant,a[7]); }
+    else { est=a[0]; if(!stkEstOk(est,estado))return; ori=a[1];rub=a[2];esti=a[3];mod=a[4];cant=a[5];val=stkRowCostoUSD(a[7],cant,a[6]); }
     mod=mod||'(s/m)';
     tot.cant+=cant; tot.val+=val;
     var o=tree[ori]||(tree[ori]={cant:0,val:0,rubros:{}}); o.cant+=cant;o.val+=val;
@@ -4292,7 +4292,7 @@ function stkTreeCosto(rows, isVentas, mes, estado){
 function stkTreeMargin(estado, pricing, dolar){
   var tree={}, tot={cant:0,costo:0,venta:0};
   (STOCK_D.stockRows||[]).forEach(function(a){
-    if(estado!=='__ALL__'&&a[0]!==estado) return; var ori=a[1],rub=a[2],esti=a[3],mod=a[4]||'(s/m)',cant=a[5],sku=a[7];
+    if(!stkEstOk(a[0],estado)) return; var ori=a[1],rub=a[2],esti=a[3],mod=a[4]||'(s/m)',cant=a[5],sku=a[7];
     var costo=stkRowCostoUSD(sku,cant,a[6]); var mn=pricing[sku]||0; var venta=dolar>0?cant*mn/dolar:0;
     tot.cant+=cant;tot.costo+=costo;tot.venta+=venta;
     var o=tree[ori]||(tree[ori]={cant:0,costo:0,venta:0,rubros:{}}); o.cant+=cant;o.costo+=costo;o.venta+=venta;
@@ -4353,6 +4353,7 @@ function setStockMgEst(e){ stockSelEstadoMg=e; stockMgSin=null; renderStock(); }
 function setStockMgCur(c){ stockMgCur=c; renderStock(); }
 function setStockMgSin(k){ stockMgSin=(stockMgSin===k?null:k); renderStock(); }
 function stkEstLbl(e){ return e==='__ALL__'?'Todos los estados':stockCap(e); }
+function stkEstOk(est,sel){ if(sel==='__ALL__') return est!=='(SIN ESTADO)' && est!=='(VACIO)' && est!==''; return est===sel; }
 function stkRpCat(rub,ori,prov){
   var R=(rub||'').toUpperCase(), O=(ori||'').trim(), P=(prov||'').trim().toUpperCase();
   var IN_NAC={'MIX':1,'HIERROS':1}, INALAMB={'LUX LIGHTING':1}, SILLAS={'WENDY FURNITURE':1,'URUN':1}, MUE_NAC={'CARPINTERIA':1,'MIX':1,'HIERROS':1};
@@ -4365,7 +4366,7 @@ function stkMgTree(estado){
   var P=(STOCK_D&&STOCK_D.pricing)||{};
   var agg={}, sin={costo:[],precio:[]}, tot={cant:0,costo:0,val:0};
   (STOCK_D.stockRows||[]).forEach(function(a){
-    if(estado!=='__ALL__'&&a[0]!==estado) return;
+    if(!stkEstOk(a[0],estado)) return;
     var ori=a[1],rub=a[2],cant=a[5],valS=a[6],sku=a[7],prov=a[8]||'';
     var cat=stkRpCat(rub,ori,prov);
     var costoUSD=stkRowCostoUSD(sku,cant,valS);
