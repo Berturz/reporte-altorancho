@@ -2118,17 +2118,37 @@ function renderYTD(){
   const dif=s26-s25a,gr=s25a?((s26-s25a)/s25a*100):0;
   const ipcPct=s25?((s25a/s25-1)*100):0;const estimIPC=(cmpSel==='YTD'?rows.some(r=>ipcEstim(r.mm)):ipcEstim(cmpSel));
   renderCmpChips();
+  // ── Desglose por canal (para el período seleccionado) ──
+  const CH_DEF=[['lett','AR Mayorista'],['web','Web'],['lbe','Belgrano'],['lsi','San Isidro'],['alc','Alcorta'],['lnd','Nordelta']];
+  const chMonths=(cmpSel==='YTD')?av:[cmpSel];
+  const chData=CH_DEF.map(([ck,lbl])=>{let v25=0,v25a=0,v26=0;chMonths.forEach(mm=>{const f=ipcFactor(mm);
+    const c25=((typeof RP2025_CANAL!=='undefined'&&RP2025_CANAL[mm])||{})[ck]||{};for(const cat in c25){const tv=c25[cat].tv||0;v25+=tv;v25a+=tv*f;}
+    const c26=((typeof RUBROPROV_D!=='undefined'&&RUBROPROV_D['2026-'+mm])||{})[ck]||{};for(const cat in c26){v26+=c26[cat][1]||0;}});
+    return {lbl,v25,v25a,v26,col:(CH_LIGHT[COBR_CMAP[ck]]||'#4472c4')};});
+  const chHtml='<div style="font-size:11.5px;font-weight:700;color:var(--txt2);margin:14px 0 6px"><i class="ti ti-building-store" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Por canal · '+per+' · nominal 2025 · aj. IPC · 2026 · crec. real</div>'
+    +'<div style="display:grid;grid-template-columns:repeat('+CH_DEF.length+',minmax(0,1fr));gap:8px">'+chData.map(function(d){
+      var has=d.v25a>0; var g=has?((d.v26-d.v25a)/d.v25a*100):0;
+      var badge=has?((g>=0?'+':'')+g.toFixed(1)+'%'):(d.v26>0?'Nuevo':'—');
+      var bcol=(!has||g>=0)?'#2a6b53':'#c0392b'; var bbg=(!has||g>=0)?'#e9f7f0':'#fdecec';
+      return '<div style="background:var(--bg);border:1px solid '+chTint(d.col,0.55)+';border-top:4px solid '+d.col+';border-radius:10px;padding:8px 10px">'
+        +'<div style="font-size:12.5px;font-weight:800;color:'+d.col+';margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.lbl+'</div>'
+        +'<div style="font-size:10px;color:var(--txt2)">2025 nom.</div><div style="font-size:11.5px;color:#565b64;font-weight:700;margin-bottom:3px">'+(d.v25>0?fmt(d.v25):'—')+'</div>'
+        +'<div style="font-size:10px;color:var(--txt2)">2025 aj.IPC</div><div style="font-size:11.5px;color:#565b64;font-weight:700;margin-bottom:3px">'+(d.v25a>0?fmt(d.v25a):'—')+'</div>'
+        +'<div style="font-size:10px;color:var(--txt2)">2026</div><div style="font-size:12.5px;color:'+d.col+';font-weight:800">'+fmt(d.v26)+'</div>'
+        +'<div style="margin-top:5px"><span style="background:'+bbg+';color:'+bcol+';font-size:11.5px;font-weight:800;border-radius:6px;padding:2px 7px">'+badge+'</span></div>'
+      +'</div>';
+    }).join('')+'</div>';
   const _yk=document.getElementById('ytdKpis');_yk.style.display='block';
   _yk.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;align-items:stretch">
-      <div class="mc" style="grid-column:1;grid-row:1;background:#f2f3f5!important;border:1px solid #b8bec6!important"><div class="ml2" style="color:#6f757e;min-height:82px"><span style="font-size:25px;font-weight:800;display:block;line-height:1;letter-spacing:.5px;margin-bottom:4px">2025</span>Facturación Total ajustado IPC · ${cmpSel==='YTD'?per.replace('YTD ',''):per}${cmpSel==='YTD'?'<br>YTD':''}</div><div class="mv" style="color:#6f757e!important;font-size:33px!important">${fmt(s25a)}</div><div class="ms" style="font-size:15px;font-weight:400;color:#6f757e;margin-top:3px">nominal: ${fmt(s25)}</div></div>
-      <div class="mc" style="grid-column:2;grid-row:1;background:#faeaf4!important;border:1px solid #d98fc4!important"><div class="ml2" style="color:#b0468f;min-height:82px"><span style="font-size:25px;font-weight:800;display:block;line-height:1;letter-spacing:.5px;margin-bottom:4px">2026</span>Facturación Total · ${cmpSel==='YTD'?per.replace('YTD ',''):per}${cmpSel==='YTD'?'<br>YTD':''}</div><div class="mv" style="color:#b0468f!important;font-size:33px!important">${fmt(s26)}</div><div class="ms">Total s/IVA</div></div>
-      <div style="grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:.8rem;margin-left:.8rem">
-        <div class="mc" style="flex:1;display:flex;flex-direction:column;justify-content:center;background:#edf7f1!important;border:1px solid #69c39c!important;border-left:5px solid #69c39c!important"><div class="ml2" style="color:#3e9e6e">Crecimiento real · ${per}</div><div class="mv" style="color:${gr>=0?'#3e9e6e':'#d85a30'}!important;font-size:24px!important">${gr>=0?'+':''}${gr.toFixed(1)}%</div><div class="ms">2026 vs 2025 ajustado IPC</div></div>
-        <div class="mc" style="flex:1;display:flex;flex-direction:column;justify-content:center;background:#edf7f1!important;border:1px solid #69c39c!important;border-left:5px solid #69c39c!important"><div class="ml2" style="color:#3e9e6e">Variación real (pesos)</div><div class="mv" style="color:${dif>=0?'#3e9e6e':'#d85a30'}!important;font-size:20px!important">${dif>=0?'+':''}${fmt(dif)}</div><div class="ms">2026 vs 2025 ajustado IPC</div></div>
+    <div style="display:flex;gap:.7rem;align-items:stretch;flex-wrap:wrap">
+      <div class="mc" style="flex:.8;min-width:150px;display:flex;flex-direction:column;justify-content:center;background:#f7e9d7!important;border:1px solid #d08a3c!important"><div class="ml2" style="color:#c8873c">IPC acum. aplicado · ${per}</div><div class="mv" style="color:#c8873c!important;font-size:26px!important">+${ipcPct.toFixed(1)}%</div><div class="ms">interanual INDEC${estimIPC?' · estim.':''} · ajusta el 2025</div></div>
+      <div class="mc" style="flex:1.5;min-width:185px;background:#f2f3f5!important;border:1px solid #b8bec6!important"><div class="ml2" style="color:#6f757e;min-height:72px"><span style="font-size:24px;font-weight:800;display:block;line-height:1;letter-spacing:.5px;margin-bottom:4px">2025</span>Facturación Total ajustado IPC · ${cmpSel==='YTD'?per.replace('YTD ',''):per}${cmpSel==='YTD'?'<br>YTD':''}</div><div class="mv" style="color:#6f757e!important;font-size:30px!important">${fmt(s25a)}</div><div class="ms" style="font-size:14px;font-weight:400;color:#6f757e;margin-top:3px">nominal: ${fmt(s25)}</div></div>
+      <div class="mc" style="flex:1.5;min-width:185px;background:#faeaf4!important;border:1px solid #d98fc4!important"><div class="ml2" style="color:#b0468f;min-height:72px"><span style="font-size:24px;font-weight:800;display:block;line-height:1;letter-spacing:.5px;margin-bottom:4px">2026</span>Facturación Total · ${cmpSel==='YTD'?per.replace('YTD ',''):per}${cmpSel==='YTD'?'<br>YTD':''}</div><div class="mv" style="color:#b0468f!important;font-size:30px!important">${fmt(s26)}</div><div class="ms">Total s/IVA</div></div>
+      <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:.6rem">
+        <div class="mc" style="flex:1;display:flex;flex-direction:column;justify-content:center;background:#edf7f1!important;border:1px solid #69c39c!important;border-left:5px solid #69c39c!important"><div class="ml2" style="color:#3e9e6e">Crecimiento real · ${per}</div><div class="mv" style="color:${gr>=0?'#3e9e6e':'#d85a30'}!important;font-size:22px!important">${gr>=0?'+':''}${gr.toFixed(1)}%</div><div class="ms">2026 vs 2025 ajustado IPC</div></div>
+        <div class="mc" style="flex:1;display:flex;flex-direction:column;justify-content:center;background:#edf7f1!important;border:1px solid #69c39c!important;border-left:5px solid #69c39c!important"><div class="ml2" style="color:#3e9e6e">Variación real (pesos)</div><div class="mv" style="color:${dif>=0?'#3e9e6e':'#d85a30'}!important;font-size:17px!important">${dif>=0?'+':''}${fmt(dif)}</div><div class="ms">2026 vs 2025 ajustado IPC</div></div>
       </div>
-      <div class="mc" style="grid-column:1;grid-row:2;align-self:start;justify-self:center;width:fit-content;background:#f7e9d7!important;border:1px solid #d08a3c!important"><div class="ml2" style="color:#c8873c">IPC acum. aplicado · ${per}</div><div class="mv" style="color:#c8873c!important">+${ipcPct.toFixed(1)}%</div><div class="ms">interanual INDEC${estimIPC?' · estim.':''} · ajusta el 2025</div></div>
-    </div>`;
+    </div>`+chHtml;
   const body=rows.map(r=>{const dv=r.v26-r.v25a,g=r.v25a?((r.v26-r.v25a)/r.v25a*100):0,sel=cmpSel===r.mm;
     return `<tr${sel?' style="background:var(--info-bg);font-weight:600"':''}><td style="text-align:center">${MNF[r.i-1]}</td><td style="text-align:center;color:#a0a6ae">${fmt(r.v25)}</td><td style="text-align:center;color:#565b64">${fmt(r.v25a)}</td><td style="text-align:center;color:#b0468f;font-weight:600">${fmt(r.v26)}</td><td style="text-align:center;color:${dv>=0?'#3e9e6e':'#d85a30'};font-weight:600">${dv>=0?'+':''}${fmt(dv)}</td><td style="text-align:center;color:${g>=0?'#3e9e6e':'#d85a30'};font-weight:600">${g>=0?'+':''}${g.toFixed(1)}%</td></tr>`;}).join('');
   let t25=0,t25a=0,t26=0;rows.forEach(r=>{t25+=r.v25;t25a+=r.v25a;t26+=r.v26;});const tg=t25a?((t26-t25a)/t25a*100):0;
