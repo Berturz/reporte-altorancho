@@ -4731,7 +4731,7 @@ function impoFill(r,key){
 }
 function impoCell(r,key,cur){
   var v=r[key]||0, f=impoFill(r,key);
-  if(v>0){ var bg = f==='g' ? 'background:#00B050;color:#08301a' : (f==='y' ? 'background:#FFC000;color:#5a3d00' : '');
+  if(v>0){ var bg = f==='g' ? 'background:#00B050;color:#08301a' : (f==='y' ? 'background:#FFC000;color:#5a3d00' : (f==='v' ? 'background:#E4DBF5;color:#5B3B8C' : ''));
     return '<td class="num'+(f?' pf':'')+'" style="'+bg+'">'+(cur==='usd'?fUSD(v):fARS(v))+'</td>'; }
   return '<td class="num pf" style="background:#FFC000;color:#5a3d00">pend.</td>';
 }
@@ -4761,7 +4761,8 @@ function impoTblGeneral(){
     '<td class="num">'+fARS(tot.desp)+'</td><td class="num">'+fARS(tot.nac)+'</td><td class="num">'+fARS(tot.fleten)+'</td><td></td><td></td><td></td><td></td></tr>';
   return '<div style="display:flex;gap:1rem;font-size:11px;margin-bottom:.4rem;color:var(--txt2)">'+
     '<span><span style="display:inline-block;width:11px;height:11px;background:#00B050;border-radius:3px;vertical-align:-1px"></span> Pagado</span>'+
-    '<span><span style="display:inline-block;width:11px;height:11px;background:#FFC000;border-radius:3px;vertical-align:-1px"></span> Pendiente de pago</span></div>'+
+    '<span><span style="display:inline-block;width:11px;height:11px;background:#FFC000;border-radius:3px;vertical-align:-1px"></span> Pendiente de pago</span>'+
+    '<span><span style="display:inline-block;width:11px;height:11px;background:#E4DBF5;border:1px solid #C9B8EC;border-radius:3px;vertical-align:-1px"></span> Importe no confirmado</span></div>'+
     '<table class="imt"><thead><tr>'+
     '<th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>CANT<br>CONT</th><th style="text-align:right">UNID.</th>'+
     '<th style="text-align:right;'+USDh+'">FOB<br>(USD)</th><th style="text-align:right;'+ARSh+'">Tributos<br>($)</th><th style="text-align:right;'+USDh+'">Flete Int.<br>(USD)</th>'+
@@ -4847,6 +4848,7 @@ async function handleIMPOFile(file){
       var R=parseInt(rgb.slice(0,2),16),G=parseInt(rgb.slice(2,4),16),B=parseInt(rgb.slice(4,6),16); if(isNaN(R)||isNaN(G)||isNaN(B)) return '';
       if(G>R+25 && G>B+15 && G>110) return 'g';
       if(R>190 && G>150 && B<170) return 'y';
+      if(B>G+8 && R>G+3 && B>=R-5) return 'v'; // violeta claro = importe no confirmado
       return ''; }catch(e){ return ''; } }
     var ti=-1;
     for(var i=0;i<rows.length;i++){ var rr=rows[i]||[]; if(rr.some(function(c){var s=c?String(c).toUpperCase():'';return s.indexOf('REAL')>=0&&s.indexOf('DIRECTORIO')>=0;})){ti=i;break;} }
