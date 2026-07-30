@@ -576,6 +576,12 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div class="sec-hdr"><i class="ti ti-table"></i>YTD por Rubro / Proveedor <span class="sec-sub">· por canal · 2025 vs 2026 · facturación ajustada por IPC</span></div>
     <div id="rpPeriodBox"></div>
   </div>
+  <div id="rp25Import" style="margin:6px 0 12px;border:1px dashed #bfc4cc;border-radius:10px;padding:8px 12px;background:var(--bg2,#f7f8fa);display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px">
+    <span style="font-weight:700;color:#5b6472"><i class="ti ti-history-toggle" style="vertical-align:-2px;margin-right:4px"></i>Comparativo 2025 · agregar mes</span>
+    <label style="cursor:pointer;background:#5b6472;color:#fff;border-radius:8px;padding:5px 11px;font-weight:600"><i class="ti ti-file-spreadsheet" style="vertical-align:-2px;margin-right:4px"></i>Subir "Reporte 2025 USAR.xlsx"<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
+    <span style="color:var(--txt2)">Lee la hoja "FACTURACIÓN 2025" y agrega el desglose de <b>julio</b> (no toca ene–jun). Luego tocá "Guardar en Supabase".</span>
+    <span id="rp25Status" style="flex-basis:100%;color:var(--txt2)"></span>
+  </div>
   <div id="rpCompWrap"></div>
 </div>
 
@@ -2239,6 +2245,77 @@ function renderRPCompare(){
   var _pb=document.getElementById('rpPeriodBox');
   if(_pb)_pb.innerHTML=`<div class="rp-period">Período: <strong style="color:var(--petrol,#0E3B43)">${per}</strong> · 2025 ajustado por IPC interanual INDEC${estim?' · mes en curso con IPC del mes anterior (estimado)':''}</div>`;
   document.getElementById('rpCompWrap').innerHTML=`<div class="rp-grid">${html||'<div class="prov-empty">Sin datos</div>'}</div>`;
+}
+// Importa el desglose por rubro/proveedor de 2025 desde "Reporte 2025 USAR.xlsx" (hoja FACTURACIÓN 2025).
+// Usa EXACTAMENTE la misma clasificación que el parser 2026 (RUBROPROV). Solo escribe el mes indicado (julio).
+async function handleFact2025File(file){
+  if(!file) return;
+  var st=document.getElementById('rp25Status');
+  var setS=function(m){ if(st) st.innerHTML=m; };
+  var MES='07', YM='2025-07';
+  setS('<span class="spin">&#8635;</span> Leyendo archivo...');
+  try{
+    var buf=await file.arrayBuffer();
+    setS('<span class="spin">&#8635;</span> Parseando hoja "FACTURACIÓN 2025" (puede tardar, es grande)...');
+    await new Promise(function(r){setTimeout(r,0);});
+    var SH='FACTURACIÓN 2025';
+    var wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true,sheets:[SH],bookVBA:false});
+    if(!wb.SheetNames.includes(SH)) throw new Error('No se encontró la hoja "'+SH+'". Hojas: '+wb.SheetNames.join(', '));
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[SH],{header:1,raw:true,defval:null});
+    var hdr=rows[0]||[];
+    var norm=function(x){return x==null?'':String(x).trim().toLowerCase();};
+    // Verifica que los índices de columna coincidan con el formato esperado (mismo template que 2026)
+    if(norm(hdr[COL.CANAL]).indexOf('canal')<0 || norm(hdr[COL.RUBRO]).indexOf('rubro')<0 || norm(hdr[COL.TV]).indexOf('total')<0){
+      throw new Error('Las columnas no coinciden con el formato esperado. Encontrado: col'+COL.CANAL+'="'+hdr[COL.CANAL]+'", col'+COL.RUBRO+'="'+hdr[COL.RUBRO]+'", col'+COL.TV+'="'+hdr[COL.TV]+'". Avisá para ajustar el mapeo.');
+    }
+    var CANAL_MAP2={Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
+    var PROV_ILUM_NAC=new Set(['MIX','HIERROS']);
+    var PROV_ILUM_INALAMB=new Set(['LUX LIGHTING']);
+    var PROV_SILLAS_IMP=new Set(['WENDY FURNITURE','URUN']);
+    var PROV_MUEBLES_NAC=new Set(['CARPINTERIA','MIX','HIERROS']);
+    var acc={}, nFilas=0;
+    for(var ri=1;ri<rows.length;ri++){
+      var row=rows[ri]; if(!row) continue;
+      var rubro=row[COL.RUBRO]?String(row[COL.RUBRO]).trim().toUpperCase():null;
+      var canal=row[COL.CANAL]?String(row[COL.CANAL]).trim():null;
+      if(!rubro || !CANALES_ALL.has(canal)) continue;
+      var dia=excelDateToStr(row[COL.FECHA]); if(!dia) continue;
+      if(dia.slice(0,7)!==YM) continue; // SOLO julio 2025
+      var canalKey2=CANAL_MAP2[canal]; if(!canalKey2) continue;
+      var provNombre2=row[COL.PROV]?String(row[COL.PROV]).trim():'';
+      var origVal2=row[COL.ORIG]?String(row[COL.ORIG]).trim():'';
+      var cat=null;
+      if(rubro==='ILUMINACION'){
+        if(PROV_ILUM_INALAMB.has(provNombre2)) cat='ILUMINACION INALAMBRICA';
+        else if(origVal2==='Importado') cat='ILUMINACION IMPORTADA';
+        else if(PROV_ILUM_NAC.has(provNombre2)||origVal2==='Fábrica') cat='ILUMINACION NACIONAL';
+        else if(origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
+      } else if(rubro==='MUEBLES'){
+        if(PROV_SILLAS_IMP.has(provNombre2)) cat='SILLAS IMPORTADAS';
+        else if(PROV_MUEBLES_NAC.has(provNombre2)) cat='MUEBLES NACIONALES';
+        else if(origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
+      } else {
+        if(origVal2==='Importado') cat='DECO/NAVIDAD/BAZAR IMPORTADO';
+        else if(origVal2==='Fábrica') cat='DECO/BAZAR FABRICA';
+        else if(origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
+      }
+      if(!cat) continue;
+      var tv=n(row[COL.TV]);
+      var qty2=Math.round(n(row[COL.QTY]));
+      if(!acc[canalKey2]) acc[canalKey2]={};
+      if(!acc[canalKey2][cat]) acc[canalKey2][cat]={tv:0,qty:0};
+      acc[canalKey2][cat].tv+=tv;
+      acc[canalKey2][cat].qty+=qty2;
+      nFilas++;
+    }
+    if(!nFilas) throw new Error('No se encontraron filas de julio 2025 (2025-07) en la hoja. ¿El archivo llega hasta julio?');
+    if(typeof RP2025_CANAL==='undefined'||!RP2025_CANAL) window.RP2025_CANAL={};
+    RP2025_CANAL[MES]=acc;
+    try{ renderYTD(); }catch(e){}
+    try{ renderRPCompare(); }catch(e){}
+    var tq=0,ttv=0; for(var ck in acc){ for(var c in acc[ck]){ tq+=acc[ck][c].qty; ttv+=acc[ck][c].tv; } }
+    setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>Julio 2025 cargado</b> · '+nFilas.toLocaleString('es-AR')+' filas · '+tq.toLocaleString('es-AR')+' u · $'+Math.round(ttv).toLocaleString('es-AR')+' s/IVA. <b>Ahora tocá "Guardar en Supabase"</b> para que quede publicado.');
+  }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
 }
 function buildFactMonthChips(){
   const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
