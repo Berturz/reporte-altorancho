@@ -4354,11 +4354,11 @@ function setStockMgCur(c){ stockMgCur=c; renderStock(); }
 function setStockMgSin(k){ stockMgSin=(stockMgSin===k?null:k); renderStock(); }
 function stkEstLbl(e){ return e==='__ALL__'?'Todos los estados':stockCap(e); }
 function stkEstOk(est,sel){ if(sel==='__ALL__') return est!=='(SIN ESTADO)' && est!=='(VACIO)' && est!==''; return est===sel; }
-function stkRpCat(rub,ori,prov){
-  var R=(rub||'').toUpperCase(), O=(ori||'').trim(), P=(prov||'').trim().toUpperCase();
+function stkRpCat(rub,ori,prov,esti){
+  var R=(rub||'').toUpperCase(), O=(ori||'').trim(), P=(prov||'').trim().toUpperCase(), E=(esti||'').toUpperCase();
   var IN_NAC={'MIX':1,'HIERROS':1}, INALAMB={'LUX LIGHTING':1}, SILLAS={'WENDY FURNITURE':1,'URUN':1}, MUE_NAC={'CARPINTERIA':1,'MIX':1,'HIERROS':1};
   if(R.indexOf('ILUMINAC')>=0){ if(INALAMB[P])return 'ILUMINACION INALAMBRICA'; if(O==='Importado')return 'ILUMINACION IMPORTADA'; if(IN_NAC[P]||O==='Fábrica')return 'ILUMINACION NACIONAL'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
-  else if(R.indexOf('MUEBLE')>=0){ if(SILLAS[P])return 'SILLAS IMPORTADAS'; if(MUE_NAC[P])return 'MUEBLES NACIONALES'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
+  else if(R.indexOf('MUEBLE')>=0){ if(SILLAS[P])return 'SILLAS IMPORTADAS'; if(O==='Importado'&&E.indexOf('SILLA')>=0)return 'SILLAS IMPORTADAS'; if(MUE_NAC[P])return 'MUEBLES NACIONALES'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
   else { if(O==='Importado')return 'DECO/NAVIDAD/BAZAR IMPORTADO'; if(O==='Fábrica')return 'DECO/BAZAR FABRICA'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
   return '(SIN CLASIF)';
 }
@@ -4367,8 +4367,8 @@ function stkMgTree(estado){
   var agg={}, sin={costo:[],precio:[]}, tot={cant:0,costo:0,val:0};
   (STOCK_D.stockRows||[]).forEach(function(a){
     if(!stkEstOk(a[0],estado)) return;
-    var ori=a[1],rub=a[2],cant=a[5],valS=a[6],sku=a[7],prov=a[8]||'';
-    var cat=stkRpCat(rub,ori,prov);
+    var ori=a[1],rub=a[2],esti=a[3],cant=a[5],valS=a[6],sku=a[7],prov=a[8]||'';
+    var cat=stkRpCat(rub,ori,prov,esti);
     var costoUSD=stkRowCostoUSD(sku,cant,valS);
     var pr=P[sku]; var mgMay=pr?(pr.mgMay||0):0, mgMin=pr?(pr.mgMin||0):0;
     var okCosto=costoUSD>0, okMg=(mgMay>0||mgMin>0);
