@@ -561,7 +561,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <div style="display:flex;flex-direction:column;gap:1.3rem">
     <div class="cp">
       <div class="st" style="font-size:18px"><i class="ti ti-chart-bar"></i>Facturación por mes · 2025 ajustado IPC vs 2026</div>
-      <div class="leg" style="justify-content:center;margin:2px 0 10px 0;font-size:13.5px"><span class="li"><span class="ld" style="background:#cfd4da"></span>2025 aj. IPC</span><span class="li"><span class="ld" style="background:#d98fc4"></span>2026</span><span class="li"><span class="ldn" style="background:#69c39c"></span>Crec. real %</span></div>
+      <div class="leg" style="justify-content:center;margin:2px 0 10px 0;font-size:13.5px"><span class="li"><span class="ld" style="background:#cfd4da"></span>2025 aj. IPC</span><span class="li"><span class="ld" style="background:#7BA7DE"></span>2026</span><span class="li"><span class="ldn" style="background:#3e9e6e"></span>Crec. real %</span></div>
       <div style="display:flex;align-items:stretch"><div id="cYTDaxis" style="position:relative;flex:0 0 68px;height:320px"></div><div style="overflow-x:auto;overflow-y:hidden;padding-bottom:4px;flex:1 1 auto;min-width:0"><div id="cYTDbox" style="position:relative;height:320px;width:100%"><canvas id="cYTD"></canvas></div></div></div>
     </div>
     <div class="prov-table-wrap" id="ytdTableWrap"></div>
@@ -2156,14 +2156,26 @@ function renderYTD(){
     <div style="font-size:12.5px;color:var(--txt2);margin-top:.4rem;padding:0 14px">2025 ajustado por IPC interanual INDEC (por mes). Var. y crecimiento calculados sobre el 2025 ajustado.</div>`;
   const labels=rows.map(r=>MNF[r.i-1]),d25a=rows.map(r=>Math.round(r.v25a)),d26=rows.map(r=>Math.round(r.v26)),dg=rows.map(r=>r.v25a?+(((r.v26-r.v25a)/r.v25a*100).toFixed(1)):0);
   if(ytdChart)ytdChart.destroy();
-  const _cb=document.getElementById('cYTDbox');if(_cb)_cb.style.minWidth=(rows.length*178)+'px';
-  const ytdBarVals={id:'ytdBarVals',afterDatasetsDraw(ch){const cx=ch.ctx;cx.save();cx.font='700 9px Calibri,"Segoe UI",sans-serif';cx.textAlign='center';cx.textBaseline='bottom';const cols=['#565b64','#7c2e66'];[0,1].forEach(di=>{const meta=ch.getDatasetMeta(di);if(!meta||meta.hidden)return;cx.fillStyle=cols[di];meta.data.forEach((bar,i)=>{const v=ch.data.datasets[di].data[i];if(!v)return;cx.fillText(fmt(v),bar.x,bar.y-3);});});const lm=ch.getDatasetMeta(2);if(lm&&!lm.hidden){cx.fillStyle='#2f7a55';cx.font='700 8px Calibri,"Segoe UI",sans-serif';lm.data.forEach((pt,i)=>{const v=ch.data.datasets[2].data[i];if(v==null)return;cx.fillText((v>=0?'+':'')+v+'%',pt.x,pt.y-7);});}cx.restore();}};
+  const _cb=document.getElementById('cYTDbox');if(_cb)_cb.style.minWidth=(rows.length>8?(rows.length*150)+'px':'100%');
+  const ytdBarVals={id:'ytdBarVals',afterDatasetsDraw(ch){const cx=ch.ctx;cx.save();
+    const rr=(x,y,w,h,r)=>{cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();};
+    const chip=(x,by,txt,bg,fg,font,bd)=>{cx.font=font;const w=cx.measureText(txt).width;const ph=parseInt((font.match(/(\d+)px/)||[0,11])[1],10);const px=5,py=3,rw=w+px*2,rh=ph+py*2,rx=x-rw/2,ry=by-rh;cx.fillStyle=bg;rr(rx,ry,rw,rh,5);cx.fill();if(bd){cx.strokeStyle=bd;cx.lineWidth=1;rr(rx+0.5,ry+0.5,rw-1,rh-1,5);cx.stroke();}cx.fillStyle=fg;cx.textAlign='center';cx.textBaseline='middle';cx.fillText(txt,x,ry+rh/2+0.5);};
+    const m0=ch.getDatasetMeta(0),m1=ch.getDatasetMeta(1),lm=ch.getDatasetMeta(2);const CH=20;
+    ch.data.labels.forEach((_,i)=>{const b0=m0&&m0.data[i],b1=m1&&m1.data[i],pt=lm&&lm.data[i];
+      const v0=ch.data.datasets[0].data[i],v1=ch.data.datasets[1].data[i],vp=lm?ch.data.datasets[2].data[i]:null;
+      let y0=b0?b0.y-2:0,y1=b1?b1.y-2:0;
+      if(b0&&b1&&v0&&v1&&Math.abs(y0-y1)<CH+3){const base=Math.min(y0,y1);y1=base;y0=base-CH-2;}
+      const tops=[],bots=[];
+      if(b1&&v1){chip(b1.x,y1,fmt(v1),'#eaf1fb','#1f4f8f','800 12px Calibri,"Segoe UI",sans-serif','#bcd4f2');tops.push(y1-CH);bots.push(y1);}
+      if(b0&&v0){chip(b0.x,y0,fmt(v0),'#f0f1f3','#565b64','700 11px Calibri,"Segoe UI",sans-serif','#d8dade');tops.push(y0-CH);bots.push(y0);}
+      if(pt&&vp!=null){let pb=pt.y-8;if(tops.length){const st=Math.min.apply(null,tops),sb=Math.max.apply(null,bots);if((pb-CH<=sb)&&(pb>=st))pb=st-4;}chip(pt.x,pb,(vp>=0?'+':'')+vp+'%','#3e9e6e','#ffffff','800 12px Calibri,"Segoe UI",sans-serif',null);}
+    });cx.restore();}};
   ytdChart=new Chart(document.getElementById('cYTD').getContext('2d'),{type:'bar',data:{labels,datasets:[
-    {type:'bar',label:'2025 aj. IPC',data:d25a,backgroundColor:'#cfd4da',borderRadius:3,order:2,yAxisID:'yL',categoryPercentage:0.9,barPercentage:1.0,maxBarThickness:200},
-    {type:'bar',label:'2026',data:d26,backgroundColor:'#d98fc4',borderRadius:3,order:3,yAxisID:'yL',categoryPercentage:0.9,barPercentage:1.0,maxBarThickness:200},
-    {type:'line',label:'Crec. real %',data:dg,borderColor:'#69c39c',backgroundColor:'#69c39c',pointBackgroundColor:'#69c39c',pointRadius:4,tension:0.3,borderWidth:2.5,order:1,yAxisID:'yG'}
-  ]},plugins:[ytdBarVals],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},tooltip:{callbacks:{label(c){return c.dataset.type==='line'?` Crec.: ${c.raw>=0?'+':''}${c.raw}%`:` ${c.dataset.label}: ${fmt(c.raw)}`;}}}},
-    scales:{yL:{position:'left',ticks:{display:false},border:{display:false},grid:{color:'rgba(30,42,56,.07)'}},yG:{position:'right',display:false},x:{ticks:{font:{size:11,weight:'600'}},grid:{display:false}}}}});
+    {type:'bar',label:'2025 aj. IPC',data:d25a,backgroundColor:'#cfd4da',borderRadius:3,order:2,yAxisID:'yL',categoryPercentage:0.86,barPercentage:0.98,maxBarThickness:200},
+    {type:'bar',label:'2026',data:d26,backgroundColor:'#7BA7DE',borderRadius:3,order:3,yAxisID:'yL',categoryPercentage:0.86,barPercentage:0.98,maxBarThickness:200},
+    {type:'line',label:'Crec. real %',data:dg,borderColor:'#3e9e6e',backgroundColor:'#3e9e6e',pointBackgroundColor:'#3e9e6e',pointRadius:4,tension:0.3,borderWidth:2.5,order:1,yAxisID:'yG'}
+  ]},plugins:[ytdBarVals],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:24}},plugins:{legend:{display:false},tooltip:{callbacks:{label(c){return c.dataset.type==='line'?` Crec.: ${c.raw>=0?'+':''}${c.raw}%`:` ${c.dataset.label}: ${fmt(c.raw)}`;}}}},
+    scales:{yL:{position:'left',ticks:{display:false},border:{display:false},grid:{color:'rgba(30,42,56,.07)'}},yG:{position:'right',display:false},x:{ticks:{font:{size:13,weight:'700'},color:'#333'},grid:{display:false}}}}});
   if(_cb&&_cb.parentElement){const _o=_cb.parentElement;requestAnimationFrame(()=>{_o.scrollLeft=_o.scrollWidth;const axCol=document.getElementById('cYTDaxis');if(axCol&&ytdChart.scales.yL){const sc=ytdChart.scales.yL;axCol.innerHTML='';sc.ticks.forEach(t=>{const y=sc.getPixelForValue(t.value);const el=document.createElement('div');el.textContent=fmt(t.value);el.style.cssText='position:absolute;right:5px;top:'+y+'px;transform:translateY(-50%);font-size:9px;color:var(--txt2);white-space:nowrap';axCol.appendChild(el);});}});}
 }
 function renderCmpChips(){
