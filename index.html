@@ -524,18 +524,11 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 
   <!-- UPLOAD ZONE -->
   <div style="min-width:280px">
-    <div class="upload-zone" id="uploadZone">
-      <input type="file" accept=".xlsx,.xls" id="fileInput" onchange="handleFile(this.files[0])">
-      <i class="ti ti-file-spreadsheet upload-icon"></i>
-      <div class="upload-txt">
-        <strong>Actualizar con nuevo Excel</strong>
-        <span>Reporte_2026_USAR.xlsx · hoja "FACTURACIÓN 2026"</span>
-      </div>
-      <div class="upload-status" id="uploadStatus"></div>
-    </div>
+    <button onclick="guardarEnSupabase(this)" title="Guarda los datos actuales en Supabase. El reporte publicado los mostrará al instante." style="width:100%;background:#2A6B53;color:#fff;border:none;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:Calibri,'Segoe UI',sans-serif"><i class="ti ti-cloud-upload" style="font-size:15px"></i>Guardar en Supabase</button>
+    <label id="uploadZone" title="Actualizar con el Reporte 2026 USAR (hoja FACTURACIÓN 2026)" style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:11px;color:#8a8f98;font-weight:600"><i class="ti ti-file-spreadsheet" style="font-size:13px"></i>Actualizar con nuevo Excel (2026)<input type="file" accept=".xlsx,.xls" id="fileInput" onchange="handleFile(this.files[0])" style="display:none"></label>
     <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <button onclick="guardarEnSupabase(this)" title="Guarda los datos actuales en Supabase. El reporte publicado los mostrará al instante." style="margin-top:8px;width:100%;background:#2A6B53;color:#fff;border:none;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:Calibri,'Segoe UI',sans-serif"><i class="ti ti-cloud-upload" style="font-size:15px"></i>Guardar en Supabase</button>
-    <label title="Agrega el desglose 2025 (julio) al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:11px;color:#8a8f98;font-weight:600"><i class="ti ti-history-toggle" style="font-size:13px"></i>Comparativo 2025 (agregar mes)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
+    <div class="upload-status" id="uploadStatus" style="font-size:11px;text-align:center;justify-content:center;margin-left:0"></div>
+    <label title="Agrega el desglose 2025 (julio) al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="margin-top:4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:11px;color:#8a8f98;font-weight:600"><i class="ti ti-history-toggle" style="font-size:13px"></i>Comparativo 2025 (agregar mes)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
     <div class="rp25-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
   </div>
 </div>
