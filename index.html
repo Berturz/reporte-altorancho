@@ -4372,8 +4372,8 @@ function stkMgTree(estado){
     var costoUSD=stkRowCostoUSD(sku,cant,valS);
     var pr=P[sku]; var mgMay=pr?(pr.mgMay||0):0, mgMin=pr?(pr.mgMin||0):0;
     var okCosto=costoUSD>0, okMg=(mgMay>0||mgMin>0);
-    if(!okCosto) sin.costo.push([prov,sku,cat,cant]);
-    if(!okMg) sin.precio.push([prov,sku,cat,cant]);
+    if(!okCosto) sin.costo.push([prov,sku,cat,cant,a[0]]);
+    if(!okMg) sin.precio.push([prov,sku,cat,cant,a[0]]);
     if(!okCosto||!okMg) return;
     var aM=mgMay>0?mgMay:mgMin, bM=mgMin>0?mgMin:mgMay; var mprom=(aM+bM)/2; var valUSD=costoUSD*mprom;
     var g=agg[cat]||(agg[cat]={cant:0,costo:0,val:0,mgMayW:0,costoMay:0,mgMinW:0,costoMin:0});
@@ -4401,7 +4401,7 @@ function stkBuildMg(estado){
 }
 function stkMgDescargar(){ var arr=stkMgSinData[stockMgSin]||[]; if(!arr.length)return;
   var head=['Proveedor','SKU','Rubro','Estado','Cantidad'];
-  var lines=[head].concat(arr.map(function(r){return [r[0],r[1],r[2],(stockSelEstadoMg==='__ALL__'?'Todos':stockSelEstadoMg),r[3]];}));
+  var lines=[head].concat(arr.map(function(r){return [r[0],r[1],r[2],stockCap(r[4]||''),r[3]];}));
   var csv=lines.map(function(x){return x.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
   var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob); var a=document.createElement('a');
   a.href=url; a.download='sin_dato_'+stockMgSin+'_'+String(stockSelEstadoMg==='__ALL__'?'todos':stockSelEstadoMg||'').toLowerCase().replace(/ /g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
@@ -4443,8 +4443,8 @@ function stkRenderMg(){
     +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+card('costo','Falta costo','ti-coin-off')+card('precio','Falta precio / margen','ti-tag-off')+'</div>';
   if(stockMgSin){ var arr=T.sin[stockMgSin];
     html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0 4px"><span style="font-size:11.5px;font-weight:700;color:#8a5a00">'+(stockMgSin==='costo'?'Falta costo':'Falta precio / margen')+' · '+arr.length+' SKUs</span>'+(arr.length?'<button onclick="stkMgDescargar()" style="font-size:11.5px;font-weight:700;color:#4a3200;background:#E0A93B;border:none;border-radius:8px;padding:5px 11px;cursor:pointer"><i class="ti ti-download"></i> Descargar CSV</button>':'')+'</div>'
-      +'<div class="prov-table-wrap" style="overflow-x:auto;max-height:280px;overflow-y:auto"><table class="k-tbl"><thead><tr><th style="text-align:left;background:#E0A93B;color:#4a3200">Proveedor</th><th style="text-align:left;background:#E0A93B;color:#4a3200">SKU</th><th style="text-align:left;background:#E0A93B;color:#4a3200">Rubro</th><th style="text-align:right;background:#E0A93B;color:#4a3200">Cant.</th></tr></thead><tbody>'
-      +(arr.length?arr.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td style="text-align:right">'+stkNum(r[3])+'</td></tr>';}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--txt2);padding:.6rem">Sin SKUs</td></tr>')
+      +'<div class="prov-table-wrap" style="overflow-x:auto;max-height:280px;overflow-y:auto"><table class="k-tbl"><thead><tr><th style="text-align:left;background:#E0A93B;color:#4a3200">Proveedor</th><th style="text-align:left;background:#E0A93B;color:#4a3200">SKU</th><th style="text-align:left;background:#E0A93B;color:#4a3200">Rubro</th><th style="text-align:left;background:#E0A93B;color:#4a3200">Estado</th><th style="text-align:right;background:#E0A93B;color:#4a3200">Cant.</th></tr></thead><tbody>'
+      +(arr.length?arr.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+stockCap(r[4]||'')+'</td><td style="text-align:right">'+stkNum(r[3])+'</td></tr>';}).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--txt2);padding:.6rem">Sin SKUs</td></tr>')
       +'</tbody></table></div>';
   }
   html+='</div>';
