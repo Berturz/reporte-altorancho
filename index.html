@@ -525,11 +525,14 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <!-- UPLOAD ZONE -->
   <div style="min-width:280px">
     <button onclick="guardarEnSupabase(this)" title="Guarda los datos actuales en Supabase. El reporte publicado los mostrará al instante." style="width:100%;background:#2A6B53;color:#fff;border:none;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:Calibri,'Segoe UI',sans-serif"><i class="ti ti-cloud-upload" style="font-size:15px"></i>Guardar en Supabase</button>
-    <label id="uploadZone" title="Actualizar con el Reporte 2026 USAR (hoja FACTURACIÓN 2026)" style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:11px;color:#8a8f98;font-weight:600"><i class="ti ti-file-spreadsheet" style="font-size:13px"></i>Actualizar con nuevo Excel (2026)<input type="file" accept=".xlsx,.xls" id="fileInput" onchange="handleFile(this.files[0])" style="display:none"></label>
-    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="upload-status" id="uploadStatus" style="font-size:11px;text-align:center;justify-content:center;margin-left:0"></div>
-    <label title="Agrega el desglose 2025 (julio) al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="margin-top:4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:11px;color:#8a8f98;font-weight:600"><i class="ti ti-history-toggle" style="font-size:13px"></i>Comparativo 2025 (agregar mes)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
-    <div class="rp25-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
+    <button onclick="toggleUploads()" style="margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--brd);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--txt2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:Calibri,'Segoe UI',sans-serif"><i class="ti ti-refresh" style="font-size:14px"></i>Actualizar archivos<i class="ti ti-chevron-down" id="upChev" style="font-size:13px;transition:transform .15s"></i></button>
+    <div id="uploadsPanel" style="display:none;margin-top:6px;border:1px solid var(--brd);border-radius:10px;padding:6px 8px;background:var(--bg2,#f7f8fa)">
+      <label id="uploadZone" title="Actualiza el reporte con el Reporte 2026 USAR (hoja FACTURACIÓN 2026)" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px"><i class="ti ti-file-spreadsheet" style="font-size:15px;color:#4472c4"></i>Reporte 2026 USAR<span style="color:var(--txt2);font-weight:400;margin-left:auto">FACTURACIÓN 2026</span><input type="file" accept=".xlsx,.xls" id="fileInput" onchange="handleFile(this.files[0])" style="display:none"></label>
+      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="upload-status" id="uploadStatus" style="font-size:11px;text-align:center;justify-content:center;margin-left:0"></div>
+      <label title="Agrega el desglose 2025 (julio) al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-history-toggle" style="font-size:15px;color:#8a8f98"></i>Reporte 2025 USAR<span style="color:var(--txt2);font-weight:400;margin-left:auto">comparativo · agrega julio</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
+      <div class="rp25-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
+    </div>
   </div>
 </div>
 
@@ -2262,6 +2265,7 @@ function renderRPCompare(){
   document.getElementById('rpCompWrap').innerHTML=`<div class="rp-grid">${html||'<div class="prov-empty">Sin datos</div>'}</div>`;
 }
 function toggleRP25(){ var b=document.getElementById('rp25Import'); if(b) b.style.display = (b.style.display==='none'||!b.style.display) ? 'flex' : 'none'; }
+function toggleUploads(){ var p=document.getElementById('uploadsPanel'); var c=document.getElementById('upChev'); if(!p) return; var open=(p.style.display==='none'||!p.style.display); p.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':''; }
 // Importa el desglose por rubro/proveedor de 2025 desde "Reporte 2025 USAR.xlsx" (hoja FACTURACIÓN 2025).
 // Usa EXACTAMENTE la misma clasificación que el parser 2026 (RUBROPROV). Solo escribe el mes indicado (julio).
 async function handleFact2025File(file){
