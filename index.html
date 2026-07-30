@@ -535,6 +535,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     </div>
     <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <button onclick="guardarEnSupabase(this)" title="Guarda los datos actuales en Supabase. El reporte publicado los mostrará al instante." style="margin-top:8px;width:100%;background:#2A6B53;color:#fff;border:none;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:Calibri,'Segoe UI',sans-serif"><i class="ti ti-cloud-upload" style="font-size:15px"></i>Guardar en Supabase</button>
+    <label title="Agrega el desglose 2025 (julio) al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:11px;color:#8a8f98;font-weight:600"><i class="ti ti-history-toggle" style="font-size:13px"></i>Comparativo 2025 (agregar mes)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
+    <div class="rp25-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
   </div>
 </div>
 
@@ -580,7 +582,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <span style="font-weight:700;color:#5b6472"><i class="ti ti-history-toggle" style="vertical-align:-2px;margin-right:4px"></i>Comparativo 2025 · agregar mes</span>
     <label style="cursor:pointer;background:#5b6472;color:#fff;border-radius:8px;padding:5px 11px;font-weight:600"><i class="ti ti-file-spreadsheet" style="vertical-align:-2px;margin-right:4px"></i>Subir "Reporte 2025 USAR.xlsx"<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
     <span style="color:var(--txt2)">Lee la hoja "FACTURACIÓN 2025" y agrega el desglose de <b>julio</b> (no toca ene–jun). Luego tocá "Guardar en Supabase".</span>
-    <span id="rp25Status" style="flex-basis:100%;color:var(--txt2)"></span>
+    <span id="rp25Status" class="rp25-status" style="flex-basis:100%;color:var(--txt2)"></span>
   </div>
   <div id="rpCompWrap"></div>
 </div>
@@ -2271,8 +2273,7 @@ function toggleRP25(){ var b=document.getElementById('rp25Import'); if(b) b.styl
 // Usa EXACTAMENTE la misma clasificación que el parser 2026 (RUBROPROV). Solo escribe el mes indicado (julio).
 async function handleFact2025File(file){
   if(!file) return;
-  var st=document.getElementById('rp25Status');
-  var setS=function(m){ if(st) st.innerHTML=m; };
+  var setS=function(m){ var els=document.querySelectorAll('.rp25-status'); for(var i=0;i<els.length;i++) els[i].innerHTML=m; };
   var MES='07', YM='2025-07';
   setS('<span class="spin">&#8635;</span> Leyendo archivo...');
   try{
