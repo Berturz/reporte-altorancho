@@ -573,10 +573,10 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <!-- SECCIÓN 0b: COMPARATIVA POR RUBRO/PROVEEDOR 2025 vs 2026 -->
 <div class="sec" id="secRPComp">
   <div class="rp-sticky">
-    <div class="sec-hdr"><i class="ti ti-table"></i>YTD por Rubro / Proveedor <span class="sec-sub">· por canal · 2025 vs 2026 · facturación ajustada por IPC</span></div>
+    <div class="sec-hdr"><i class="ti ti-table"></i>YTD por Rubro / Proveedor <span class="sec-sub">· por canal · 2025 vs 2026 · facturación ajustada por IPC</span><button onclick="toggleRP25()" title="Cargar comparativo 2025" style="margin-left:8px;background:none;border:none;color:#b8bcc4;cursor:pointer;font-size:13px;padding:2px 4px;vertical-align:middle"><i class="ti ti-settings"></i></button></div>
     <div id="rpPeriodBox"></div>
   </div>
-  <div id="rp25Import" style="margin:6px 0 12px;border:1px dashed #bfc4cc;border-radius:10px;padding:8px 12px;background:var(--bg2,#f7f8fa);display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px">
+  <div id="rp25Import" style="display:none;margin:6px 0 12px;border:1px dashed #bfc4cc;border-radius:10px;padding:8px 12px;background:var(--bg2,#f7f8fa);flex-wrap:wrap;align-items:center;gap:10px;font-size:12px">
     <span style="font-weight:700;color:#5b6472"><i class="ti ti-history-toggle" style="vertical-align:-2px;margin-right:4px"></i>Comparativo 2025 · agregar mes</span>
     <label style="cursor:pointer;background:#5b6472;color:#fff;border-radius:8px;padding:5px 11px;font-weight:600"><i class="ti ti-file-spreadsheet" style="vertical-align:-2px;margin-right:4px"></i>Subir "Reporte 2025 USAR.xlsx"<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
     <span style="color:var(--txt2)">Lee la hoja "FACTURACIÓN 2025" y agrega el desglose de <b>julio</b> (no toca ene–jun). Luego tocá "Guardar en Supabase".</span>
@@ -2246,6 +2246,7 @@ function renderRPCompare(){
   if(_pb)_pb.innerHTML=`<div class="rp-period">Período: <strong style="color:var(--petrol,#0E3B43)">${per}</strong> · 2025 ajustado por IPC interanual INDEC${estim?' · mes en curso con IPC del mes anterior (estimado)':''}</div>`;
   document.getElementById('rpCompWrap').innerHTML=`<div class="rp-grid">${html||'<div class="prov-empty">Sin datos</div>'}</div>`;
 }
+function toggleRP25(){ var b=document.getElementById('rp25Import'); if(b) b.style.display = (b.style.display==='none'||!b.style.display) ? 'flex' : 'none'; }
 // Importa el desglose por rubro/proveedor de 2025 desde "Reporte 2025 USAR.xlsx" (hoja FACTURACIÓN 2025).
 // Usa EXACTAMENTE la misma clasificación que el parser 2026 (RUBROPROV). Solo escribe el mes indicado (julio).
 async function handleFact2025File(file){
