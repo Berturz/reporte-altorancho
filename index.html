@@ -2264,7 +2264,9 @@ function renderRPCompare(){
     const col=total?'#5b6472':(CH_LIGHT[COBR_CMAP[ck]]||'#4472c4');
     const col26=total?'#b0468f':col;
     const active=data.active||months;
-    const anote=(!total)?(OPEN_PREV[ck]?(' · abrió '+OPEN_PREV[ck]):((active.length&&active.length<months.length)?(active[active.length-1]!==months[months.length-1]?' · cerró '+(CLOSE_DATE[ck]||('en '+MNL[+active[active.length-1]-1]+' 2026'))+' (compara '+MNL[+active[0]-1]+'–'+MNL[+active[active.length-1]-1]+')':' · desde '+(OPEN_DATE[ck]||(MNL[+active[0]-1]+' 2026'))):'')):'';
+    // Aclaraciones FIJAS por local (siempre visibles, como Belgrano): apertura/cierre.
+    const NOTE={lbe:'abrió '+OPEN_PREV.lbe, lnd:'cerró '+CLOSE_DATE.lnd, alc:'abrió el '+OPEN_DATE.alc};
+    const anote=(!total && NOTE[ck])?(' · '+NOTE[ck]):'';
     const cats=RP_ORDER.filter(c=>(r25[c]&&(r25[c].tv||r25[c].qty))||(r26[c]&&(r26[c].tv||r26[c].qty)));
     if(!cats.length) return '';
     let tq25=0,tq26=0,taj=0,t26=0;
