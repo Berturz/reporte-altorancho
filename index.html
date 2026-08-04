@@ -1364,8 +1364,8 @@ zone.addEventListener('drop', e=>{ e.preventDefault(); zone.classList.remove('dr
 // Cuadros WEB / Locales con la tabla de Costos de Financiación (Valor + Financiación total)
 // Historial por vigencia: cada fila trae Vigencia Desde/Hasta; el selector "Fecha de tasas"
 // muestra, por período, la tasa vigente de cada producto (los no modificados se arrastran).
-var costFinPeriodo=null;
-function setCostFinPeriodo(v){ costFinPeriodo=(v===''||v==null)?null:Number(v); renderCostFin(); }
+var costFinPeriodoWeb=null, costFinPeriodoLocal=null;
+function setCostFinPeriodo(chan,v){ var n=(v===''||v==null)?null:Number(v); if(chan==='local') costFinPeriodoLocal=n; else costFinPeriodoWeb=n; renderCostFin(); }
 function cfNormRows(arr){ return (arr||[]).map(function(p){ return Array.isArray(p)?{v:p[0],d:null,h:null,t:p[1]}:p; }); }
 function cfFmtSerial(s){ try{var o=XLSX.SSF.parse_date_code(s); return String(o.d).padStart(2,'0')+'/'+String(o.m).padStart(2,'0')+'/'+String(o.y).slice(2);}catch(e){return ''+s;} }
 function cfPeriodos(cf){
@@ -1381,6 +1381,23 @@ function cfPeriodos(cf){
   }
   return pers;
 }
+function cfPeriodosOne(rows){
+  var set={}; (rows||[]).forEach(function(p){ if(typeof p.d==='number') set[p.d]=1; });
+  var bps=Object.keys(set).map(Number).sort(function(a,b){return a-b;});
+  if(!bps.length) return [];
+  var pers=[];
+  for(var i=0;i<bps.length;i++){ var label;
+    if(bps.length===1) label='Vigente';
+    else if(i===0) label='Hasta '+cfFmtSerial(bps[1]-1);
+    else label='Desde '+cfFmtSerial(bps[i]);
+    pers.push({ref:bps[i], label:label});
+  }
+  return pers;
+}
+function cfSel(chan,pers,sel,color){
+  if((pers||[]).length<=1) return '';
+  return '<select onchange="setCostFinPeriodo(\''+chan+'\',this.value)" style="font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:7px;border:1.5px solid '+color+';background:#fff;color:'+color+';cursor:pointer;margin-left:7px;vertical-align:middle">'+pers.map(function(p){return '<option value="'+p.ref+'"'+(p.ref===sel?' selected':'')+'>'+p.label+'</option>';}).join('')+'</select>';
+}
 function cfApplicable(rows, ref){
   var best={};
   (rows||[]).forEach(function(p){ var d=(typeof p.d==='number')?p.d:-1; if(d>ref) return; if(!(p.v in best)||d>=best[p.v].d) best[p.v]={d:d,t:p.t}; });
@@ -1392,17 +1409,18 @@ function renderCostFin(){
   var el=document.getElementById('finCostFin'); if(!el) return;
   var cfRaw=(typeof COSTFIN_D!=='undefined'&&COSTFIN_D)?COSTFIN_D:{web:[],local:[]};
   var cf={web:cfNormRows(cfRaw.web), local:cfNormRows(cfRaw.local)};
-  var pers=cfPeriodos(cf);
-  var bar=document.getElementById('costFinPerBar'), pw=document.getElementById('costFinPerWrap');
-  if(pers.length){ if(costFinPeriodo==null || !pers.some(function(p){return p.ref===costFinPeriodo;})) costFinPeriodo=pers[pers.length-1].ref; }
-  var perLabel=''; for(var pi=0;pi<pers.length;pi++){ if(pers[pi].ref===costFinPeriodo) perLabel=pers[pi].label; }
-  if(pw){ pw.innerHTML = pers.length ? '<select onchange="setCostFinPeriodo(this.value)" style="font-size:13px;font-weight:700;padding:5px 12px;border-radius:8px;border:1.5px solid #7B6BC8;background:#fff;color:#3C3489;cursor:pointer">'+pers.map(function(p){return '<option value="'+p.ref+'"'+(p.ref===costFinPeriodo?' selected':'')+'>'+p.label+'</option>';}).join('')+'</select>' : ''; }
-  if(bar) bar.style.display = pers.length>1 ? 'flex' : 'none';
-  var ref = (costFinPeriodo!=null)?costFinPeriodo:(pers.length?pers[pers.length-1].ref:1e15);
-  var cfWeb=cfApplicable(cf.web, ref), cfLocal=cfApplicable(cf.local, ref);
+  var persWeb=cfPeriodosOne(cf.web), persLocal=cfPeriodosOne(cf.local);
+  var bar=document.getElementById('costFinPerBar'); if(bar) bar.style.display='none';
+  if(persWeb.length){ if(costFinPeriodoWeb==null || !persWeb.some(function(p){return p.ref===costFinPeriodoWeb;})) costFinPeriodoWeb=persWeb[persWeb.length-1].ref; }
+  if(persLocal.length){ if(costFinPeriodoLocal==null || !persLocal.some(function(p){return p.ref===costFinPeriodoLocal;})) costFinPeriodoLocal=persLocal[persLocal.length-1].ref; }
+  var refWeb=(costFinPeriodoWeb!=null)?costFinPeriodoWeb:(persWeb.length?persWeb[persWeb.length-1].ref:1e15);
+  var refLocal=(costFinPeriodoLocal!=null)?costFinPeriodoLocal:(persLocal.length?persLocal[persLocal.length-1].ref:1e15);
+  var lblWeb=''; for(var pi=0;pi<persWeb.length;pi++){ if(persWeb[pi].ref===refWeb) lblWeb=persWeb[pi].label; }
+  var lblLocal=''; for(var pj=0;pj<persLocal.length;pj++){ if(persLocal[pj].ref===refLocal) lblLocal=persLocal[pj].label; }
+  var selWeb=cfSel('web',persWeb,refWeb,'#7B6BC8'), selLocal=cfSel('local',persLocal,refLocal,'#4E9DAC');
+  var cfWeb=cfApplicable(cf.web, refWeb), cfLocal=cfApplicable(cf.local, refLocal);
   var tint=(typeof chTint==='function')?chTint:function(h){return h;};
   var pct=function(t){return (t*100).toFixed(2)+'%';};
-  var cfSub='Tasas vigentes'+(perLabel?' · '+perLabel:'');
   function fam(v){ var u=v.trim().toUpperCase();
     if(u.indexOf('MERCADO PAGO')===0) return 'Mercado Pago';
     if(u.indexOf('PAGONUBE')===0) return 'Pagonube';
@@ -1412,7 +1430,7 @@ function renderCostFin(){
   }
   function group(rows){ var order=[],map={}; rows.forEach(function(p){var f=fam(p[0]); if(!map[f]){map[f]=[];order.push(f);} map[f].push(p);}); return order.map(function(f){return {fam:f,items:map[f]};}); }
   var norm=function(s){return String(s).trim().toLowerCase();};
-  function box(titulo,color,rows,excl){
+  function box(titulo,color,rows,excl,selHtml,label){
     rows=(rows||[]).filter(function(p){return excl.indexOf(norm(p[0]))<0;});
     if(!rows.length) return '';
     var soft=tint(color,0.88);
@@ -1427,10 +1445,10 @@ function renderCostFin(){
     }).join('');
     return '<div style="flex:1;min-width:260px">'
       +'<div class="rp-canal-title" style="color:'+color+';border-bottom:2px solid '+tint(color,0.45)+';padding-bottom:.15rem"><i class="ti ti-credit-card" style="color:'+color+'"></i>'+titulo+'</div>'
-      +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .55rem">'+cfSub+'</div>'
+      +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .55rem">Tasas vigentes'+(label?' · '+label:'')+(selHtml||'')+'</div>'
       +'<div class="cf-list">'+body+'</div></div>';
   }
-  var html=box('WEB','#7B6BC8',cfWeb,['debito','mercado credito'])+box('Locales','#4E9DAC',cfLocal,['gocuotas','mercado credito']);
+  var html=box('WEB','#7B6BC8',cfWeb,['debito','mercado credito'],selWeb,lblWeb)+box('Locales','#4E9DAC',cfLocal,['gocuotas','mercado credito'],selLocal,lblLocal);
   el.innerHTML=html;
   el.style.display=html?'flex':'none';
 }
