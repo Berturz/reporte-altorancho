@@ -5800,6 +5800,17 @@ async function rsemLogin(email,password){
   try{sessionStorage.setItem('__RSEM_SESS__',JSON.stringify({t:RSEM_TOKEN,rt:RSEM_RT,e:email}));}catch(_){}
   return j;
 }
+async function rsemRefresh(){
+  if(!RSEM_RT) return false;
+  try{
+    var r=await fetch(RSEM_SUPA_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':RSEM_SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:RSEM_RT})});
+    if(!r.ok) return false;
+    var j=await r.json(); if(!j||!j.access_token) return false;
+    RSEM_TOKEN=j.access_token; RSEM_RT=j.refresh_token||RSEM_RT;
+    try{sessionStorage.setItem('__RSEM_SESS__',JSON.stringify({t:RSEM_TOKEN,rt:RSEM_RT,e:RSEM_EMAIL}));}catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
 async function rsemLoadData(){
   var r=await fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data?id=eq.main&select=data',{headers:rsemHeaders(false)});
   if(r.status===401||r.status===403){ var ae=new Error('auth'); ae.auth=true; throw ae; }
@@ -5807,11 +5818,13 @@ async function rsemLoadData(){
   var j=await r.json(); return (j&&j.length)?j[0].data:null;
 }
 async function guardarEnSupabase(btn){
-  if(!RSEM_TOKEN){alert('Iniciá sesión primero.');return;}
+  if(!RSEM_TOKEN && !(await rsemRefresh())){alert('Iniciá sesión primero.');return;}
   var old=btn?btn.innerHTML:null; if(btn){btn.disabled=true;btn.innerHTML='Guardando…';}
   try{
     var snap=rsemSnapObj();
-    var r=await fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data',{method:'POST',headers:Object.assign(rsemHeaders(true),{'Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([{id:'main',data:snap}])});
+    var doPost=function(){ return fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data',{method:'POST',headers:Object.assign(rsemHeaders(true),{'Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([{id:'main',data:snap}])}); };
+    var r=await doPost();
+    if((r.status===401||r.status===403) && await rsemRefresh()){ r=await doPost(); } // token vencido → renovar y reintentar
     if(!r.ok){var tx=await r.text();throw new Error(r.status+' '+tx);}
     alert('✔ Guardado en Supabase. El reporte publicado ya muestra estos datos.');
   }catch(e){ alert('Error al guardar: '+(e&&e.message?e.message:e)); }
@@ -5820,7 +5833,7 @@ async function guardarEnSupabase(btn){
 async function rsemEnter(){
   var data=null;
   try{ data=await rsemLoadData(); }
-  catch(e){ if(e&&e.auth) return false; console.warn('rsemEnter load',e); }
+  catch(e){ if(e&&e.auth){ if(await rsemRefresh()){ try{ data=await rsemLoadData(); }catch(e2){ if(e2&&e2.auth) return false; } } else return false; } else console.warn('rsemEnter load',e); }
   rsemApplySnap(data);
   if(typeof showTab==='function') showTab('comp');
   var ov=document.getElementById('rsemLogin'); if(ov) ov.style.display='none'; document.documentElement.style.overflow='';
