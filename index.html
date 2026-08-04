@@ -4283,10 +4283,20 @@ async function handleStockFile(file){
     var EST_ORDER=['ACTIVO','DISCONTINUO','PRÓXIMO INGRESO','NO VIGENTE','EXCEPCIÓN'];
     var estados=Object.keys(estadosSet).sort(function(a,b){var ia=EST_ORDER.indexOf(a),ib=EST_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);});
     var perKey = fecha || ('carga-'+(Object.keys(STOCK_HIST).length+1));
-    var prevSnap = STOCK_HIST[perKey]; // solo se reusa pricing/costos si es re-carga del MISMO cierre
-    var prevP=(prevSnap&&prevSnap.pricing)||{}; var prevC=(prevSnap&&prevSnap.costos)||{};
-    var prevD=(prevSnap&&prevSnap.dolar)||(STOCK_D&&STOCK_D.dolar)||1460;
-    var snap={ fecha:fecha, estados:estados, origenes:origenes, stockRows:stockRows, ventasRows:ventasRows, ventasMeses:Object.keys(mesesSet).sort(), pricing:prevP, costos:prevC, dolar:prevD };
+    // ── Heredar pricing/costos/dólar del snapshot más reciente que los tenga (no solo del mismo cierre) ──
+    // Así al subir un stock de fecha nueva NO se borran los márgenes ni el costo galpón.
+    var inh = STOCK_HIST[perKey] || null;
+    if(!inh){ var hk=Object.keys(STOCK_HIST).sort(); for(var z=hk.length-1;z>=0;z--){ var s=STOCK_HIST[hk[z]]; if(s&&((s.pricing&&Object.keys(s.pricing).length)||(s.costos&&Object.keys(s.costos).length))){ inh=s; break; } } }
+    if(!inh && STOCK_D && ((STOCK_D.pricing&&Object.keys(STOCK_D.pricing).length)||(STOCK_D.costos&&Object.keys(STOCK_D.costos).length))) inh=STOCK_D;
+    var prevP=(inh&&inh.pricing)||{}; var prevC=(inh&&inh.costos)||{};
+    var prevD=(inh&&inh.dolar)||(STOCK_D&&STOCK_D.dolar)||1460;
+    // ── Acumular ventas: conservar los meses anteriores y reemplazar solo el mes que trae este archivo ──
+    // (la hoja "Ventas" de cada archivo trae SOLO su mes; por eso antes se perdía el mes anterior.)
+    var baseSnap=null; var hk2=Object.keys(STOCK_HIST).sort(); for(var w=hk2.length-1;w>=0;w--){ if(hk2[w]!==perKey){ baseSnap=STOCK_HIST[hk2[w]]; break; } }
+    var baseVentas=(baseSnap&&baseSnap.ventasRows)||[];
+    var ventasMerged=baseVentas.filter(function(vr){ return !mesesSet[vr[0]]; }).concat(ventasRows);
+    var mesesMerged={}; ventasMerged.forEach(function(vr){ mesesMerged[vr[0]]=1; });
+    var snap={ fecha:fecha, estados:estados, origenes:origenes, stockRows:stockRows, ventasRows:ventasMerged, ventasMeses:Object.keys(mesesMerged).sort(), pricing:prevP, costos:prevC, dolar:prevD };
     STOCK_HIST[perKey]=snap; stockPeriodo=perKey; STOCK_D=snap;
     stockSelEstado=null; stockSelMes=null;
     setStockProgress(92,'<span class="spin">&#8635;</span> Actualizando...');
