@@ -2755,18 +2755,18 @@ function renderTopFC(){
     const mgColor = mg>=2.2 ? '#0f6e56' : '#854f0b';
     const foto = resolveProdFoto(p.skus||{});
     const imgSrc = foto.url || '';
-    return `<div style="background:var(--bg2);border:1px solid var(--brd);border-radius:11px;padding:7px 5px;text-align:center;overflow:hidden">`
-      +`<div style="font-size:13px;font-weight:800;color:#4472c4;line-height:1;white-space:nowrap">${fmt(p.fc)}</div>`
-      +`<div style="font-size:10px;line-height:1.12;height:24px;overflow:hidden;margin:3px 0 5px"><b style="color:var(--txt)">${p.modelo}</b><br><span style="color:var(--txt2)">${p.estilo}</span></div>`
-      +`<div style="position:relative;width:100%;height:86px;border-radius:8px;background:var(--bg3);overflow:hidden;display:flex;align-items:center;justify-content:center">`
+    return `<div style="background:var(--bg2);border:1px solid var(--brd);border-radius:12px;padding:9px 6px;text-align:center;overflow:hidden">`
+      +`<div style="font-size:14px;font-weight:800;color:#4472c4;line-height:1;white-space:nowrap">${fmt(p.fc)}</div>`
+      +`<div style="font-size:10.5px;line-height:1.15;height:26px;overflow:hidden;margin:4px 0 6px"><b style="color:var(--txt)">${p.modelo}</b><br><span style="color:var(--txt2)">${p.estilo}</span></div>`
+      +`<div style="position:relative;width:100%;height:104px;border-radius:8px;background:var(--bg3);overflow:hidden;display:flex;align-items:center;justify-content:center">`
         +(imgSrc
           ? `<img src="${imgSrc}" alt="${p.modelo}" style="width:100%;height:100%;object-fit:cover;display:block">`
           : `<div style="color:var(--txt2);font-size:7px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px"><i class="ti ti-photo-off" style="font-size:15px;opacity:.5"></i>${foto.sku||'Falta foto'}</div>`)
         +`<span style="position:absolute;top:4px;left:4px;font-size:11px;font-weight:800;color:#4472c4;background:rgba(255,255,255,.92);border-radius:6px;padding:0 5px">#${i+1}</span>`
       +`</div>`
-      +`<div style="display:flex;justify-content:center;gap:8px;margin-top:5px">`
-        +`<div style="line-height:1.05"><div style="font-size:13px;font-weight:800;color:var(--txt)">${p.qty.toLocaleString('es-AR')}</div><div style="font-size:8px;color:var(--txt2)">unidades</div></div>`
-        +`<div style="line-height:1.05"><div style="font-size:13px;font-weight:800;color:${mgColor}">${mg.toFixed(2)}</div><div style="font-size:8px;color:var(--txt2)">margen</div></div>`
+      +`<div style="display:flex;justify-content:center;gap:12px;margin-top:8px">`
+        +`<div style="line-height:1.05"><div style="font-size:17px;font-weight:800;color:var(--txt)">${p.qty.toLocaleString('es-AR')}</div><div style="font-size:9.5px;color:var(--txt2)">unidades</div></div>`
+        +`<div style="line-height:1.05"><div style="font-size:17px;font-weight:800;color:${mgColor}">${mg.toFixed(2)}</div><div style="font-size:9.5px;color:var(--txt2)">margen</div></div>`
       +`</div></div>`;
   }).join('');
 }
