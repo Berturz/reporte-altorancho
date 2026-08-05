@@ -5872,9 +5872,14 @@ async function guardarEnSupabase(btn){
   var old=btn?btn.innerHTML:null; if(btn){btn.disabled=true;btn.innerHTML='Guardando…';}
   try{
     var snap=rsemSnapObj();
-    var doPost=function(){ return fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data',{method:'POST',headers:Object.assign(rsemHeaders(true),{'Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([{id:'main',data:snap}])}); };
-    var r=await doPost();
-    if((r.status===401||r.status===403) && await rsemRefresh()){ r=await doPost(); } // token vencido → renovar y reintentar
+    // Aligerar: guardar solo el último cierre de stock (los viejos no se usan) y sin duplicar STOCK_D.
+    // Así el snapshot pesa menos y Supabase no cancela por statement timeout.
+    try{ var H=(snap.stock&&snap.stock.STOCK_HIST)||null; if(H){ var ks=Object.keys(H).sort(); if(ks.length){ var last=ks[ks.length-1]; var nh={}; nh[last]=H[last]; snap.stock={STOCK_HIST:nh, stockPeriodo:last, STOCK_D:null}; } } }catch(e){}
+    var body=JSON.stringify({data:snap});
+    // PATCH (UPDATE directo) en vez de POST upsert: es más rápido y entra bajo el límite de tiempo de Supabase.
+    var doSave=function(){ return fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data?id=eq.main',{method:'PATCH',headers:Object.assign(rsemHeaders(true),{'Prefer':'return=minimal'}),body:body}); };
+    var r=await doSave();
+    if((r.status===401||r.status===403) && await rsemRefresh()){ r=await doSave(); } // token vencido → renovar y reintentar
     if(!r.ok){var tx=await r.text();throw new Error(r.status+' '+tx);}
     alert('✔ Guardado en Supabase. El reporte publicado ya muestra estos datos.');
   }catch(e){ alert('Error al guardar: '+(e&&e.message?e.message:e)); }
