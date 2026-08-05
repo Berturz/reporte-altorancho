@@ -2627,18 +2627,24 @@ function aggProd(dates, key){
 var _photoModelIdx = null;
 function resolveProdFoto(skus){
   if(!skus || typeof PHOTO_MAP==='undefined') return {url:'',sku:null};
-  // regla: SIEMPRE la foto del COLOR más vendido (agrupando por color = últimas 2 letras, igual que la lista).
-  // Si ese color no tiene foto, no se muestra nada (queda visible el SKU faltante para cargarlo).
+  // regla: preferir la foto del COLOR más vendido (color = últimas 2 letras). Si ese color no tiene foto,
+  // caer a otro color del mismo modelo, y por último a cualquier variante del mismo modelo (primeros 6 chars).
   var byColor={}, skuByColor={};
   for(var s in skus){ var c=String(s).slice(-2).toUpperCase(); byColor[c]=(byColor[c]||0)+(skus[s]||0); (skuByColor[c]=skuByColor[c]||[]).push(s); }
   var topColor=null, mx=-1;
   for(var c in byColor){ if(byColor[c]>mx){ mx=byColor[c]; topColor=c; } }
   if(!topColor) return {url:'',sku:null};
-  // dentro del color top, preferir un SKU que tenga foto; si no, el de mayor cantidad
+  // 1) dentro del color top, un SKU que tenga foto
   var list=skuByColor[topColor].sort(function(a,b){return (skus[b]||0)-(skus[a]||0);});
   var withPhoto=list.filter(function(s){return PHOTO_MAP[s];});
-  var chosen = withPhoto.length ? withPhoto[0] : list[0];
-  return {url: PHOTO_MAP[chosen]||'', sku: chosen};
+  if(withPhoto.length) return {url:PHOTO_MAP[withPhoto[0]], sku:withPhoto[0]};
+  // 2) cualquier SKU del set (otros colores) que tenga foto, priorizando cantidad
+  var allSkus=Object.keys(skus).sort(function(a,b){return (skus[b]||0)-(skus[a]||0);});
+  for(var i=0;i<allSkus.length;i++){ if(PHOTO_MAP[allSkus[i]]) return {url:PHOTO_MAP[allSkus[i]], sku:allSkus[i]}; }
+  // 3) foto de otra variante del MISMO modelo (primeros 6 chars del SKU)
+  if(!_photoModelIdx){ _photoModelIdx={}; for(var k in PHOTO_MAP){ var m=k.slice(0,6); if(!_photoModelIdx[m])_photoModelIdx[m]=PHOTO_MAP[k]; } }
+  for(var j=0;j<allSkus.length;j++){ var mm=String(allSkus[j]).slice(0,6); if(_photoModelIdx[mm]) return {url:_photoModelIdx[mm], sku:list[0]}; }
+  return {url:'', sku:list[0]};
 }
 function renderTop5(wrapId, items, canalKey){
   const wrap = document.getElementById(wrapId);
