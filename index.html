@@ -2236,7 +2236,7 @@ const RP_ORDER=['ILUMINACION IMPORTADA','ILUMINACION NACIONAL','ILUMINACION INAL
 function renderRPCompare(){
   if(typeof RUBROPROV_D==='undefined') return;
   const months = cmpSel==='YTD' ? ['01','02','03','04','05','06','07'] : [cmpSel];
-  const CANALES=[['lett','AR Mayorista'],['web','Web'],['lbe','Belgrano'],['lsi','San Isidro'],['alc','Alcorta'],['lnd','Nordelta']];
+  const CANALES=[['lett','AR Mayorista'],['web','Web'],['lsi','San Isidro'],['lbe','Belgrano'],['alc','Alcorta'],['lnd','Nordelta']];
   const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio'];
   const MNL=['enero','febrero','marzo','abril','mayo','junio','julio'];
   const CLOSE_DATE={lnd:'el sábado 28 de marzo 2026'};
@@ -2292,11 +2292,51 @@ function renderRPCompare(){
           <tr class="cobr-total-row" style="font-size:14px"><td colspan="2">Total ${label}</td><td style="text-align:right;color:#8a8880!important">${tq25.toLocaleString('es-AR')}</td><td style="text-align:right;color:${col26}!important">${tq26.toLocaleString('es-AR')}</td><td style="text-align:right;color:#8a8880!important">${fmt(taj)}</td><td style="text-align:right;color:${col26}!important">${fmt(t26)}</td><td style="text-align:right">${gv(t26,taj)}</td><td style="text-align:right">100%</td></tr>
         </tbody></table></div>`;
   }
-  let html=renderBlock('TODOS LOS CANALES',compute(null),true,null);
-  CANALES.forEach(([ck,label])=>{html+=renderBlock(label,compute(ck),false,ck);});
+  // Cuadro compacto por canal (2 por fila). "TODOS LOS CANALES" queda full-width con renderBlock.
+  function renderBlockCompact(label,data,ck){
+    const {r25,r25a,r26}=data;
+    const c=CH_LIGHT[COBR_CMAP[ck]]||'#4472c4';
+    const NOTE={lbe:'abrió '+OPEN_PREV.lbe, lnd:'cerró '+CLOSE_DATE.lnd, alc:'abrió el '+OPEN_DATE.alc};
+    const anote=NOTE[ck]?(' · '+NOTE[ck]):'';
+    const cats=RP_ORDER.filter(cat=>(r25[cat]&&(r25[cat].tv||r25[cat].qty))||(r26[cat]&&(r26[cat].tv||r26[cat].qty)));
+    if(!cats.length) return '';
+    let tq25=0,tq26=0,taj=0,t26=0;
+    cats.forEach(cat=>{const a=r25[cat]||{qty:0,tv:0},b=r26[cat]||{qty:0,tv:0};tq25+=a.qty;tq26+=b.qty;taj+=(r25a[cat]||0);t26+=b.tv;});
+    const g25='#a0a6ae';
+    const body=cats.map(cat=>{const a=r25[cat]||{qty:0,tv:0},b=r26[cat]||{qty:0,tv:0},aj=r25a[cat]||0;const sh=t26?(b.tv/t26*100):0;
+      return `<tr><td class="rpc2-rp"><div class="rpc2-rub">${cat}</div><div class="rpc2-prov">${RP_PROVDESC[cat]||''}</div></td>`
+        +`<td style="color:${g25}">${a.qty.toLocaleString('es-AR')}</td><td style="font-weight:700;color:${c}">${b.qty.toLocaleString('es-AR')}</td>`
+        +`<td style="color:#8a8880">${fmt(aj)}</td><td style="font-weight:700;color:${c}">${fmt(b.tv)}</td>`
+        +`<td style="font-weight:700;color:${gcol(b.tv,aj)}">${gv(b.tv,aj)}</td><td style="color:var(--txt2)">${sh.toFixed(1)}%</td></tr>`;}).join('');
+    const totrow=`<tr class="rpc2-tot"><td class="rpc2-rp" style="font-weight:800">Total ${label}</td>`
+      +`<td style="color:${g25}">${tq25.toLocaleString('es-AR')}</td><td style="font-weight:800;color:${c}">${tq26.toLocaleString('es-AR')}</td>`
+      +`<td style="color:#8a8880">${fmt(taj)}</td><td style="font-weight:800;color:${c}">${fmt(t26)}</td>`
+      +`<td style="font-weight:800;color:${gcol(t26,taj)}">${gv(t26,taj)}</td><td style="font-weight:800">100%</td></tr>`;
+    return `<div class="rpc2-card" style="border:1px solid ${chTint(c,0.55)};background:${chTint(c,0.97)}">`
+      +`<div class="rpc2-hd" style="background:${chTint(c,0.80)};color:${c}"><i class="ti ti-building-store" style="font-size:13px;margin-right:6px;vertical-align:-2px"></i>${label}${anote?`<span style="font-weight:700;font-size:12px;color:#c0392b">${anote}</span>`:''}</div>`
+      +`<table class="rpc2-tbl"><colgroup><col style="width:29%"><col style="width:9%"><col style="width:9%"><col style="width:20.5%"><col style="width:20.5%"><col style="width:7%"><col style="width:5%"></colgroup>`
+      +`<thead><tr><th rowspan="2" style="text-align:left;vertical-align:bottom">Rubro / Proveedor</th><th colspan="2" style="text-align:center;background:${chTint(c,0.85)}">Cantidad</th><th colspan="2" style="text-align:center;background:${chTint(c,0.85)}">Facturación s/IVA</th><th rowspan="2" style="vertical-align:bottom">Var.</th><th rowspan="2" style="vertical-align:bottom">%</th></tr>`
+      +`<tr><th style="color:${g25}">2025</th><th>2026</th><th style="color:${g25}">2025 aj.</th><th>2026</th></tr></thead>`
+      +`<tbody>${body}${totrow}</tbody></table></div>`;
+  }
+  const RPC2_CSS='<style>'
+    +'#secRPComp .rpc2-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:1.2rem;align-items:start}'
+    +'@media(max-width:900px){#secRPComp .rpc2-grid{grid-template-columns:1fr}}'
+    +'#secRPComp .rpc2-card{border-radius:12px;overflow:hidden;box-shadow:0 4px 14px rgba(14,59,67,.08)}'
+    +'#secRPComp .rpc2-hd{font-weight:700;font-size:15px;padding:8px 12px}'
+    +'#secRPComp .rpc2-tbl{width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed}'
+    +'#secRPComp .rpc2-tbl th{font-size:9px;font-weight:700;padding:4px 6px;line-height:1.15;color:#5b6472;text-align:right;white-space:nowrap}'
+    +'#secRPComp .rpc2-tbl td{padding:5px 6px;border-top:.5px solid var(--brd);vertical-align:middle;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}'
+    +'#secRPComp .rpc2-tbl td.rpc2-rp{text-align:left;white-space:normal;overflow:hidden}'
+    +'#secRPComp .rpc2-rub{font-weight:700;color:var(--txt);line-height:1.15}'
+    +'#secRPComp .rpc2-prov{font-size:9px;color:var(--txt2);line-height:1.1}'
+    +'#secRPComp .rpc2-tbl tr.rpc2-tot td{border-top:2px solid rgba(0,0,0,.18);background:rgba(0,0,0,.03);font-size:10.5px}'
+    +'</style>';
+  let totalHtml=renderBlock('TODOS LOS CANALES',compute(null),true,null);
+  let chHtml=CANALES.map(([ck,label])=>renderBlockCompact(label,compute(ck),ck)).filter(Boolean).join('');
   var _pb=document.getElementById('rpPeriodBox');
   if(_pb)_pb.innerHTML=`<div class="rp-period">Período: <strong style="color:var(--petrol,#0E3B43)">${per}</strong> · 2025 ajustado por IPC interanual INDEC${estim?' · mes en curso con IPC del mes anterior (estimado)':''}</div>`;
-  document.getElementById('rpCompWrap').innerHTML=`<div class="rp-grid">${html||'<div class="prov-empty">Sin datos</div>'}</div>`;
+  document.getElementById('rpCompWrap').innerHTML=`${RPC2_CSS}<div class="rp-grid">${totalHtml||''}</div><div class="rpc2-grid">${chHtml||'<div class="prov-empty">Sin datos</div>'}</div>`;
 }
 function toggleRP25(){ var b=document.getElementById('rp25Import'); if(b) b.style.display = (b.style.display==='none'||!b.style.display) ? 'flex' : 'none'; }
 function toggleUploads(){ var p=document.getElementById('uploadsPanel'); var c=document.getElementById('upChev'); if(!p) return; var open=(p.style.display==='none'||!p.style.display); p.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':''; }
