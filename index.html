@@ -532,6 +532,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
       <div class="upload-status" id="uploadStatus" style="font-size:11px;text-align:center;justify-content:center;margin-left:0"></div>
       <label title="Agrega el desglose 2025 (julio) al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-history-toggle" style="font-size:15px;color:#8a8f98"></i>Reporte 2025 USAR<span style="color:var(--txt2);font-weight:400;margin-left:auto">comparativo · agrega julio</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
       <div class="rp25-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
+      <label title="Conecta la Biblia de Productos: los SKUs con ATRIBUTOS inalámbrico van a ILUMINACION INALAMBRICA (2026). Lee la hoja Hoja1." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-book-2" style="font-size:15px;color:#8a6bb0"></i>Biblia de Productos<span style="color:var(--txt2);font-weight:400;margin-left:auto">inalámbricos → clasificación</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleBibliaFile(this.files[0])"></label>
+      <div class="biblia-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
     </div>
   </div>
 </div>
@@ -839,6 +841,7 @@ var PROD_D = {};
 var TOPFC_D = {};
 var PROV_D = {};
 var RUBROPROV_D = {};
+var BIBLIA_INAL = {}; // { SKU(mayúsc): 1 } — SKUs con ATRIBUTOS inalámbrico según la Biblia de Productos (para clasificar ILUMINACION INALAMBRICA en 2026)
 var COBR_D = {};
 var VEND_D = {};
 var ORIGEN_D = {};
@@ -1147,8 +1150,10 @@ async function handleFile(file) {
           const provNombre2 = row[COL.PROV] ? String(row[COL.PROV]).trim() : '';
           const origVal2 = origVal;
           let cat = null;
+          const skuU = row[COL.SKU] ? String(row[COL.SKU]).trim().toUpperCase() : '';
           if (rubroU === 'ILUMINACION') {
-            if (PROV_ILUM_INALAMB.has(provNombre2)) cat='ILUMINACION INALAMBRICA';
+            // Inalámbrico según la Biblia (ATRIBUTOS = "ILUMINACIÓN INALÁMBRICA …") tiene prioridad, sin importar proveedor/origen.
+            if ((typeof BIBLIA_INAL!=='undefined' && BIBLIA_INAL[skuU]) || PROV_ILUM_INALAMB.has(provNombre2)) cat='ILUMINACION INALAMBRICA';
             else if (origVal2==='Importado') cat='ILUMINACION IMPORTADA';
             else if (PROV_ILUM_NAC.has(provNombre2) || origVal2==='Fábrica') cat='ILUMINACION NACIONAL';
             else if (origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
@@ -2233,7 +2238,7 @@ function ipcEstim(mm){ return !!IPC_ESTIM["2026-"+mm] || !IPC_IDX["2026-"+mm]; }
 var RP2025_CANAL = {};
 var RP2025M = {};
 let cmpSel='YTD';
-const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home','ILUMINACION NACIONAL':'Mix + Hierros','ILUMINACION INALAMBRICA':'Lux Lighting','SILLAS IMPORTADAS':'Wendy + Urun','MUEBLES NACIONALES':'Carpin + Mix + Hierros (Muebles y Sillas)','PROVEEDOR NACIONAL':'(Todos)','DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)','DECO/BAZAR FABRICA':'(Todos)'};
+const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home','ILUMINACION NACIONAL':'Mix + Hierros','ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home','SILLAS IMPORTADAS':'Wendy + Urun','MUEBLES NACIONALES':'Carpin + Mix + Hierros (Muebles y Sillas)','PROVEEDOR NACIONAL':'(Todos)','DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)','DECO/BAZAR FABRICA':'(Todos)'};
 const RP_ORDER=['ILUMINACION IMPORTADA','ILUMINACION NACIONAL','ILUMINACION INALAMBRICA','SILLAS IMPORTADAS','MUEBLES NACIONALES','PROVEEDOR NACIONAL','DECO/NAVIDAD/BAZAR IMPORTADO','DECO/BAZAR FABRICA'];
 function renderRPCompare(){
   if(typeof RUBROPROV_D==='undefined') return;
@@ -2342,6 +2347,36 @@ function renderRPCompare(){
 }
 function toggleRP25(){ var b=document.getElementById('rp25Import'); if(b) b.style.display = (b.style.display==='none'||!b.style.display) ? 'flex' : 'none'; }
 function toggleUploads(){ var p=document.getElementById('uploadsPanel'); var c=document.getElementById('upChev'); if(!p) return; var open=(p.style.display==='none'||!p.style.display); p.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':''; }
+// Conecta la Biblia de Productos: arma el set de SKUs inalámbricos (ATRIBUTOS con "INALÁMBRIC").
+// Ese set se usa en el parser de facturación 2026 para mandar esos SKUs a ILUMINACION INALAMBRICA.
+async function handleBibliaFile(file){
+  if(!file) return;
+  var setS=function(m){ var els=document.querySelectorAll('.biblia-status'); for(var i=0;i<els.length;i++) els[i].innerHTML=m; };
+  setS('<span class="spin">&#8635;</span> Leyendo Biblia...');
+  try{
+    var buf=await file.arrayBuffer();
+    setS('<span class="spin">&#8635;</span> Parseando "Hoja1"...');
+    await new Promise(function(r){setTimeout(r,0);});
+    var SH='Hoja1';
+    var wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true,sheets:[SH],bookVBA:false});
+    if(!wb.SheetNames.includes(SH)) throw new Error('No se encontró la hoja "'+SH+'". Hojas: '+wb.SheetNames.join(', '));
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[SH],{header:1,raw:true,defval:null});
+    var norm=function(x){return x==null?'':String(x).trim().toLowerCase();};
+    // encabezado: buscar la fila que tenga "sku" y "atributos"
+    var hi=-1,iSku=-1,iAtr=-1;
+    for(var h=0;h<Math.min(rows.length,6);h++){ var hr=rows[h]||[]; var s=-1,a=-1; for(var c=0;c<hr.length;c++){ var t=norm(hr[c]); if(t==='sku'&&s<0)s=c; if(t.indexOf('atributo')>=0&&a<0)a=c; } if(s>=0&&a>=0){ hi=h; iSku=s; iAtr=a; break; } }
+    if(hi<0) throw new Error('No encontré columnas "SKU" y "ATRIBUTOS" en el encabezado. ¿Es la Biblia correcta (hoja Hoja1)?');
+    var map={}, n=0;
+    for(var r2=hi+1;r2<rows.length;r2++){ var rr=rows[r2]; if(!rr) continue;
+      var sku=rr[iSku]?String(rr[iSku]).trim().toUpperCase():''; if(!sku) continue;
+      var atr=rr[iAtr]?String(rr[iAtr]):'';
+      if(/INAL.MBRIC/i.test(atr)){ map[sku]=1; n++; }
+    }
+    if(!n) throw new Error('No se encontraron SKUs inalámbricos (ATRIBUTOS con "INALÁMBRIC"). ¿Es la Biblia correcta?');
+    BIBLIA_INAL=map;
+    setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>Biblia conectada</b> · '+n.toLocaleString('es-AR')+' SKUs inalámbricos. Ahora subí el <b>reporte 2026</b> y tocá "Guardar en Supabase".');
+  }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
+}
 // Importa el desglose por rubro/proveedor de 2025 desde "Reporte 2025 USAR.xlsx" (hoja FACTURACIÓN 2025).
 // Usa EXACTAMENTE la misma clasificación que el parser 2026 (RUBROPROV). Solo escribe el mes indicado (julio).
 async function handleFact2025File(file){
@@ -2847,7 +2882,7 @@ const RP_CANAL_CHKEY  = {lett:'Lett', web:'Web', lbe:'LBE', lsi:'LSI', alc:'ALC'
 const RP_CAT_PROV = {
   'ILUMINACION IMPORTADA':'Todos (excepto Lux Lighting)',
   'ILUMINACION NACIONAL':'Mix + Hierros',
-  'ILUMINACION INALAMBRICA':'Lux Lighting',
+  'ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home',
   'SILLAS IMPORTADAS':'Wendy + Urun',
   'MUEBLES NACIONALES':'Carpin+ Mix +Hierros (Muebles y Sillas)',
   'PROVEEDOR NACIONAL':'(Todos)',
@@ -5823,6 +5858,7 @@ function rsemSnapObj(){
     stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo')},
     logistica:{LOG_D:g('LOG_D')},
     hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M')},
+    biblia:{BIBLIA_INAL:g('BIBLIA_INAL')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
   };
@@ -5831,6 +5867,7 @@ function rsemApplySnap(s){
   if(!s) return false;
   try{if(s.notas){if(s.notas.arMayoristaNotas)localStorage.setItem('arMayoristaNotas',s.notas.arMayoristaNotas);if(s.notas.cajasNotas)localStorage.setItem('cajasNotas',s.notas.cajasNotas);}}catch(e){}
   try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;}}catch(e){}
+  try{if(s.biblia&&s.biblia.BIBLIA_INAL)BIBLIA_INAL=s.biblia.BIBLIA_INAL;}catch(e){}
   try{if(s.cajas&&s.cajas.CAJAS_D)CAJAS_D=s.cajas.CAJAS_D;}catch(e){}
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
   try{if(s.cajas&&s.cajas.RENTAB_D)RENTAB_D=s.cajas.RENTAB_D;}catch(e){}
