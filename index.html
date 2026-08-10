@@ -3522,7 +3522,7 @@ function renderVend(){
 }
 
 // ══════════ ANÁLISIS DE CLIENTES (Mayorista) ══════════
-var cliCardSel='todos', cliMesSel='YTD', cliDataCur=[];
+var cliCardSel='todos', cliMesSel='YTD', cliDataCur=[], cliTipoSel='todos';
 var CLI_MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 function cliClosedMonths(){
   var now=new Date(); var curMM=(now.getFullYear()===2026)?(now.getMonth()+1):13;
@@ -3540,6 +3540,7 @@ function cliAgg(monthsSel){
 }
 function setCliCard(g){ cliCardSel=g; renderClientes(); }
 function setCliMes(v){ cliMesSel=v; renderClientes(); }
+function setCliTipo(t){ cliTipoSel=(cliTipoSel===t?'todos':t); renderClientes(); }
 function exportClientesNA(){
   try{
     var na=cliDataCur.filter(function(x){return x.tipo==='N/A';}).sort(function(a,b){return b.f26-a.f26;});
@@ -3600,8 +3601,10 @@ function renderClientes(){
   // CUADRO 3 (tipo)
   var byT={}; g26.forEach(function(x){if(!byT[x.tipo])byT[x.tipo]={fac:0,n:0};byT[x.tipo].fac+=x.f26;byT[x.tipo].n++;});
   var naN=g26.filter(function(x){return x.tipo==='N/A';}).length;
-  var tsum=Object.keys(byT).sort(function(a,b){return byT[b].fac-byT[a].fac;}).map(function(t){var c=tc(t);return '<div style="border:1px solid '+c+';border-left:4px solid '+c+';border-radius:9px;padding:5px 9px;min-width:96px"><div style="font-size:10.5px;font-weight:700;color:'+c+'">'+t+' <span style="font-weight:400;color:#9aa0a8">·'+byT[t].n+'</span></div><div style="font-size:13px;font-weight:800;color:'+c+'">'+fml(byT[t].fac)+'</div></div>';}).join('');
-  var t3=g26.map(function(x){var c=tc(x.tipo);return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 8px;font-weight:600">'+x.cli+'</td><td style="text-align:left;padding:5px 8px"><span style="background:'+c+'18;color:'+c+';font-weight:700;border-radius:6px;padding:1px 8px;font-size:10.5px">'+x.tipo+'</span></td><td style="text-align:left;padding:5px 8px">'+cliVendChip(x.vend)+'</td><td style="text-align:right;padding:5px 8px;color:#274d80;font-weight:700;white-space:nowrap">'+fml(x.f26)+'</td><td style="text-align:right;padding:5px 8px;color:var(--txt2)">'+(gt?(x.f26/gt*100).toFixed(1):'0')+'%</td></tr>';}).join('');
+  if(cliTipoSel!=='todos' && !byT[cliTipoSel]) cliTipoSel='todos';
+  var tsum=Object.keys(byT).sort(function(a,b){return byT[b].fac-byT[a].fac;}).map(function(t){var c=tc(t);var on=cliTipoSel===t;return '<div onclick="setCliTipo(\''+t.replace(/'/g,"\\'")+'\')" title="Filtrar por '+t+'" style="cursor:pointer;border:1.5px solid '+c+';border-left:4px solid '+c+';border-radius:9px;padding:5px 9px;min-width:96px;background:'+(on?c+'22':'var(--bg)')+';box-shadow:'+(on?'0 0 0 2px '+c+'55':'none')+'"><div style="font-size:10.5px;font-weight:700;color:'+c+'">'+t+(on?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+' <span style="font-weight:400;color:#9aa0a8">·'+byT[t].n+'</span></div><div style="font-size:13px;font-weight:800;color:'+c+'">'+fml(byT[t].fac)+'</div></div>';}).join('');
+  var g3 = cliTipoSel==='todos' ? g26 : g26.filter(function(x){return x.tipo===cliTipoSel;});
+  var t3=g3.map(function(x){var c=tc(x.tipo);return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 8px;font-weight:600">'+x.cli+'</td><td style="text-align:left;padding:5px 8px"><span style="background:'+c+'18;color:'+c+';font-weight:700;border-radius:6px;padding:1px 8px;font-size:10.5px">'+x.tipo+'</span></td><td style="text-align:left;padding:5px 8px">'+cliVendChip(x.vend)+'</td><td style="text-align:right;padding:5px 8px;color:#274d80;font-weight:700;white-space:nowrap">'+fml(x.f26)+'</td><td style="text-align:right;padding:5px 8px;color:var(--txt2)">'+(gt?(x.f26/gt*100).toFixed(1):'0')+'%</td></tr>';}).join('');
   var HDR='background:#3d74ae;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px';
   wrap.innerHTML=''
    +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-user-search"></i>Análisis de clientes <span class="sec-sub">· Mayorista · '+perLbl+' · a mes cerrado</span></div>'
