@@ -3356,6 +3356,8 @@ function renderCobr(){
 // ── PERFORMANCE AR MAYORISTA POR VENDEDOR (canal Lett) ──
 // Color FIJO por vendedor (mismo criterio en gráficos de vendedores, tablas y análisis de clientes)
 var VEND_FIXED={'MATIAS CHIUKI':'#4472c4','LAURA VIVIANA SOLDANO':'#2a6b53','JOSE LUIS PERSOGLIA':'#c0657f','JIMENA ALEJANDRA TOBARES':'#c88a3c','ATENCION DECORADORES Y ARQUITECTOS':'#6c5fa6'};
+// Vendedores MAYORISTAS: solo estos entran al análisis de clientes (el resto —ventas internas, etc.— se excluye)
+var VEND_MAYORISTA={'MATIAS CHIUKI':1,'LAURA VIVIANA SOLDANO':1,'JOSE LUIS PERSOGLIA':1,'JIMENA ALEJANDRA TOBARES':1,'ATENCION DECORADORES Y ARQUITECTOS':1};
 var VEND_PAL_DYN=['#3E8FA6','#b5714a','#8e6e9d','#5a7a99','#1D9E75','#BA7517','#7A3E8F'];
 var VEND_DYN={};
 function vendColor(name){ if(!name) return '#7a8aa0'; var k=String(name).trim().toUpperCase(); if(VEND_FIXED[k]) return VEND_FIXED[k]; if(!VEND_DYN[k]) VEND_DYN[k]=VEND_PAL_DYN[Object.keys(VEND_DYN).length % VEND_PAL_DYN.length]; return VEND_DYN[k]; }
@@ -3529,9 +3531,10 @@ function cliClosedMonths(){
 }
 function cliAgg(monthsSel){
   var by={}; // cliente -> {f25,f26,ped26,vend,rub:{}}
-  function acc(src,mm,key){ var md=src&&src[mm]; if(!md)return; for(var cl in md){ var d=md[cl]; var o=by[cl]||(by[cl]={f25:0,f26:0,ped26:0,vend:'',rub:{}}); o[key]+=d.fc||0; if(key==='f26'){ o.ped26+=d.ped||0; for(var r in (d.rub||{})) o.rub[r]=(o.rub[r]||0)+d.rub[r]; } if(!o.vend && d.vend) o.vend=d.vend; } }
+  function acc(src,mm,key){ var md=src&&src[mm]; if(!md)return; for(var cl in md){ var d=md[cl]; var o=by[cl]||(by[cl]={f25:0,f26:0,ped26:0,vend:'',rub:{}}); o[key]+=d.fc||0; if(key==='f26'){ o.ped26+=d.ped||0; for(var r in (d.rub||{})) o.rub[r]=(o.rub[r]||0)+d.rub[r]; } if(d.vend){ if(VEND_MAYORISTA[String(d.vend).toUpperCase()]) o.vend=d.vend; else if(!o.vend) o.vend=d.vend; } } }
   monthsSel.forEach(function(mm){ acc(CLIENTE_2026,mm,'f26'); acc(CLIENTE_2025,mm,'f25'); });
   var arr=[]; for(var cl in by){ var o=by[cl]; var est=o.f25>0&&o.f26>0?'siempre':(o.f25<=0&&o.f26>0?'nuevo':(o.f25>0&&o.f26<=0?'fue':'')); if(!est)continue;
+    if(!VEND_MAYORISTA[String(o.vend||'').toUpperCase()]) continue; // solo clientes de vendedores mayoristas
     arr.push({cli:cl, f25:o.f25, f26:o.f26, ped26:o.ped26, vend:o.vend||'—', rub:o.rub, est:est, tipo:cliTipo(cl)}); }
   return arr;
 }
