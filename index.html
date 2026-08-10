@@ -799,16 +799,10 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <div class="sec" id="secVend">
   <div class="sec-hdr"><i class="ti ti-users"></i>Performance AR Mayorista <span class="sec-sub">· canal Lett · controlado por el calendario</span></div>
 
-  <div class="prov-table-wrap" id="vendTableWrap" style="margin-bottom:.85rem"></div>
-
-  <div class="cp">
-    <div class="st"><i class="ti ti-chart-bar"></i>Facturación Total por vendedor</div>
-    <div style="position:relative;width:100%;height:300px">
-      <canvas id="cVend"></canvas>
-    </div>
-  </div>
-
   <style>
+  #secVend .vend-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media(max-width:900px){#secVend .vend-2col{grid-template-columns:1fr}}
+  #secVend .vend-table{font-size:12px}
   #vendTableWrap table.vend-table thead th{background:#3d74ae!important}
   #vendTableWrap table.vend-table thead th.vend-total-col{background:#274d80!important}
   #vendTableWrap table.vend-table tbody td.vend-total-cell{background:rgba(61,116,174,.10)!important}
@@ -816,14 +810,19 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   #vendMTMTableWrap table.vend-table thead th.vend-total-col{background:#0a4f58!important}
   #vendMTMTableWrap table.vend-table tbody td.vend-total-cell{background:rgba(15,110,122,.10)!important}
   </style>
-  <div class="cp" style="margin-top:.85rem">
-    <div class="st" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span><i class="ti ti-chart-bar"></i>Facturación Total por vendedor <span class="sec-sub" style="font-weight:400">· Acumulado MTM</span></span>
-      <span id="vendMTMselWrap"></span>
+  <div class="vend-2col">
+    <div class="cp">
+      <div class="st"><i class="ti ti-chart-bar"></i>Facturación por vendedor <span class="sec-sub" style="font-weight:400">· calendario</span></div>
+      <div class="prov-table-wrap" id="vendTableWrap" style="margin:.4rem 0 .7rem"></div>
+      <div style="position:relative;width:100%;height:190px"><canvas id="cVend"></canvas></div>
     </div>
-    <div class="prov-table-wrap" id="vendMTMTableWrap" style="margin:.4rem 0 .85rem"></div>
-    <div style="position:relative;width:100%;height:300px">
-      <canvas id="cVendMTM"></canvas>
+    <div class="cp">
+      <div class="st" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span><i class="ti ti-chart-bar"></i>Facturación por vendedor <span class="sec-sub" style="font-weight:400">· Acumulado MTM</span></span>
+        <span id="vendMTMselWrap"></span>
+      </div>
+      <div class="prov-table-wrap" id="vendMTMTableWrap" style="margin:.4rem 0 .7rem"></div>
+      <div style="position:relative;width:100%;height:190px"><canvas id="cVendMTM"></canvas></div>
     </div>
   </div>
 </div>
