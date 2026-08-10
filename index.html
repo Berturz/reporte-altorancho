@@ -534,6 +534,8 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
       <div class="rp25-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
       <label title="Conecta la Biblia de Productos: los SKUs con ATRIBUTOS inalámbrico van a ILUMINACION INALAMBRICA (2026). Lee la hoja Hoja1." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-book-2" style="font-size:15px;color:#8a6bb0"></i>Biblia de Productos<span style="color:var(--txt2);font-weight:400;margin-left:auto">inalámbricos → clasificación</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleBibliaFile(this.files[0])"></label>
       <div class="biblia-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
+      <label title="Etiquetas de clientes Mayorista (tipo de cliente). Cruza por 'Nombre de visualización traducido'." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-tags" style="font-size:15px;color:#3d74ae"></i>Clientes (etiquetas)<span style="color:var(--txt2);font-weight:400;margin-left:auto">tipo de cliente</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleEtiquetasFile(this.files[0])"></label>
+      <div class="etiq-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
     </div>
   </div>
 </div>
@@ -827,6 +829,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
       <div style="position:relative;width:100%;height:190px"><canvas id="cVendMTM"></canvas></div>
     </div>
   </div>
+  <div id="cliWrap" style="margin-top:18px"></div>
 </div>
 
 <!-- ════════════════════════════════════════════════
@@ -2487,6 +2490,7 @@ async function handleFact2025File(file){
     // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
     var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb}; } }
     CLIENTE_2025=finalCli25;
+    try{ renderClientes(); }catch(e){}
     try{ renderYTD(); }catch(e){}
     try{ renderRPCompare(); }catch(e){}
     var tq=0,ttv=0; for(var ck in acc){ for(var c in acc[ck]){ tq+=acc[ck][c].qty; ttv+=acc[ck][c].tv; } }
@@ -3498,6 +3502,99 @@ function renderVend(){
   renderVendTable(items);
   renderVendChart(items);
   renderVendMTM();
+  try{ renderClientes(); }catch(e){ console.warn('renderClientes',e); }
+}
+
+// ══════════ ANÁLISIS DE CLIENTES (Mayorista) ══════════
+var cliCardSel='todos', cliMesSel='YTD', cliDataCur=[];
+var CLI_MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function cliClosedMonths(){
+  var now=new Date(); var curMM=(now.getFullYear()===2026)?(now.getMonth()+1):13;
+  var out=[]; for(var m=1;m<=12;m++){ var mm=(m<10?'0':'')+m; if(m<curMM && ((CLIENTE_2026&&CLIENTE_2026[mm])||(CLIENTE_2025&&CLIENTE_2025[mm]))) out.push(mm); }
+  return out;
+}
+function cliAgg(monthsSel){
+  var by={}; // cliente -> {f25,f26,ped26,vend,rub:{}}
+  function acc(src,mm,key){ var md=src&&src[mm]; if(!md)return; for(var cl in md){ var d=md[cl]; var o=by[cl]||(by[cl]={f25:0,f26:0,ped26:0,vend:'',rub:{}}); o[key]+=d.fc||0; if(key==='f26'){ o.ped26+=d.ped||0; for(var r in (d.rub||{})) o.rub[r]=(o.rub[r]||0)+d.rub[r]; } if(!o.vend && d.vend) o.vend=d.vend; } }
+  monthsSel.forEach(function(mm){ acc(CLIENTE_2026,mm,'f26'); acc(CLIENTE_2025,mm,'f25'); });
+  var arr=[]; for(var cl in by){ var o=by[cl]; var est=o.f25>0&&o.f26>0?'siempre':(o.f25<=0&&o.f26>0?'nuevo':(o.f25>0&&o.f26<=0?'fue':'')); if(!est)continue;
+    arr.push({cli:cl, f25:o.f25, f26:o.f26, ped26:o.ped26, vend:o.vend||'—', rub:o.rub, est:est, tipo:(CLIENTE_TIPO&&CLIENTE_TIPO[cl.toUpperCase()])||'N/A'}); }
+  return arr;
+}
+function setCliCard(g){ cliCardSel=g; renderClientes(); }
+function setCliMes(v){ cliMesSel=v; renderClientes(); }
+function exportClientesNA(){
+  try{
+    var na=cliDataCur.filter(function(x){return x.tipo==='N/A';}).sort(function(a,b){return b.f26-a.f26;});
+    if(!na.length){ alert('No hay clientes N/A en la selección actual.'); return; }
+    var aoa=[['Cliente','Vendedor','Facturación 2026','Facturación 2025','Estado']];
+    na.forEach(function(x){ aoa.push([x.cli,x.vend,Math.round(x.f26),Math.round(x.f25),x.est==='siempre'?'Desde siempre':(x.est==='nuevo'?'Nuevo':'Se fue')]); });
+    var ws=XLSX.utils.aoa_to_sheet(aoa); var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Clientes N-A');
+    XLSX.writeFile(wb,'clientes_sin_etiqueta_'+(cliMesSel==='YTD'?'YTD':cliMesSel)+'.xlsx');
+  }catch(e){ alert('No se pudo exportar: '+(e&&e.message?e.message:e)); }
+}
+function renderClientes(){
+  var wrap=document.getElementById('cliWrap'); if(!wrap) return;
+  var closed=cliClosedMonths();
+  if(!closed.length || (!Object.keys(CLIENTE_2026||{}).length && !Object.keys(CLIENTE_2025||{}).length)){
+    wrap.innerHTML='<div class="prov-empty" style="padding:1rem;border:1px dashed var(--brd);border-radius:12px">Análisis de clientes: subí <b>Reporte 2025</b> + <b>Reporte 2026</b> (y el <b>Excel de etiquetas</b>) y Guardá para verlo.</div>'; return;
+  }
+  if(cliMesSel!=='YTD' && closed.indexOf(cliMesSel)<0) cliMesSel='YTD';
+  var monthsSel = cliMesSel==='YTD' ? closed : [cliMesSel];
+  var data=cliAgg(monthsSel); cliDataCur=data;
+  var perLbl = cliMesSel==='YTD' ? ('YTD ('+CLI_MN[+closed[0]-1].slice(0,3)+'–'+CLI_MN[+closed[closed.length-1]-1].slice(0,3)+')') : CLI_MN[+cliMesSel-1];
+  var fml=function(v){return v>0?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
+  var RUBC={'MUEBLES':'#4472c4','ILUMINACION':'#5a9ca8','DECO':'#6c5fa6','BAZAR':'#3f8e68','TEXTIL':'#c88a3c','GIFTCARD':'#c8ab6f','BAÑO':'#7fa07a','LIBRERIA':'#8e6e9d','NAVIDAD':'#b5714a','BOLSAS':'#5a7a99','BIENESTAR':'#9bb8b4'};
+  var rc=function(r){return RUBC[r]||'#888';};
+  var TC={'Estudio':'#4472c4','Ambientaciones':'#5a9ca8','Café':'#c88a3c','Local Muebles':'#6c5fa6','Local Iluminación':'#3f8e68','Local Deco (Veladores Inalámbricos)':'#c0657f','Local Muebles e Iluminación':'#4a86b8','Desarrolladora':'#b5714a','Constructora':'#8e6e9d','Restaurante':'#3f8e68','Showroom':'#c0657f','Hotel':'#5a7a99','N/A':'#9aa0a8'};
+  var tc=function(t){return TC[t]||'#7a8aa0';};
+  var G=[['todos','Todos','#5b6472'],['siempre','Desde siempre','#2a6b53'],['nuevo','Nuevos','#3d74ae'],['fue','Se fueron','#c0392b']];
+  var BADGE={siempre:['#eaf3ec','#2a6b53','Desde siempre'],nuevo:['#eaf1fb','#3d74ae','Nuevo'],fue:['#fdecec','#c0392b','Se fue']};
+  var grp = cliCardSel==='todos' ? data : data.filter(function(x){return x.est===cliCardSel;});
+  var g26 = grp.filter(function(x){return x.f26>0;}).sort(function(a,b){return b.f26-a.f26;});
+  var gt = g26.reduce(function(s,x){return s+x.f26;},0);
+  // rubros presentes (columnas de la matriz), top por total
+  var rubTot={}; g26.forEach(function(x){for(var r in x.rub)rubTot[r]=(rubTot[r]||0)+x.rub[r];});
+  var RUBS=Object.keys(rubTot).sort(function(a,b){return rubTot[b]-rubTot[a];});
+  // opciones de mes
+  var opts='<option value="YTD"'+(cliMesSel==='YTD'?' selected':'')+'>YTD (meses cerrados)</option>'+closed.map(function(mm){return '<option value="'+mm+'"'+(cliMesSel===mm?' selected':'')+'>'+CLI_MN[+mm-1]+'</option>';}).join('');
+  var cards=G.map(function(g){var arr=g[0]==='todos'?data:data.filter(function(x){return x.est===g[0];});var on=cliCardSel===g[0];var t26=arr.reduce(function(s,x){return s+x.f26;},0);
+    return '<div onclick="setCliCard(\''+g[0]+'\')" style="cursor:pointer;flex:1;min-width:120px;border:1.5px solid '+g[2]+';border-left:5px solid '+g[2]+';border-radius:10px;padding:7px 11px;background:'+(on?g[2]+'18':'var(--bg)')+'"><div style="font-size:11px;font-weight:700;color:'+g[2]+'">'+g[1]+(on?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+'</div><div style="font-size:17px;font-weight:800;color:'+g[2]+'">'+arr.length+'</div><div style="font-size:10px;color:var(--txt2)">'+fml(t26)+'</div></div>';
+  }).join('');
+  // CUADRO 1
+  var t1=grp.sort(function(a,b){return b.f26-a.f26;}).map(function(x){var b=BADGE[x.est];
+    return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 8px;font-weight:600">'+x.cli+'</td><td style="text-align:left;padding:5px 8px;color:var(--txt2)">'+x.vend+'</td><td style="text-align:right;padding:5px 8px;white-space:nowrap">'+(x.ped26>0?fml(x.f26/x.ped26):'—')+'</td><td style="text-align:right;padding:5px 8px;color:#8a8880;white-space:nowrap">'+fml(x.f25)+'</td><td style="text-align:right;padding:5px 8px;color:#274d80;font-weight:700;white-space:nowrap">'+fml(x.f26)+'</td><td style="text-align:right;padding:5px 8px;color:var(--txt2)">'+(gt&&x.f26>0?(x.f26/gt*100).toFixed(1)+'%':'—')+'</td><td style="text-align:center;padding:5px 8px"><span style="background:'+b[0]+';color:'+b[1]+';font-weight:700;border-radius:6px;padding:1px 8px;font-size:10.5px">'+b[2]+'</span></td></tr>';
+  }).join('');
+  // CUADRO 2 (matriz rubros)
+  var h2='<th style="text-align:left;padding:5px 8px;background:#eef2f6;color:#274d80">Cliente</th>'+RUBS.map(function(r){return '<th style="text-align:right;padding:5px 8px;background:'+rc(r)+';color:#fff">'+r+'</th>';}).join('')+'<th style="text-align:right;padding:5px 8px;background:#274d80;color:#fff">Total</th>';
+  var t2=g26.map(function(x){var cells=RUBS.map(function(r){var v=x.rub[r]||0;var c=rc(r);return '<td style="text-align:right;padding:5px 8px;white-space:nowrap;font-weight:'+(v?'700':'400')+';color:'+(v?c:'#ccc')+';background:'+(v?c+'14':'transparent')+'">'+(v?fml(v):'—')+'</td>';}).join('');
+    return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 8px;font-weight:600">'+x.cli+'</td>'+cells+'<td style="text-align:right;padding:5px 8px;font-weight:800;background:rgba(39,77,128,.10);color:#274d80;white-space:nowrap">'+fml(x.f26)+'</td></tr>';
+  }).join('');
+  // CUADRO 3 (tipo)
+  var byT={}; g26.forEach(function(x){if(!byT[x.tipo])byT[x.tipo]={fac:0,n:0};byT[x.tipo].fac+=x.f26;byT[x.tipo].n++;});
+  var naN=g26.filter(function(x){return x.tipo==='N/A';}).length;
+  var tsum=Object.keys(byT).sort(function(a,b){return byT[b].fac-byT[a].fac;}).map(function(t){var c=tc(t);return '<div style="border:1px solid '+c+';border-left:4px solid '+c+';border-radius:9px;padding:5px 9px;min-width:96px"><div style="font-size:10.5px;font-weight:700;color:'+c+'">'+t+' <span style="font-weight:400;color:#9aa0a8">·'+byT[t].n+'</span></div><div style="font-size:13px;font-weight:800;color:'+c+'">'+fml(byT[t].fac)+'</div></div>';}).join('');
+  var t3=g26.map(function(x){var c=tc(x.tipo);return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 8px;font-weight:600">'+x.cli+'</td><td style="text-align:left;padding:5px 8px"><span style="background:'+c+'18;color:'+c+';font-weight:700;border-radius:6px;padding:1px 8px;font-size:10.5px">'+x.tipo+'</span></td><td style="text-align:left;padding:5px 8px;color:var(--txt2)">'+x.vend+'</td><td style="text-align:right;padding:5px 8px;color:#274d80;font-weight:700;white-space:nowrap">'+fml(x.f26)+'</td><td style="text-align:right;padding:5px 8px;color:var(--txt2)">'+(gt?(x.f26/gt*100).toFixed(1):'0')+'%</td></tr>';}).join('');
+  var HDR='background:#3d74ae;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px';
+  wrap.innerHTML=''
+   +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-user-search"></i>Análisis de clientes <span class="sec-sub">· Mayorista · '+perLbl+' · a mes cerrado</span></div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:.3rem 0 .7rem"><div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">'+cards+'</div>'
+     +'<span style="font-size:12px;font-weight:600;color:var(--txt2)">Mes: <select onchange="setCliMes(this.value)" style="font-size:12px;font-weight:700;border:1px solid var(--brd);border-radius:7px;padding:4px 9px;background:var(--bg);color:var(--txt)">'+opts+'</select></span></div>'
+   // Cuadro 1
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-bottom:14px"><div style="'+HDR+'"><i class="ti ti-users-group" style="margin-right:6px"></i>1 · Análisis de clientes</div>'
+     +'<div style="overflow-x:auto;padding:4px 12px 12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:5px 8px">Cliente</th><th style="text-align:left;padding:5px 8px">Vendedor</th><th style="text-align:right;padding:5px 8px">Ticket</th><th style="text-align:right;padding:5px 8px">Fact. '+(cliMesSel==='YTD'?'2025':CLI_MN[+cliMesSel-1].slice(0,3)+'-25')+'</th><th style="text-align:right;padding:5px 8px">Fact. '+(cliMesSel==='YTD'?'2026':CLI_MN[+cliMesSel-1].slice(0,3)+'-26')+'</th><th style="text-align:right;padding:5px 8px">% incid.</th><th style="text-align:center;padding:5px 8px">Estado</th></tr></thead><tbody>'+(t1||'<tr><td colspan="7" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+'</tbody></table></div></div>'
+   // Cuadro 2
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-bottom:14px"><div style="'+HDR+'"><i class="ti ti-layout-grid" style="margin-right:6px"></i>2 · Rubros por cliente <span style="font-weight:400;opacity:.85;font-size:11.5px">· facturación 2026 por rubro</span></div>'
+     +'<div style="overflow-x:auto;padding:8px 12px 12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr>'+h2+'</tr></thead><tbody>'+(t2||'<tr><td style="padding:.6rem;color:var(--txt2)">Sin datos</td></tr>')+'</tbody></table></div></div>'
+   // Cuadro 3
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="'+HDR+';display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span><i class="ti ti-tags" style="margin-right:6px"></i>3 · Tipo de cliente</span>'
+     +'<span style="margin-left:auto;display:flex;gap:7px;align-items:center">'
+       +'<label style="background:rgba(255,255,255,.2);border-radius:7px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer"><i class="ti ti-refresh" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Actualizar etiquetas<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleEtiquetasFile(this.files[0])"></label>'
+       +'<span onclick="exportClientesNA()" style="background:#e7a33e;color:#3a2600;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer"><i class="ti ti-file-download" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Exportar N/A ('+naN+')</span>'
+     +'</span></div>'
+     +'<div class="etiq-status" style="font-size:11px;color:var(--txt2);padding:4px 14px 0"></div>'
+     +'<div style="display:flex;gap:6px;flex-wrap:wrap;padding:9px 14px 4px">'+(tsum||'<span style="font-size:11px;color:var(--txt2)">Subí el Excel de etiquetas para clasificar</span>')+'</div>'
+     +'<div style="overflow-x:auto;padding:4px 12px 12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:5px 8px">Cliente</th><th style="text-align:left;padding:5px 8px">Tipo</th><th style="text-align:left;padding:5px 8px">Vendedor</th><th style="text-align:right;padding:5px 8px">Facturación</th><th style="text-align:right;padding:5px 8px">% incid.</th></tr></thead><tbody>'+(t3||'<tr><td colspan="5" style="text-align:center;color:var(--txt2);padding:.6rem">Sin datos</td></tr>')+'</tbody></table></div></div>';
 }
 
 // ── INIT ──
@@ -5980,6 +6077,19 @@ async function rsemLoadData(){
   if(!r.ok) throw new Error('load '+r.status);
   var j=await r.json(); return (j&&j.length)?j[0].data:null;
 }
+// Guarda el análisis de clientes en una FILA SEPARADA ('clientes') para no pesar en el snapshot principal.
+async function rsemGuardarClientes(){
+  if(!RSEM_TOKEN && !(await rsemRefresh())) return {ok:false,msg:'sin sesión'};
+  var data={CLIENTE_2026:(typeof CLIENTE_2026!=='undefined'?CLIENTE_2026:{}),CLIENTE_2025:(typeof CLIENTE_2025!=='undefined'?CLIENTE_2025:{}),CLIENTE_TIPO:(typeof CLIENTE_TIPO!=='undefined'?CLIENTE_TIPO:{})};
+  var body=JSON.stringify([{id:'clientes',data:data}]);
+  var doPost=function(){ return fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data',{method:'POST',headers:Object.assign(rsemHeaders(true),{'Prefer':'resolution=merge-duplicates,return=minimal'}),body:body}); };
+  try{ var r=await doPost(); if((r.status===401||r.status===403)&&await rsemRefresh()) r=await doPost(); if(!r.ok){var t=await r.text(); return {ok:false,msg:r.status+' '+(t||'').slice(0,160)};} return {ok:true,mb:(body.length/1048576).toFixed(2)}; }catch(e){ return {ok:false,msg:(e&&e.message)||(''+e)}; }
+}
+async function rsemCargarClientes(){
+  try{ var r=await fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data?id=eq.clientes&select=data',{headers:rsemHeaders(false)}); if(!r.ok) return; var j=await r.json(); var d=(j&&j.length)?j[0].data:null; if(!d) return;
+    if(d.CLIENTE_2026)CLIENTE_2026=d.CLIENTE_2026; if(d.CLIENTE_2025)CLIENTE_2025=d.CLIENTE_2025; if(d.CLIENTE_TIPO)CLIENTE_TIPO=d.CLIENTE_TIPO;
+  }catch(e){ console.warn('cargar clientes',e); }
+}
 async function guardarEnSupabase(btn){
   if(!RSEM_TOKEN && !(await rsemRefresh())){alert('Iniciá sesión primero.');return;}
   var old=btn?btn.innerHTML:null; if(btn){btn.disabled=true;btn.innerHTML='Guardando…';}
@@ -5994,7 +6104,8 @@ async function guardarEnSupabase(btn){
     var r=await doSave();
     if((r.status===401||r.status===403) && await rsemRefresh()){ r=await doSave(); } // token vencido → renovar y reintentar
     if(!r.ok){var tx=await r.text();throw new Error(r.status+' '+tx);}
-    alert('✔ Guardado en Supabase. El reporte publicado ya muestra estos datos.');
+    var _cr=await rsemGuardarClientes(); // clientes en fila aparte (no afecta el guardado principal)
+    alert('✔ Guardado en Supabase. El reporte publicado ya muestra estos datos.'+(_cr.ok?('\n(Análisis de clientes: '+_cr.mb+' MB ✓)'):('\n⚠ Análisis de clientes no se guardó: '+_cr.msg)));
   }catch(e){ alert('Error al guardar: '+(e&&e.message?e.message:e)); }
   finally{ if(btn){btn.disabled=false;btn.innerHTML=old;} }
 }
@@ -6003,6 +6114,7 @@ async function rsemEnter(){
   try{ data=await rsemLoadData(); }
   catch(e){ if(e&&e.auth){ if(await rsemRefresh()){ try{ data=await rsemLoadData(); }catch(e2){ if(e2&&e2.auth) return false; } } else return false; } else console.warn('rsemEnter load',e); }
   rsemApplySnap(data);
+  try{ await rsemCargarClientes(); if(typeof renderClientes==='function') renderClientes(); }catch(e){}
   if(typeof showTab==='function') showTab('comp');
   var ov=document.getElementById('rsemLogin'); if(ov) ov.style.display='none'; document.documentElement.style.overflow='';
   return true;
