@@ -2516,8 +2516,8 @@ async function handleEtiquetasFile(file){
       if(!nom && !nom2) continue;
       var et=rr[iEt]?String(rr[iEt]):''; var tipo='';
       var parts=et.split(','); for(var p=0;p<parts.length;p++){ var mt=parts[p].trim().match(/^tipo de cliente\s*\/\s*(.+)$/i); if(mt){ tipo=mt[1].trim(); break; } }
-      // indexar el tipo bajo AMBOS nombres (visualización y Nombre) para maximizar el cruce y reducir N/A
-      if(tipo){ if(nom)map[nom.toUpperCase()]=tipo; if(nom2)map[nom2.toUpperCase()]=tipo; n++; }
+      // indexar el tipo bajo TODAS las claves de ambos nombres (completo + antes del "-" + contenido de "[...]") para maximizar el cruce
+      if(tipo){ cliKeys(nom).concat(cliKeys(nom2)).forEach(function(k){ map[k]=tipo; }); n++; }
     }
     CLIENTE_TIPO=map;
     try{ if(typeof renderClientes==='function') renderClientes(); }catch(e){}
@@ -3360,6 +3360,13 @@ var VEND_PAL_DYN=['#3E8FA6','#b5714a','#8e6e9d','#5a7a99','#1D9E75','#BA7517','#
 var VEND_DYN={};
 function vendColor(name){ if(!name) return '#7a8aa0'; var k=String(name).trim().toUpperCase(); if(VEND_FIXED[k]) return VEND_FIXED[k]; if(!VEND_DYN[k]) VEND_DYN[k]=VEND_PAL_DYN[Object.keys(VEND_DYN).length % VEND_PAL_DYN.length]; return VEND_DYN[k]; }
 function cliVendChip(v){ var c=vendColor(v); return '<span style="display:inline-flex;align-items:center;gap:5px;background:'+c+'14;color:'+c+';font-weight:700;border-radius:6px;padding:1px 8px;font-size:10.5px;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:'+c+'"></span>'+v+'</span>'; }
+// Claves de match de un nombre de cliente: texto completo + parte antes de " - [" + contenido de "[...]".
+// Permite cruzar facturación ↔ etiquetas aunque el nombre de visualización difiera (ej. "CASA BROTA - [CHAVANNE LUCRECIA]" vs "CHAVANNE LUCRECIA - [CHAVANNE LUCRECIA]").
+function cliKeys(name){ var s=String(name||'').replace(/\s+/g,' ').trim().toUpperCase(); if(!s) return []; var ks=[s];
+  var m=s.match(/^(.*?)\s*-\s*\[(.*?)\]\s*$/); if(m){ if(m[1].trim())ks.push(m[1].trim()); if(m[2].trim())ks.push(m[2].trim()); }
+  var br=s.match(/\[([^\]]+)\]/); if(br && br[1].trim())ks.push(br[1].trim());
+  var seen={}; return ks.filter(function(k){ if(seen[k])return false; seen[k]=1; return true; }); }
+function cliTipo(name){ if(typeof CLIENTE_TIPO==='undefined'||!CLIENTE_TIPO) return 'N/A'; var ks=cliKeys(name); for(var i=0;i<ks.length;i++){ if(CLIENTE_TIPO[ks[i]]) return CLIENTE_TIPO[ks[i]]; } return 'N/A'; }
 const VEND_COLORS = ['#A8C3DC','#7FA8CC','#5689BD','#3D74AE','#4472c4'];
 
 function aggVend(dates){
@@ -3525,7 +3532,7 @@ function cliAgg(monthsSel){
   function acc(src,mm,key){ var md=src&&src[mm]; if(!md)return; for(var cl in md){ var d=md[cl]; var o=by[cl]||(by[cl]={f25:0,f26:0,ped26:0,vend:'',rub:{}}); o[key]+=d.fc||0; if(key==='f26'){ o.ped26+=d.ped||0; for(var r in (d.rub||{})) o.rub[r]=(o.rub[r]||0)+d.rub[r]; } if(!o.vend && d.vend) o.vend=d.vend; } }
   monthsSel.forEach(function(mm){ acc(CLIENTE_2026,mm,'f26'); acc(CLIENTE_2025,mm,'f25'); });
   var arr=[]; for(var cl in by){ var o=by[cl]; var est=o.f25>0&&o.f26>0?'siempre':(o.f25<=0&&o.f26>0?'nuevo':(o.f25>0&&o.f26<=0?'fue':'')); if(!est)continue;
-    arr.push({cli:cl, f25:o.f25, f26:o.f26, ped26:o.ped26, vend:o.vend||'—', rub:o.rub, est:est, tipo:(CLIENTE_TIPO&&CLIENTE_TIPO[cl.toUpperCase()])||'N/A'}); }
+    arr.push({cli:cl, f25:o.f25, f26:o.f26, ped26:o.ped26, vend:o.vend||'—', rub:o.rub, est:est, tipo:cliTipo(cl)}); }
   return arr;
 }
 function setCliCard(g){ cliCardSel=g; renderClientes(); }
