@@ -3396,7 +3396,7 @@ function renderVendTable(items, wrapId, variant){
   // Mostrar de mayor a menor en la tabla (más legible), aunque el gráfico va de menor a mayor
   const itemsDesc = [...items].sort((a,b)=>b.tv-a.tv);
 
-  const headerHTML = itemsDesc.map(i=>`<th>${i.vend}</th>`).join('') + '<th class="vend-total-col">Total</th>';
+  const headerHTML = itemsDesc.map(i=>`<th style="background:${vendColor(i.vend)}!important;color:#fff!important">${i.vend}</th>`).join('') + '<th class="vend-total-col">Total</th>';
 
   function rowFacturacion(){
     const cells = itemsDesc.map(i=>`<td>${ffl(i.tv)}</td>`).join('');
