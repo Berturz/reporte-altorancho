@@ -846,6 +846,10 @@ var BIBLIA_INAL = {}; // { SKU(mayúsc): 1 } — SKUs con ATRIBUTOS inalámbrico
 var COBR_D = {};
 var VEND_D = {};
 var ORIGEN_D = {};
+// Análisis de clientes (solo Mayorista/Lett). Keyed por mes '01'..'12'. Se guardan en filas propias de Supabase.
+var CLIENTE_2026 = {};   // { mm: { cliente: {fc, ped, vend, rub:{rubro:fc}} } }  ← del reporte 2026
+var CLIENTE_2025 = {};   // idem ← del importador 2025
+var CLIENTE_TIPO = {};   // { clienteUpper: tipo }  ← del Excel de etiquetas (o N/A si no está)
 var COSTFIN_D = {web:[], local:[]};
 </script>
 
@@ -865,6 +869,7 @@ const COL = {
   PROV:    21,
   ORIG:    22,
   ORIGEN:  22,
+  CLIENTE: 23,
   MDP:     26,
   QTY:     29,
   CMV:     31,
@@ -982,6 +987,7 @@ async function handleFile(file) {
     const newTOPFC = {};
     const newPROV = {};
     const newRUBROPROV = {};
+    const newCLI = {}; // clientes Mayorista (Lett): { mm: { cliente: {fc, comps:{}, vend, rub:{}} } }
     const newCOBR = {};
     const newVEND = {};
     const newFIN  = {};
@@ -1182,6 +1188,22 @@ async function handleFile(file) {
         }
       }
 
+      // ── CLIENTE_2026: análisis de clientes (SOLO Mayorista / Lett) ──
+      if (canal === 'Lett') {
+        const cliente = row[COL.CLIENTE] ? String(row[COL.CLIENTE]).trim() : '';
+        if (cliente) {
+          const mmC = dia.slice(5,7);
+          if (!newCLI[mmC]) newCLI[mmC] = {};
+          let e = newCLI[mmC][cliente]; if(!e){ e = newCLI[mmC][cliente] = {fc:0, comps:{}, vend:'', rub:{}}; }
+          e.fc += tv;
+          const idRepC = row[COL.IDREP] ? String(row[COL.IDREP]).trim() : '';
+          if (idRepC && !/Reversión de:/i.test(idRepC) && idRepC.indexOf('A-NC')!==0 && idRepC.indexOf('NC')!==0) e.comps[idRepC]=1;
+          const vendC = row[COL.VEND] ? String(row[COL.VEND]).trim() : '';
+          if (vendC) e.vend = vendC;
+          if (rubro && rubro!=='ENVIOS' && rubro!=='N/A') e.rub[rubro] = (e.rub[rubro]||0) + tv;
+        }
+      }
+
       // ── COBR_D: cobranzas MDP importe S/IVA + AA/B (excl. ENVIOS y N/A) ──
       {
         const CANAL_MAP3 = {Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
@@ -1310,6 +1332,12 @@ async function handleFile(file) {
       }
     }
     RUBROPROV_D = finalRUBROPROV;
+    // Clientes Mayorista (Lett): comprobantes → cantidad de pedidos + redondeo
+    const finalCLI = {};
+    for (const mm in newCLI){ finalCLI[mm] = {};
+      for (const cl in newCLI[mm]){ const d = newCLI[mm][cl]; const rub = {}; for (const r in d.rub) rub[r] = Math.round(d.rub[r]);
+        finalCLI[mm][cl] = {fc:Math.round(d.fc), ped:Object.keys(d.comps).length, vend:d.vend, rub:rub}; } }
+    CLIENTE_2026 = finalCLI;
     COBR_D = newCOBR;
     VEND_D = newVEND;
     TOPFC_D = newTOPFC;
@@ -2406,14 +2434,26 @@ async function handleFact2025File(file){
     var PROV_ILUM_INALAMB=new Set(['LUX LIGHTING']);
     var PROV_SILLAS_IMP=new Set(['WENDY FURNITURE','URUN']);
     var PROV_MUEBLES_NAC=new Set(['CARPINTERIA','MIX','HIERROS']);
-    var acc={}, nFilas=0;
+    var acc={}, nFilas=0, cliAcc={};
     for(var ri=1;ri<rows.length;ri++){
       var row=rows[ri]; if(!row) continue;
       var rubro=row[COL.RUBRO]?String(row[COL.RUBRO]).trim().toUpperCase():null;
       var canal=row[COL.CANAL]?String(row[COL.CANAL]).trim():null;
       if(!rubro || !CANALES_ALL.has(canal)) continue;
       var dia=excelDateToStr(row[COL.FECHA]); if(!dia) continue;
-      if(dia.slice(0,7)!==YM) continue; // SOLO julio 2025
+      // CLIENTE_2025: capturar clientes Mayorista (Lett) de TODOS los meses 2025 (para el análisis de clientes)
+      if(canal==='Lett' && dia.slice(0,4)==='2025'){
+        var cli25=row[COL.CLIENTE]?String(row[COL.CLIENTE]).trim():'';
+        if(cli25){ var mm25=dia.slice(5,7); if(!cliAcc[mm25])cliAcc[mm25]={};
+          var ce=cliAcc[mm25][cli25]; if(!ce){ce=cliAcc[mm25][cli25]={fc:0,comps:{},vend:'',rub:{}};}
+          var tv25=n(row[COL.TV]); ce.fc+=tv25;
+          var idr=row[COL.IDREP]?String(row[COL.IDREP]).trim():'';
+          if(idr && !/Reversión de:/i.test(idr) && idr.indexOf('A-NC')!==0 && idr.indexOf('NC')!==0) ce.comps[idr]=1;
+          var vd=row[COL.VEND]?String(row[COL.VEND]).trim():''; if(vd) ce.vend=vd;
+          if(rubro!=='ENVIOS' && rubro!=='N/A') ce.rub[rubro]=(ce.rub[rubro]||0)+tv25;
+        }
+      }
+      if(dia.slice(0,7)!==YM) continue; // (RP2025_CANAL) SOLO julio 2025
       var canalKey2=CANAL_MAP2[canal]; if(!canalKey2) continue;
       var provNombre2=row[COL.PROV]?String(row[COL.PROV]).trim():'';
       var origVal2=row[COL.ORIG]?String(row[COL.ORIG]).trim():'';
@@ -2444,10 +2484,39 @@ async function handleFact2025File(file){
     if(!nFilas) throw new Error('No se encontraron filas de julio 2025 (2025-07) en la hoja. ¿El archivo llega hasta julio?');
     if(typeof RP2025_CANAL==='undefined'||!RP2025_CANAL) window.RP2025_CANAL={};
     RP2025_CANAL[MES]=acc;
+    // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
+    var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb}; } }
+    CLIENTE_2025=finalCli25;
     try{ renderYTD(); }catch(e){}
     try{ renderRPCompare(); }catch(e){}
     var tq=0,ttv=0; for(var ck in acc){ for(var c in acc[ck]){ tq+=acc[ck][c].qty; ttv+=acc[ck][c].tv; } }
     setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>Julio 2025 cargado</b> · '+nFilas.toLocaleString('es-AR')+' filas · '+tq.toLocaleString('es-AR')+' u · $'+Math.round(ttv).toLocaleString('es-AR')+' s/IVA. <b>Ahora tocá "Guardar en Supabase"</b> para que quede publicado.');
+  }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
+}
+// Importa el Excel de etiquetas de clientes → mapa CLIENTE(mayúsc) → tipo (etiqueta "Tipo de cliente / …"). El resto queda N/A.
+async function handleEtiquetasFile(file){
+  if(!file) return;
+  var setS=function(m){ var els=document.querySelectorAll('.etiq-status'); for(var i=0;i<els.length;i++) els[i].innerHTML=m; };
+  setS('<span class="spin">&#8635;</span> Leyendo etiquetas...');
+  try{
+    var buf=await file.arrayBuffer();
+    await new Promise(function(r){setTimeout(r,0);});
+    var wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true,bookVBA:false});
+    var sh=wb.SheetNames[0]; var rows=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:null});
+    var norm=function(x){return x==null?'':String(x).trim().toLowerCase();};
+    var hi=-1,iNom=-1,iEt=-1;
+    for(var h=0;h<Math.min(rows.length,6);h++){ var hr=rows[h]||[]; var nn=-1,ee=-1; for(var c=0;c<hr.length;c++){ var t=norm(hr[c]); if(nn<0 && t.indexOf('nombre de visualiz')>=0) nn=c; if(ee<0 && t==='etiquetas') ee=c; } if(nn>=0&&ee>=0){hi=h;iNom=nn;iEt=ee;break;} }
+    if(hi<0) throw new Error('No encontré las columnas "Nombre de visualización traducido" y "Etiquetas".');
+    var map={}, n=0;
+    for(var r2=hi+1;r2<rows.length;r2++){ var rr=rows[r2]; if(!rr) continue;
+      var nom=rr[iNom]?String(rr[iNom]).trim():''; if(!nom) continue;
+      var et=rr[iEt]?String(rr[iEt]):''; var tipo='';
+      var parts=et.split(','); for(var p=0;p<parts.length;p++){ var mt=parts[p].trim().match(/^tipo de cliente\s*\/\s*(.+)$/i); if(mt){ tipo=mt[1].trim(); break; } }
+      if(tipo){ map[nom.toUpperCase()]=tipo; n++; }
+    }
+    CLIENTE_TIPO=map;
+    try{ if(typeof renderClientes==='function') renderClientes(); }catch(e){}
+    setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>Etiquetas cargadas</b> · '+n.toLocaleString('es-AR')+' clientes con tipo (el resto = N/A). Tocá "Guardar en Supabase".');
   }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
 }
 function buildFactMonthChips(){
