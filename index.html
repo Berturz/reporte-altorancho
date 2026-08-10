@@ -2506,15 +2506,18 @@ async function handleEtiquetasFile(file){
     var wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true,bookVBA:false});
     var sh=wb.SheetNames[0]; var rows=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:null});
     var norm=function(x){return x==null?'':String(x).trim().toLowerCase();};
-    var hi=-1,iNom=-1,iEt=-1;
-    for(var h=0;h<Math.min(rows.length,6);h++){ var hr=rows[h]||[]; var nn=-1,ee=-1; for(var c=0;c<hr.length;c++){ var t=norm(hr[c]); if(nn<0 && t.indexOf('nombre de visualiz')>=0) nn=c; if(ee<0 && t==='etiquetas') ee=c; } if(nn>=0&&ee>=0){hi=h;iNom=nn;iEt=ee;break;} }
+    var hi=-1,iNom=-1,iNom2=-1,iEt=-1;
+    for(var h=0;h<Math.min(rows.length,6);h++){ var hr=rows[h]||[]; var nn=-1,n2=-1,ee=-1; for(var c=0;c<hr.length;c++){ var t=norm(hr[c]); if(nn<0 && t.indexOf('nombre de visualiz')>=0) nn=c; else if(n2<0 && t==='nombre') n2=c; if(ee<0 && t==='etiquetas') ee=c; } if(nn>=0&&ee>=0){hi=h;iNom=nn;iNom2=n2;iEt=ee;break;} }
     if(hi<0) throw new Error('No encontré las columnas "Nombre de visualización traducido" y "Etiquetas".');
     var map={}, n=0;
     for(var r2=hi+1;r2<rows.length;r2++){ var rr=rows[r2]; if(!rr) continue;
-      var nom=rr[iNom]?String(rr[iNom]).trim():''; if(!nom) continue;
+      var nom=rr[iNom]?String(rr[iNom]).trim():'';
+      var nom2=(iNom2>=0&&rr[iNom2])?String(rr[iNom2]).trim():'';
+      if(!nom && !nom2) continue;
       var et=rr[iEt]?String(rr[iEt]):''; var tipo='';
       var parts=et.split(','); for(var p=0;p<parts.length;p++){ var mt=parts[p].trim().match(/^tipo de cliente\s*\/\s*(.+)$/i); if(mt){ tipo=mt[1].trim(); break; } }
-      if(tipo){ map[nom.toUpperCase()]=tipo; n++; }
+      // indexar el tipo bajo AMBOS nombres (visualización y Nombre) para maximizar el cruce y reducir N/A
+      if(tipo){ if(nom)map[nom.toUpperCase()]=tipo; if(nom2)map[nom2.toUpperCase()]=tipo; n++; }
     }
     CLIENTE_TIPO=map;
     try{ if(typeof renderClientes==='function') renderClientes(); }catch(e){}
