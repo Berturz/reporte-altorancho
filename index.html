@@ -3535,7 +3535,17 @@ function renderClientes(){
   var wrap=document.getElementById('cliWrap'); if(!wrap) return;
   var closed=cliClosedMonths();
   if(!closed.length || (!Object.keys(CLIENTE_2026||{}).length && !Object.keys(CLIENTE_2025||{}).length)){
-    wrap.innerHTML='<div class="prov-empty" style="padding:1rem;border:1px dashed var(--brd);border-radius:12px">Análisis de clientes: subí <b>Reporte 2025</b> + <b>Reporte 2026</b> (y el <b>Excel de etiquetas</b>) y Guardá para verlo.</div>'; return;
+    var nTipos=Object.keys(CLIENTE_TIPO||{}).length;
+    wrap.innerHTML=''
+     +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-user-search"></i>Análisis de clientes <span class="sec-sub">· Mayorista</span></div>'
+     +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px">'
+       +'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
+         +'<span style="font-size:12px;color:var(--txt2)">Subí <b>Reporte 2025</b> + <b>Reporte 2026</b> (panel de arriba) y las <b>etiquetas</b> acá, y Guardá para ver el análisis.</span>'
+         +'<label style="background:#3d74ae;color:#fff;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap"><i class="ti ti-tags" style="font-size:12px;vertical-align:-1px;margin-right:5px"></i>Actualizar etiquetas<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleEtiquetasFile(this.files[0])"></label>'
+       +'</div>'
+       +'<div class="etiq-status" style="font-size:11px;color:var(--txt2);margin-top:6px">'+(nTipos?('<i class="ti ti-check" style="color:#2a6b53"></i> Etiquetas cargadas: '+nTipos.toLocaleString('es-AR')+' clientes con tipo.'):'')+'</div>'
+     +'</div>';
+    return;
   }
   if(cliMesSel!=='YTD' && closed.indexOf(cliMesSel)<0) cliMesSel='YTD';
   var monthsSel = cliMesSel==='YTD' ? closed : [cliMesSel];
