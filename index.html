@@ -1337,7 +1337,7 @@ async function handleFile(file) {
     const finalCLI = {};
     for (const mm in newCLI){ finalCLI[mm] = {};
       for (const cl in newCLI[mm]){ const d = newCLI[mm][cl]; const rub = {}; for (const r in d.rub) rub[r] = Math.round(d.rub[r]);
-        finalCLI[mm][cl] = {fc:Math.round(d.fc), ped:Object.keys(d.comps).length, vend:d.vend, rub:rub}; } }
+        finalCLI[mm][cl] = {fc:Math.round(d.fc), ped:Object.keys(d.comps).length, vend:d.vend, rub:rub, comps:Object.keys(d.comps)}; } }
     CLIENTE_2026 = finalCLI;
     COBR_D = newCOBR;
     VEND_D = newVEND;
@@ -2486,7 +2486,7 @@ async function handleFact2025File(file){
     if(typeof RP2025_CANAL==='undefined'||!RP2025_CANAL) window.RP2025_CANAL={};
     RP2025_CANAL[MES]=acc;
     // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
-    var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb}; } }
+    var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb,comps:Object.keys(dc.comps)}; } }
     CLIENTE_2025=finalCli25;
     try{ renderClientes(); }catch(e){}
     try{ renderYTD(); }catch(e){}
@@ -3531,11 +3531,11 @@ function cliClosedMonths(){
 }
 function cliAgg(monthsSel){
   var by={}; // cliente -> {f25,f26,ped26,vend,rub:{}}
-  function acc(src,mm,key){ var md=src&&src[mm]; if(!md)return; for(var cl in md){ var d=md[cl]; var o=by[cl]||(by[cl]={f25:0,f26:0,ped26:0,vend:'',rub:{}}); o[key]+=d.fc||0; if(key==='f26'){ o.ped26+=d.ped||0; for(var r in (d.rub||{})) o.rub[r]=(o.rub[r]||0)+d.rub[r]; } if(d.vend){ if(VEND_MAYORISTA[String(d.vend).toUpperCase()]) o.vend=d.vend; else if(!o.vend) o.vend=d.vend; } } }
+  function acc(src,mm,key){ var md=src&&src[mm]; if(!md)return; for(var cl in md){ var d=md[cl]; var o=by[cl]||(by[cl]={f25:0,f26:0,ped26:0,vend:'',rub:{},comps26:{},comps25:{}}); o[key]+=d.fc||0; if(key==='f26'){ o.ped26+=d.ped||0; for(var r in (d.rub||{})) o.rub[r]=(o.rub[r]||0)+d.rub[r]; } if(d.comps){ var tgt=key==='f26'?o.comps26:o.comps25; for(var ci=0;ci<d.comps.length;ci++) tgt[d.comps[ci]]=1; } if(d.vend){ if(VEND_MAYORISTA[String(d.vend).toUpperCase()]) o.vend=d.vend; else if(!o.vend) o.vend=d.vend; } } }
   monthsSel.forEach(function(mm){ acc(CLIENTE_2026,mm,'f26'); acc(CLIENTE_2025,mm,'f25'); });
   var arr=[]; for(var cl in by){ var o=by[cl]; var est=o.f25>0&&o.f26>0?'siempre':(o.f25<=0&&o.f26>0?'nuevo':(o.f25>0&&o.f26<=0?'fue':'')); if(!est)continue;
     if(!VEND_MAYORISTA[String(o.vend||'').toUpperCase()]) continue; // solo clientes de vendedores mayoristas
-    arr.push({cli:cl, f25:o.f25, f26:o.f26, ped26:o.ped26, vend:o.vend||'—', rub:o.rub, est:est, tipo:cliTipo(cl)}); }
+    arr.push({cli:cl, f25:o.f25, f26:o.f26, ped26:o.ped26, vend:o.vend||'—', rub:o.rub, est:est, tipo:cliTipo(cl), comps26:Object.keys(o.comps26), comps25:Object.keys(o.comps25)}); }
   return arr;
 }
 function setCliCard(g){ cliCardSel=g; renderClientes(); }
@@ -3545,8 +3545,8 @@ function exportClientesNA(){
   try{
     var na=cliDataCur.filter(function(x){return x.tipo==='N/A';}).sort(function(a,b){return b.f26-a.f26;});
     if(!na.length){ alert('No hay clientes N/A en la selección actual.'); return; }
-    var aoa=[['Cliente','Vendedor','Facturación 2026','Facturación 2025','Estado']];
-    na.forEach(function(x){ aoa.push([x.cli,x.vend,Math.round(x.f26),Math.round(x.f25),x.est==='siempre'?'Desde siempre':(x.est==='nuevo'?'Nuevo':'Se fue')]); });
+    var aoa=[['Cliente','Vendedor','Facturación 2026','Facturación 2025','Estado','N° asiento/factura 2026','N° asiento/factura 2025']];
+    na.forEach(function(x){ aoa.push([x.cli,x.vend,Math.round(x.f26),Math.round(x.f25),x.est==='siempre'?'Desde siempre':(x.est==='nuevo'?'Nuevo':'Se fue'),(x.comps26||[]).join(', '),(x.comps25||[]).join(', ')]); });
     var ws=XLSX.utils.aoa_to_sheet(aoa); var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Clientes N-A');
     XLSX.writeFile(wb,'clientes_sin_etiqueta_'+(cliMesSel==='YTD'?'YTD':cliMesSel)+'.xlsx');
   }catch(e){ alert('No se pudo exportar: '+(e&&e.message?e.message:e)); }
