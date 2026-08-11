@@ -2313,22 +2313,28 @@ function renderRPCompare(){
     let tq25=0,tq26=0,taj=0,t26=0;
     cats.forEach(cat=>{const a=r25[cat]||{qty:0,tv:0},b=r26[cat]||{qty:0,tv:0};tq25+=a.qty;tq26+=b.qty;taj+=(r25a[cat]||0);t26+=b.tv;});
     const vrT=taj?((t26-taj)/taj*100):0;
+    // Ticket promedio (Facturación ÷ Cantidad; 2025 con Aj.IPC) + variación 2026 vs 2025 aj.
+    const tk25T=tq25?taj/tq25:0, tk26T=tq26?t26/tq26:0; const avgTV=tk25T?((tk26T/tk25T-1)*100):0;
+    const CQ='#f2f9f5',CF='#fcf7f0',CT='#f4f7fc';
     const body=cats.map(cat=>{const a=r25[cat]||{qty:0,tv:0},b=r26[cat]||{qty:0,tv:0},aj=r25a[cat]||0;const sh=t26?(b.tv/t26*100):0;
+      const tk25=a.qty?aj/a.qty:0, tk26=b.qty?b.tv/b.qty:0; const tvv=tk25?((tk26/tk25-1)*100):0; const tvc=(tvv>=avgTV)?'#1f7a44':'#b4322a';
       return `<tr><td style="font-weight:600">${cat}</td><td style="color:var(--txt2)">${RP_PROVDESC[cat]||''}</td>
-        <td style="text-align:right">${a.qty.toLocaleString('es-AR')}</td><td style="text-align:right;color:${col26};font-weight:700">${b.qty.toLocaleString('es-AR')}</td>
-        <td style="text-align:right;color:#8a8880">${fmt(aj)}</td><td style="text-align:right;font-weight:700;color:${col26}">${fmt(b.tv)}</td>
-        <td style="text-align:right;color:${gcol(b.tv,aj)};font-weight:700">${gv(b.tv,aj)}</td>
+        <td style="text-align:right;background:${CQ}">${a.qty.toLocaleString('es-AR')}</td><td style="text-align:right;background:${CQ};color:#2a6b53;font-weight:700">${b.qty.toLocaleString('es-AR')}</td>
+        <td style="text-align:right;background:${CF};color:#8a8880">${fmt(aj)}</td><td style="text-align:right;background:${CF};font-weight:700;color:#8a5a2b">${fmt(b.tv)}</td>
+        <td style="text-align:right;background:${CF};color:${gcol(b.tv,aj)};font-weight:700">${gv(b.tv,aj)}</td>
+        <td style="text-align:right;background:${CT};color:#5a6472">${fmt(tk25)}</td><td style="text-align:right;background:${CT};color:#274d80;font-weight:700">${fmt(tk26)}</td>
+        <td style="text-align:right;background:${CT};color:${tvc};font-weight:700">${(tvv>=0?'+':'')+tvv.toFixed(1)}%</td>
         <td style="text-align:right;color:var(--txt2)">${sh.toFixed(1)}%</td></tr>`;}).join('');
     return `<div class="prov-table-wrap" style="--ch:${chTint(col,0.85)};--chtx:${col};background:${chTint(col,0.96)};border:1px solid ${chTint(col,0.35)}!important">
       <div class="prov-title" style="background:${chTint(col,0.80)};color:${col};padding:9px 14px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:18px">
         <span><i class="ti ti-${total?'sum':'building-store'}" style="font-size:16px;margin-right:7px;vertical-align:-2px"></i>${label}${anote?`<span style="font-weight:700;font-size:14px;color:#c0392b">${anote}</span>`:''}</span></div>
       <table class="prov-table rpcomp">
         <thead>
-          <tr><th rowspan="2">Rubro</th><th rowspan="2">Proveedor</th><th colspan="2" style="text-align:center;background:#4472c4">Cantidad</th><th colspan="3" style="text-align:center;background:#2c2c2a">Facturación s/IVA</th><th rowspan="2" style="text-align:right">% '26</th></tr>
-          <tr><th style="text-align:right;color:#8a8880!important">2025</th><th style="text-align:right">2026</th><th style="text-align:right;background:#8a8577;color:#8a8880!important">2025 Aj.IPC</th><th style="text-align:right">2026</th><th style="text-align:right">Var. real</th></tr>
+          <tr><th rowspan="2">Rubro</th><th rowspan="2">Proveedor</th><th colspan="2" style="text-align:center;background:#e2efe9!important;color:#1f6b52!important">Cantidad</th><th colspan="3" style="text-align:center;background:#f5e9da!important;color:#8a5a2b!important">Facturación s/IVA</th><th colspan="3" style="text-align:center;background:#e3e9f2!important;color:#274d80!important">Ticket promedio</th><th rowspan="2" style="text-align:right">% '26</th></tr>
+          <tr><th style="text-align:right;background:#eef6f2!important;color:#3f8266!important">2025</th><th style="text-align:right;background:#eef6f2!important;color:#3f8266!important">2026</th><th style="text-align:right;background:#faf1e6!important;color:#a5764a!important">2025 Aj.IPC</th><th style="text-align:right;background:#faf1e6!important;color:#a5764a!important">2026</th><th style="text-align:right;background:#faf1e6!important;color:#a5764a!important">Var. real</th><th style="text-align:right;background:#eef2f9!important;color:#3f5f8f!important">2025</th><th style="text-align:right;background:#eef2f9!important;color:#3f5f8f!important">2026</th><th style="text-align:right;background:#eef2f9!important;color:#3f5f8f!important">Var.</th></tr>
         </thead>
         <tbody>${body}
-          <tr class="cobr-total-row" style="font-size:14px"><td colspan="2">Total ${label}</td><td style="text-align:right;color:#8a8880!important">${tq25.toLocaleString('es-AR')}</td><td style="text-align:right;color:${col26}!important">${tq26.toLocaleString('es-AR')}</td><td style="text-align:right;color:#8a8880!important">${fmt(taj)}</td><td style="text-align:right;color:${col26}!important">${fmt(t26)}</td><td style="text-align:right">${gv(t26,taj)}</td><td style="text-align:right">100%</td></tr>
+          <tr class="cobr-total-row" style="font-size:14px"><td colspan="2">Total ${label}</td><td style="text-align:right;background:#dcefe6!important;color:#1f6b52!important">${tq25.toLocaleString('es-AR')}</td><td style="text-align:right;background:#dcefe6!important;color:#1f6b52!important">${tq26.toLocaleString('es-AR')}</td><td style="text-align:right;background:#f6e8d7!important;color:#8a5a2b!important">${fmt(taj)}</td><td style="text-align:right;background:#f6e8d7!important;color:#8a5a2b!important">${fmt(t26)}</td><td style="text-align:right;background:#f6e8d7!important;color:${gcol(t26,taj)}!important">${gv(t26,taj)}</td><td style="text-align:right;background:#e3ebf6!important;color:#274d80!important">${fmt(tk25T)}</td><td style="text-align:right;background:#e3ebf6!important;color:#274d80!important">${fmt(tk26T)}</td><td style="text-align:right;background:#e3ebf6!important;color:#274d80!important">${(avgTV>=0?'+':'')+avgTV.toFixed(1)}%</td><td style="text-align:right">100%</td></tr>
         </tbody></table></div>`;
   }
   // Cuadro compacto por canal (2 por fila). "TODOS LOS CANALES" queda full-width con renderBlock.
@@ -2370,6 +2376,8 @@ function renderRPCompare(){
     +'#secRPComp .rpc2-rub{font-weight:700;color:var(--txt);line-height:1.15}'
     +'#secRPComp .rpc2-prov{font-size:9px;color:var(--txt2);line-height:1.1}'
     +'#secRPComp .rpc2-tbl tr.rpc2-tot td{border-top:2px solid rgba(0,0,0,.18);background:rgba(0,0,0,.03);font-size:10.5px}'
+    +'#rpCompWrap .rp-grid .rpcomp{font-size:11px}'
+    +'#rpCompWrap .rp-grid .rpcomp th,#rpCompWrap .rp-grid .rpcomp td{padding:5px 7px!important}'
     +'</style>';
   let totalHtml=renderBlock('TODOS LOS CANALES',compute(null),true,null);
   let chHtml=CANALES.map(([ck,label])=>renderBlockCompact(label,compute(ck),ck)).filter(Boolean).join('');
