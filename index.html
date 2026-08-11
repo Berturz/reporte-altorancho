@@ -3607,6 +3607,7 @@ function renderClientes(){
   var t3=g3.map(function(x){var c=tc(x.tipo);return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 8px;font-weight:600">'+x.cli+'</td><td style="text-align:left;padding:5px 8px"><span style="background:'+c+'18;color:'+c+';font-weight:700;border-radius:6px;padding:1px 8px;font-size:10.5px">'+x.tipo+'</span></td><td style="text-align:left;padding:5px 8px">'+cliVendChip(x.vend)+'</td><td style="text-align:right;padding:5px 8px;color:#274d80;font-weight:700;white-space:nowrap">'+fml(x.f26)+'</td><td style="text-align:right;padding:5px 8px;color:var(--txt2)">'+(gt?(x.f26/gt*100).toFixed(1):'0')+'%</td></tr>';}).join('');
   var HDR='background:#3d74ae;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px';
   wrap.innerHTML=''
+   +'<style>#cliWrap thead th{position:sticky;top:0;z-index:2;background:#eef2f6}#cliWrap thead tr{position:static}</style>'
    +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-user-search"></i>Análisis de clientes <span class="sec-sub">· Mayorista · '+perLbl+' · a mes cerrado</span></div>'
    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:.3rem 0 .7rem"><div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">'+cards+'</div>'
      +'<span style="font-size:12px;font-weight:600;color:var(--txt2)">Mes: <select onchange="setCliMes(this.value)" style="font-size:12px;font-weight:700;border:1px solid var(--brd);border-radius:7px;padding:4px 9px;background:var(--bg);color:var(--txt)">'+opts+'</select></span></div>'
