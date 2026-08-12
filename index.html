@@ -3378,9 +3378,17 @@ function vendColor(name){ if(!name) return '#7a8aa0'; var k=String(name).trim().
 function cliVendChip(v){ var c=vendColor(v); var s=vendShort(v); var full=String(v||'').replace(/"/g,'&quot;'); return '<span title="'+full+'" style="display:inline-flex;align-items:center;gap:5px;max-width:100%;overflow:hidden;background:'+c+'14;color:'+c+';font-weight:700;border-radius:6px;padding:1px 7px;font-size:10.5px;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:'+c+';flex:0 0 auto"></span><span style="overflow:hidden;text-overflow:ellipsis">'+s+'</span></span>'; }
 // Claves de match de un nombre de cliente: texto completo + parte antes de " - [" + contenido de "[...]".
 // Permite cruzar facturación ↔ etiquetas aunque el nombre de visualización difiera (ej. "CASA BROTA - [CHAVANNE LUCRECIA]" vs "CHAVANNE LUCRECIA - [CHAVANNE LUCRECIA]").
-function cliKeys(name){ var s=String(name||'').replace(/\s+/g,' ').trim().toUpperCase(); if(!s) return []; var ks=[s];
-  var m=s.match(/^(.*?)\s*-\s*\[(.*?)\]\s*$/); if(m){ if(m[1].trim())ks.push(m[1].trim()); if(m[2].trim())ks.push(m[2].trim()); }
-  var br=s.match(/\[([^\]]+)\]/); if(br && br[1].trim())ks.push(br[1].trim());
+function cliKeys(name){ var s=String(name||'').replace(/\s+/g,' ').trim().toUpperCase(); if(!s) return [];
+  var base=[s];
+  var m=s.match(/^(.*?)\s*-\s*\[(.*?)\]\s*$/); if(m){ if(m[1].trim())base.push(m[1].trim()); if(m[2].trim())base.push(m[2].trim()); }
+  var br=s.match(/\[([^\]]+)\]/); if(br && br[1].trim())base.push(br[1].trim());
+  // Por cada nombre base agrego variantes normalizadas para cruzar aunque difieran mayúsculas/puntuación/espacios
+  // ej. "PERIPLO S.R.L" (etiquetas) ↔ "Periplo SRL" (factura); "FARO SUR S. R. L." ↔ "FARO SUR S. R. L"
+  var ks=[];
+  base.forEach(function(b){ ks.push(b);
+    var nd=b.replace(/[.,]/g,'').replace(/\s+/g,' ').trim(); if(nd&&nd!==b) ks.push(nd);          // sin puntos/comas
+    var sq=b.replace(/[^0-9A-ZÁÉÍÓÚÑÜ]/g,''); if(sq&&sq.length>=3) ks.push('~'+sq);                // solo alfanumérico (ignora espacios/puntos)
+  });
   var seen={}; return ks.filter(function(k){ if(seen[k])return false; seen[k]=1; return true; }); }
 function cliTipo(name){ if(typeof CLIENTE_TIPO==='undefined'||!CLIENTE_TIPO) return 'N/A'; var ks=cliKeys(name); for(var i=0;i<ks.length;i++){ if(CLIENTE_TIPO[ks[i]]) return CLIENTE_TIPO[ks[i]]; } return 'N/A'; }
 const VEND_COLORS = ['#A8C3DC','#7FA8CC','#5689BD','#3D74AE','#4472c4'];
