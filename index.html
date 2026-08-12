@@ -5626,7 +5626,7 @@ const SALIDAS_CAT_ROUTE={
 const SALIDAS_ORDER=['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','PagoTarjeta'];
 // Desglose por moneda de "Pago tarjeta" (la hoja no trae el detalle $/USD).
 // VALORES MANUALES: actualizar cuando cambie el período.
-const SALIDAS_PAGOTARJETA_SPLIT = { pesos: 7773595.54, usd: 3814.74 };
+const SALIDAS_PAGOTARJETA_SPLIT = { pesos: 3185000, usd: 2500 };
 function renderSalidasCards(agg){
   const entries=SALIDAS_ORDER.filter(k=>agg.cats[k]>0);
   if(!salidasSelCat || !entries.includes(salidasSelCat)) salidasSelCat=entries[0]||null;
