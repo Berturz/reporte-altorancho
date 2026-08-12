@@ -3532,7 +3532,7 @@ function renderVend(){
 }
 
 // ══════════ ANÁLISIS DE CLIENTES (Mayorista) ══════════
-var cliCardSel='todos', cliMesSel='YTD', cliDataCur=[], cliTipoSel='todos', cliSortK=null, cliSortDir=-1;
+var cliCardSel='todos', cliMesSel='YTD', cliDataCur=[], cliTipoSel='todos', cliSortK='f26', cliSortDir=-1;
 var CLI_MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 function cliClosedMonths(){
   var now=new Date(); var curMM=(now.getFullYear()===2026)?(now.getMonth()+1):13;
@@ -3548,7 +3548,7 @@ function cliAgg(monthsSel){
     arr.push({cli:cl, f25:o.f25, f26:o.f26, ped25:o.ped25, ped26:o.ped26, vend:o.vend||'—', rub:o.rub, rub25:o.rub25, est:est, tipo:cliTipo(cl), comps26:Object.keys(o.comps26), comps25:Object.keys(o.comps25)}); }
   return arr;
 }
-function setCliCard(g){ cliCardSel=g; cliSortK=null; cliSortDir=-1; renderClientes(); }
+function setCliCard(g){ cliCardSel=g; cliSortK=(g==='fue'?'f25':'f26'); cliSortDir=-1; renderClientes(); }
 function setCliMes(v){ cliMesSel=v; renderClientes(); }
 function setCliTipo(t){ cliTipoSel=(cliTipoSel===t?'todos':t); renderClientes(); }
 function setCliSort(k){ if(cliSortK===k){ cliSortDir=-cliSortDir; } else { cliSortK=k; cliSortDir=-1; } renderClientes(); }
@@ -3599,7 +3599,7 @@ function renderClientes(){
   var pedOf = function(x){ return use25 ? x.ped25 : x.ped26; };
   var facYr = use25 ? '2025' : '2026';
   // orden de la tabla 1: por defecto facturación de referencia (desc); flechas en Ticket/F.25/F.26
-  var sortVal=function(x){ if(cliSortK==='f25')return x.f25; if(cliSortK==='f26')return x.f26; if(cliSortK==='ticket')return x.ped26>0?x.f26/x.ped26:0; return facOf(x); };
+  var sortVal=function(x){ if(cliSortK==='f25')return x.f25; if(cliSortK==='f26')return x.f26; if(cliSortK==='ticket')return pedOf(x)>0?facOf(x)/pedOf(x):0; return facOf(x); };
   var arrOf=function(k){ return cliSortK===k?(cliSortDir<0?' <i class="ti ti-caret-down-filled" style="font-size:9px;vertical-align:0"></i>':' <i class="ti ti-caret-up-filled" style="font-size:9px;vertical-align:0"></i>'):' <i class="ti ti-arrows-sort" style="font-size:9px;opacity:.35;vertical-align:0"></i>'; };
   var g26 = grp.filter(function(x){return facOf(x)>0;}).sort(function(a,b){return facOf(b)-facOf(a);});
   var gt = g26.reduce(function(s,x){return s+facOf(x);},0);
