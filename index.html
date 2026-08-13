@@ -3388,6 +3388,8 @@ function cliKeys(name){ var s=String(name||'').replace(/\s+/g,' ').trim().toUppe
   base.forEach(function(b){ ks.push(b);
     var nd=b.replace(/[.,]/g,'').replace(/\s+/g,' ').trim(); if(nd&&nd!==b) ks.push(nd);          // sin puntos/comas
     var sq=b.replace(/[^0-9A-ZÁÉÍÓÚÑÜ]/g,''); if(sq&&sq.length>=3) ks.push('~'+sq);                // solo alfanumérico (ignora espacios/puntos)
+    var words=b.replace(/[^0-9A-ZÁÉÍÓÚÑÜ ]/g,' ').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+    if(words.length>=2&&words.length<=4){ var ts=words.slice().sort().join(''); if(ts.length>=6) ks.push('@'+ts); } // ignora el orden de palabras (POZZOLO MARIANA <-> Mariana Pozzolo)
   });
   var seen={}; return ks.filter(function(k){ if(seen[k])return false; seen[k]=1; return true; }); }
 function cliTipo(name){ if(typeof CLIENTE_TIPO==='undefined'||!CLIENTE_TIPO) return 'N/A'; var ks=cliKeys(name); for(var i=0;i<ks.length;i++){ if(CLIENTE_TIPO[ks[i]]) return CLIENTE_TIPO[ks[i]]; } return 'N/A'; }
