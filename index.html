@@ -4559,6 +4559,7 @@ var _impoChart = null;
 var STK_MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 var IMP_CATS = ['ILUMINACION IMPORTADA','ILUMINACION INALAMBRICA','SILLAS IMPORTADAS']; // solo iluminación y muebles (sillas/banquetas/poltronas); Deco/Navidad/Bazar no se analiza
 var IMP_LBL = {'ILUMINACION IMPORTADA':'Iluminación Importada','ILUMINACION INALAMBRICA':'Iluminación Inalámbrica','SILLAS IMPORTADAS':'Sillas Importadas','DECO/NAVIDAD/BAZAR IMPORTADO':'Deco/Navidad/Bazar Imp.'};
+var IMP_COL = {'ILUMINACION IMPORTADA':'#c98500','ILUMINACION INALAMBRICA':'#7f77dd','SILLAS IMPORTADAS':'#d85a30','DECO/NAVIDAD/BAZAR IMPORTADO':'#3f8e68'};
 var STK_TABS = [
   {k:'impo',t:'Análisis importado',s:'Ventas vs stock (quiebres)',ic:'ti-plane-inflight',c:'#2a78d6'},
   {k:'costo',t:'Stock valorizado al costo',s:'Valor de inventario a costo',ic:'ti-cash',c:'#4B5CC4'},
@@ -4625,9 +4626,9 @@ function renderImpoAnalisis(){ var el=document.getElementById('stkImpoPanel'); i
   if(!cats.length){ el.innerHTML='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-plane-inflight" style="font-size:26px;color:#2a78d6"></i><div style="margin-top:8px">Subí <b>Reporte 2026/2025</b> (ventas) y el archivo <b>Impo 2025-2026</b> (llegadas) para ver el análisis.</div></div>'; return; }
   if(!impCatSel || cats.indexOf(impCatSel)<0) impCatSel=cats[0];
   var fq=function(v){return (v||0).toLocaleString('es-AR');};
-  var cardsH=cats.map(function(cat){ var t25=0,t26=0; months.forEach(function(mm){ t25+=stkVentasQty(cat,2025,mm); t26+=stkVentasQty(cat,2026,mm); });
-    var on=impCatSel===cat; var vv=t25>0?((t26/t25-1)*100):null; var vtxt=vv===null?(t26>0?'Nuevo':'—'):((vv>=0?'+':'')+vv.toFixed(1)+'%'); var vcol=vv===null?'#185fa5':(vv<0?'#a32d2d':'#0ca30c');
-    return '<div onclick="setImpCat(\''+cat.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border:1.5px solid '+(on?'#2a78d6':'var(--brd)')+';border-radius:10px;padding:7px 10px;background:'+(on?'#2a78d614':'var(--bg)')+';box-shadow:'+(on?'0 0 0 2px #2a78d640':'none')+'"><div style="font-size:11px;font-weight:700;color:'+(on?'#185fa5':'var(--txt)')+';line-height:1.2">'+IMP_LBL[cat]+(on?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+'</div><div style="font-size:13.5px;font-weight:800;margin-top:2px;color:'+vcol+'">'+vtxt+'</div><div style="font-size:9.5px;color:var(--txt2)">'+fq(t25)+' → '+fq(t26)+' u.</div></div>';
+  var cardsH=cats.map(function(cat,idx){ var t25=0,t26=0; months.forEach(function(mm){ t25+=stkVentasQty(cat,2025,mm); t26+=stkVentasQty(cat,2026,mm); });
+    var on=impCatSel===cat; var vv=t25>0?((t26/t25-1)*100):null; var vtxt=vv===null?(t26>0?'Nuevo':'—'):((vv>=0?'+':'')+vv.toFixed(1)+'%'); var vcol=vv===null?'#185fa5':(vv<0?'#a32d2d':'#0ca30c'); var cc=IMP_COL[cat]||'#2a78d6';
+    return '<div onclick="setImpCat(\''+cat.replace(/'/g,"\\'")+'\')" title="'+IMP_LBL[cat]+'" style="cursor:pointer;flex:1;min-width:0;padding:6px 12px;border-right:'+(idx<cats.length-1?'1px solid var(--brd)':'none')+';border-bottom:3px solid '+(on?cc:'transparent')+';background:'+(on?cc+'1f':'transparent')+'"><div style="font-size:11px;font-weight:700;color:'+cc+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+IMP_LBL[cat]+(on?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+'</div><div style="font-size:12.5px;font-weight:800;color:'+vcol+';white-space:nowrap">'+vtxt+' <span style="font-size:9.5px;color:var(--txt2);font-weight:400">'+fq(t25)+'→'+fq(t26)+' u.</span></div></div>';
   }).join('');
   var cat=impCatSel;
   var v25=months.map(function(mm){return stkVentasQty(cat,2025,mm);});
@@ -4660,7 +4661,7 @@ function renderImpoAnalisis(){ var el=document.getElementById('stkImpoPanel'); i
   var diagHtml=months.map(function(mm,i){var e=diag[i];return '<div style="text-align:center;border-radius:7px;background:'+e[1]+';padding:5px 2px"><div style="font-size:10px;color:var(--txt2)">'+STK_MN[+mm-1]+'</div><div style="font-size:9.5px;font-weight:700;color:'+e[0]+';line-height:1.2"><i class="ti '+e[3]+'" style="font-size:12px"></i><br>'+e[2]+'</div></div>';}).join('');
   var resumen='<b>'+IMP_LBL[cat]+'</b> — '+(q>0?('<span style="color:#a32d2d;font-weight:700">'+q+' mes(es) con quiebre de stock probable</span>: la caída de ventas coincide con meses sin reposición de importación.'):(t25s===0?'producto nuevo en 2026, el stock acompañó el arranque.':'<span style="color:#1a7a3a;font-weight:700">sin quiebres detectados</span>: el stock acompañó la demanda.'));
   el.innerHTML='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px">'
-   +'<div style="display:grid;grid-template-columns:repeat('+cats.length+',minmax(0,1fr));gap:8px;margin-bottom:12px">'+cardsH+'</div>'
+   +'<div style="display:flex;border:1px solid var(--brd);border-radius:10px;overflow:hidden;margin-bottom:14px">'+cardsH+'</div>'
    +'<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;font-size:11.5px;color:var(--txt2)"><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#B4B2A9"></span>Ventas u. 2025</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#2a78d6"></span>Ventas u. 2026</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#1baf7a"></span>Llegadas 2026</span></div>'
    +'<div style="position:relative;width:100%;height:250px"><canvas id="cImpoAnalisis" role="img" aria-label="Ventas mensuales 2025 y 2026 y llegadas de stock"></canvas></div>'
    +'<div style="display:grid;grid-template-columns:repeat('+months.length+',minmax(0,1fr));gap:4px;margin:10px 0 6px">'+diagHtml+'</div>'
