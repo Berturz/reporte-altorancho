@@ -4632,31 +4632,38 @@ function renderImpoAnalisis(){ var el=document.getElementById('stkImpoPanel'); i
   var cat=impCatSel;
   var v25=months.map(function(mm){return stkVentasQty(cat,2025,mm);});
   var v26=months.map(function(mm){return stkVentasQty(cat,2026,mm);});
-  var lg=months.map(function(mm){return stkLlegQty(cat,2026,mm)+stkLlegQty(cat,2025,mm);});
+  var l25=months.map(function(mm){return stkLlegQty(cat,2025,mm);});
+  var l26=months.map(function(mm){return stkLlegQty(cat,2026,mm);});
   var diag=[], acum=0;
-  for(var i=0;i<months.length;i++){ acum+=lg[i]; var caida=v25[i]>0 && v26[i]<v25[i]*0.9; var sin=lg[i]===0; var e;
+  for(var i=0;i<months.length;i++){ acum+=l26[i]; var caida=v25[i]>0 && v26[i]<v25[i]*0.9; var sin=l26[i]===0; var e;
     if(caida&&sin&&acum<(v25[i]||v26[i])*1.2) e=['#d03b3b','#fce8e8','Quiebre','ti-alert-triangle'];
     else if(caida) e=['#c98500','#fbf1dd','Cayó c/stock','ti-info-circle'];
     else e=['#1a7a3a','#e7f4e7','OK','ti-check'];
     acum-=v26[i]; if(acum<0)acum=0; diag.push(e); }
   var q=diag.filter(function(e){return e[2]==='Quiebre';}).length;
-  var t25s=v25.reduce(function(a,b){return a+b;},0), t26s=v26.reduce(function(a,b){return a+b;},0), totL=lg.reduce(function(a,b){return a+b;},0);
+  var t25s=v25.reduce(function(a,b){return a+b;},0), t26s=v26.reduce(function(a,b){return a+b;},0), tl25=l25.reduce(function(a,b){return a+b;},0), tl26=l26.reduce(function(a,b){return a+b;},0);
   var mfmt=function(v){return (v||0).toLocaleString('es-AR');};
-  var bodyRows=months.map(function(mm,i){ var e=diag[i]; var vv=v25[i]>0?((v26[i]/v25[i]-1)*100):null; var vc=vv===null?'#8a8880':(vv<0?'#a32d2d':'#1a7a3a'); var noStk=lg[i]===0;
+  var lcell=function(v){var no=v===0;return '<td style="text-align:right;padding:5px 8px;font-weight:600;background:'+(no?'#fceceb':'#eef7f1')+';color:'+(no?'#c0392b':'#1a7a3a')+'">'+(no?'—':mfmt(v))+'</td>';};
+  var bodyRows=months.map(function(mm,i){ var vv=v25[i]>0?((v26[i]/v25[i]-1)*100):null; var vc=vv===null?'#8a8880':(vv<0?'#a32d2d':'#1a7a3a');
     return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 8px;font-weight:600">'+STK_MN[+mm-1]+'</td>'
      +'<td style="text-align:right;padding:5px 8px;color:#8a8880">'+mfmt(v25[i])+'</td>'
      +'<td style="text-align:right;padding:5px 8px;font-weight:600;color:#274d80">'+mfmt(v26[i])+'</td>'
      +'<td style="text-align:right;padding:5px 8px;color:'+vc+'">'+(vv===null?(v26[i]>0?'Nuevo':'—'):(vv>=0?'+':'')+vv.toFixed(0)+'%')+'</td>'
-     +'<td style="text-align:right;padding:5px 8px;font-weight:600;background:'+(noStk?'#fceceb':'#eef7f1')+';color:'+(noStk?'#c0392b':'#1a7a3a')+'">'+(noStk?'— sin llegada':mfmt(lg[i]))+'</td>'
-     +'<td style="text-align:center;padding:5px 8px"><span style="background:'+e[1]+';color:'+e[0]+';font-weight:700;border-radius:6px;padding:1px 8px;font-size:10.5px;white-space:nowrap"><i class="ti '+e[3]+'" style="font-size:11px;vertical-align:-1px"></i> '+e[2]+'</span></td></tr>';
+     +lcell(l25[i])+lcell(l26[i])+'</tr>';
   }).join('');
   var totVar=t25s>0?((t26s/t25s-1)*100).toFixed(0)+'%':(t26s>0?'Nuevo':'—');
-  var tblHtml='<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 8px">Mes</th><th style="text-align:right;padding:6px 8px">Ventas \'25</th><th style="text-align:right;padding:6px 8px">Ventas \'26</th><th style="text-align:right;padding:6px 8px">Var.</th><th style="text-align:right;padding:6px 8px;background:#e2f3ec;color:#1a7a3a">Llegadas</th><th style="text-align:center;padding:6px 8px">Estado</th></tr></thead><tbody>'+bodyRows+'</tbody><tfoot><tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:7px 8px">Total</td><td style="text-align:right;padding:7px 8px;color:#8a8880">'+mfmt(t25s)+'</td><td style="text-align:right;padding:7px 8px;color:#274d80">'+mfmt(t26s)+'</td><td style="text-align:right;padding:7px 8px;color:'+(t26s<t25s?'#a32d2d':'#1a7a3a')+'">'+totVar+'</td><td style="text-align:right;padding:7px 8px;color:#1a7a3a">'+mfmt(totL)+'</td><td style="text-align:center;padding:7px 8px;font-size:10.5px;color:'+(q>0?'#a32d2d':'#1a7a3a')+'">'+(q>0?q+' quiebre'+(q>1?'s':''):'sin quiebres')+'</td></tr></tfoot></table>';
+  var tblHtml='<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px">'
+    +'<thead><tr><th rowspan="2" style="text-align:left;padding:5px 8px;background:#eef2f6;color:#274d80;vertical-align:bottom">Mes</th><th colspan="3" style="text-align:center;padding:4px 8px;background:#e3e9f2;color:#274d80">Ventas (u.)</th><th colspan="2" style="text-align:center;padding:4px 8px;background:#e2f3ec;color:#1a7a3a">Llegadas (u.)</th></tr>'
+    +'<tr style="font-size:10.5px"><th style="text-align:right;padding:4px 8px;background:#eef2f9;color:#3f5f8f">2025</th><th style="text-align:right;padding:4px 8px;background:#eef2f9;color:#3f5f8f">2026</th><th style="text-align:right;padding:4px 8px;background:#eef2f9;color:#3f5f8f">Var.</th><th style="text-align:right;padding:4px 8px;background:#eaf6ef;color:#1a7a3a">2025</th><th style="text-align:right;padding:4px 8px;background:#eaf6ef;color:#1a7a3a">2026</th></tr></thead>'
+    +'<tbody>'+bodyRows+'</tbody>'
+    +'<tfoot><tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:7px 8px">Total</td><td style="text-align:right;padding:7px 8px;color:#8a8880">'+mfmt(t25s)+'</td><td style="text-align:right;padding:7px 8px;color:#274d80">'+mfmt(t26s)+'</td><td style="text-align:right;padding:7px 8px;color:'+(t26s<t25s?'#a32d2d':'#1a7a3a')+'">'+totVar+'</td><td style="text-align:right;padding:7px 8px;color:#1a7a3a">'+mfmt(tl25)+'</td><td style="text-align:right;padding:7px 8px;color:#1a7a3a">'+mfmt(tl26)+'</td></tr></tfoot></table>';
+  var diagHtml=months.map(function(mm,i){var e=diag[i];return '<div style="text-align:center;border-radius:7px;background:'+e[1]+';padding:5px 2px"><div style="font-size:10px;color:var(--txt2)">'+STK_MN[+mm-1]+'</div><div style="font-size:9.5px;font-weight:700;color:'+e[0]+';line-height:1.2"><i class="ti '+e[3]+'" style="font-size:12px"></i><br>'+e[2]+'</div></div>';}).join('');
   var resumen='<b>'+IMP_LBL[cat]+'</b> — '+(q>0?('<span style="color:#a32d2d;font-weight:700">'+q+' mes(es) con quiebre de stock probable</span>: la caída de ventas coincide con meses sin reposición de importación.'):(t25s===0?'producto nuevo en 2026, el stock acompañó el arranque.':'<span style="color:#1a7a3a;font-weight:700">sin quiebres detectados</span>: el stock acompañó la demanda.'));
   el.innerHTML='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px">'
    +'<div style="display:grid;grid-template-columns:repeat('+cats.length+',minmax(0,1fr));gap:8px;margin-bottom:12px">'+cardsH+'</div>'
-   +'<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;font-size:11.5px;color:var(--txt2)"><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#B4B2A9"></span>Ventas u. 2025</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#2a78d6"></span>Ventas u. 2026</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#1baf7a"></span>Llegadas de stock</span></div>'
+   +'<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;font-size:11.5px;color:var(--txt2)"><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#B4B2A9"></span>Ventas u. 2025</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#2a78d6"></span>Ventas u. 2026</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:2px;background:#1baf7a"></span>Llegadas 2026</span></div>'
    +'<div style="position:relative;width:100%;height:250px"><canvas id="cImpoAnalisis" role="img" aria-label="Ventas mensuales 2025 y 2026 y llegadas de stock"></canvas></div>'
+   +'<div style="display:grid;grid-template-columns:repeat('+months.length+',minmax(0,1fr));gap:4px;margin:10px 0 6px">'+diagHtml+'</div>'
    +tblHtml
    +'<div style="margin-top:10px;font-size:12px;background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:9px 12px">'+resumen+'</div>'
    +'</div>';
@@ -4665,7 +4672,7 @@ function renderImpoAnalisis(){ var el=document.getElementById('stkImpoPanel'); i
   try{ _impoChart=new Chart(document.getElementById('cImpoAnalisis'),{type:'bar',data:{labels:mlabels,datasets:[
     {label:'Ventas 2025',data:v25,backgroundColor:'#B4B2A9',borderRadius:3},
     {label:'Ventas 2026',data:v26,backgroundColor:'#2a78d6',borderRadius:3},
-    {label:'Llegadas',data:lg,backgroundColor:'#1baf7a',borderRadius:3}
+    {label:'Llegadas 2026',data:l26,backgroundColor:'#1baf7a',borderRadius:3}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(120,120,120,.12)'},title:{display:true,text:'unidades'}}}}}); }catch(e){}
 }
 try{ setStkTab('costo'); }catch(e){}
