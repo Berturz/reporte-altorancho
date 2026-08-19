@@ -3367,8 +3367,8 @@ var VEND_FIXED={'MATIAS CHIUKI':'#4472c4','LAURA VIVIANA SOLDANO':'#2a6b53','JOS
 var VEND_SHORT={'MATIAS CHIUKI':'Matías','LAURA VIVIANA SOLDANO':'Laura','JOSE LUIS PERSOGLIA':'José','JIMENA ALEJANDRA TOBARES':'Jimena','ATENCION DECORADORES Y ARQUITECTOS':'Decoradores'};
 function vendShort(name){ var k=String(name||'').trim().toUpperCase(); if(VEND_SHORT[k]) return VEND_SHORT[k]; var w=String(name||'').trim().split(/\s+/); return w[0]||'—'; }
 // Agrupación de tipos de cliente en tarjetas "macro" (el tipo real del Excel se mantiene en la tabla)
-var TIPO_GROUP_RAW={'universidad':'Instituciones','universidades':'Instituciones','escuela':'Instituciones','escuelas':'Instituciones','colegio':'Instituciones','colegios':'Instituciones','clinica':'Instituciones','clínica':'Instituciones','clinicas':'Instituciones','clínicas':'Instituciones','heladeria':'Restaurantes','heladería':'Restaurantes','cafe':'Restaurantes','café':'Restaurantes','restaurante':'Restaurantes','restaurantes':'Restaurantes'};
-var TIPO_GROUP_LABELS={'Instituciones':1,'Restaurantes':1};
+var TIPO_GROUP_RAW={'universidad':'Instituciones','universidades':'Instituciones','escuela':'Instituciones','escuelas':'Instituciones','colegio':'Instituciones','colegios':'Instituciones','clinica':'Instituciones','clínica':'Instituciones','clinicas':'Instituciones','clínicas':'Instituciones','heladeria':'Restaurantes','heladería':'Restaurantes','cafe':'Restaurantes','café':'Restaurantes','restaurante':'Restaurantes','restaurantes':'Restaurantes','constructora':'Constructora/Desarrolladora','constructoras':'Constructora/Desarrolladora','desarrolladora':'Constructora/Desarrolladora','desarrolladoras':'Constructora/Desarrolladora','desarrollador':'Constructora/Desarrolladora'};
+var TIPO_GROUP_LABELS={'Instituciones':1,'Restaurantes':1,'Constructora/Desarrolladora':1};
 function tipoGroup(t){ if(!t) return t; var k=String(t).trim().toLowerCase(); return TIPO_GROUP_RAW[k]||t; }
 // Vendedores MAYORISTAS: solo estos entran al análisis de clientes (el resto —ventas internas, etc.— se excluye)
 var VEND_MAYORISTA={'MATIAS CHIUKI':1,'LAURA VIVIANA SOLDANO':1,'JOSE LUIS PERSOGLIA':1,'JIMENA ALEJANDRA TOBARES':1,'ATENCION DECORADORES Y ARQUITECTOS':1};
@@ -3601,7 +3601,7 @@ function renderClientes(){
   var rc=function(r){return RUBC[r]||'#888';};
   var RABBR={'MUEBLES':'MUEB','ILUMINACION':'ILUM','DECO':'DECO','BAZAR':'BAZ','TEXTIL':'TEX','GIFTCARD':'GIFT','BAÑO':'BAÑO','LIBRERIA':'LIBR','NAVIDAD':'NAV','BOLSAS':'BOLS','BIENESTAR':'BIEN'};
   var rab=function(r){return RABBR[r]||String(r).slice(0,4);};
-  var TC={'Estudio':'#4472c4','Ambientaciones':'#5a9ca8','Café':'#c88a3c','Local Muebles':'#6c5fa6','Local Iluminación':'#3f8e68','Local Deco (Veladores Inalámbricos)':'#c0657f','Local Muebles e Iluminación':'#4a86b8','Desarrolladora':'#b5714a','Constructora':'#8e6e9d','Restaurante':'#3f8e68','Showroom':'#c0657f','Hotel':'#5a7a99','N/A':'#9aa0a8','Universidad':'#8e6e9d','Clínica':'#5a7a99','Heladería':'#7a8aa0','Instituciones':'#8e6e9d','Restaurantes':'#c05a3a'};
+  var TC={'Estudio':'#4472c4','Ambientaciones':'#5a9ca8','Café':'#c88a3c','Local Muebles':'#6c5fa6','Local Iluminación':'#3f8e68','Local Deco (Veladores Inalámbricos)':'#c0657f','Local Muebles e Iluminación':'#4a86b8','Desarrolladora':'#b5714a','Constructora':'#8e6e9d','Restaurante':'#3f8e68','Showroom':'#c0657f','Hotel':'#5a7a99','N/A':'#9aa0a8','Universidad':'#8e6e9d','Clínica':'#5a7a99','Heladería':'#7a8aa0','Instituciones':'#8e6e9d','Restaurantes':'#c05a3a','Constructora/Desarrolladora':'#b5714a'};
   var tc=function(t){return TC[t]||'#7a8aa0';};
   var G=[['todos','Todos','#5b6472'],['siempre','Desde siempre','#2a6b53'],['nuevo','Nuevos','#3d74ae'],['fue','Se fueron','#c0392b']];
   var BADGE={siempre:['#eaf3ec','#2a6b53','Desde siempre'],nuevo:['#eaf1fb','#3d74ae','Nuevo'],fue:['#fdecec','#c0392b','Se fue']};
