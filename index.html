@@ -5348,9 +5348,11 @@ function setImpoSel(k){ impoSel=k; renderIMPO(); }
 function impoIsLleg(r){ return (r.com||'').trim().toUpperCase().indexOf('LLEG')===0; }
 function impoComStyle(r){ var u=(r.com||'').trim().toUpperCase(); if(u.indexOf('LLEG')===0)return 'color:#0f7a34;font-weight:700'; if(u.indexOf('VIAJE')>=0)return 'color:#3C3489;font-weight:700'; if(u.indexOf('PRODUC')>=0)return 'color:#8a5a00;font-weight:700'; return u?'color:#2c2c2a;font-weight:700':''; }
 var IMPO_PEND_OTROS=[['trib','Tributos'],['fleteint','Flete int.'],['desp','Despach.'],['nac','Gastos Nac.'],['fleten','Flete nac.']];
-function impoFobPend(r){ return impoFill(r,'fob')==='y'; }
-function impoPendList(r){ var out=[]; if(impoFobPend(r)) out.push('FOB'); IMPO_PEND_OTROS.forEach(function(c){ if(!(r[c[0]]>0)) out.push(c[1]); }); return out; }
-function impoIsPend(r){ return impoFobPend(r) || IMPO_PEND_OTROS.some(function(c){return !(r[c[0]]>0);}); }
+// Regla: un concepto está PAGO sólo si su celda es VERDE. Cualquier otro estado (amarillo, violeta = importe no confirmado, o vacío) => pendiente.
+function impoConcPaid(r,key){ return impoFill(r,key)==='g'; }
+function impoFobPend(r){ return !impoConcPaid(r,'fob'); }
+function impoPendList(r){ var out=[]; if(!impoConcPaid(r,'fob')) out.push('FOB'); IMPO_PEND_OTROS.forEach(function(c){ if(!impoConcPaid(r,c[0])) out.push(c[1]); }); return out; }
+function impoIsPend(r){ return !impoConcPaid(r,'fob') || IMPO_PEND_OTROS.some(function(c){return !impoConcPaid(r,c[0]);}); }
 function impoArrKey(r){ var a=r.arribo; if(a instanceof Date) return a.getTime(); if(typeof a==='number') return a; if(typeof a==='string'){ var m=a.match(/(\d{1,2})\D(\d{1,2})\D(\d{2,4})/); if(m){var y=m[3].length===2?'20'+m[3]:m[3]; return new Date(+y,+m[2]-1,+m[1]).getTime();} } return Infinity; }
 function impoTblGeneral(){
   var USDh='background:#5a9ca8;color:#fff', ARSh='background:#c8ab6f;color:#2c2c2a';
@@ -5390,13 +5392,13 @@ function impoTblPend(){
   var rows=IMPO_D.filter(impoIsPend);
   if(!rows.length) return '<div class="prov-empty" style="padding:1rem">Sin pendientes de pago.</div>';
   var tf=0, ty=0;
-  var body=rows.map(function(r){ var pend=impoPendList(r); var ff=impoFill(r,'fob'); tf+=r.fob||0; if(ff==='y') ty+=r.fob||0;
-    var fobCell = r.fob>0 ? (ff==='g'?'<span class="pf" style="background:#00B050;color:#08301a;padding:1px 5px">'+fUSD(r.fob)+'</span>': ff==='y'?'<span class="pf" style="background:#FFC000;color:#5a3d00;padding:1px 5px">'+fUSD(r.fob)+'</span>': fUSD(r.fob)) : '';
+  var body=rows.map(function(r){ var pend=impoPendList(r); var ff=impoFill(r,'fob'); tf+=r.fob||0; if(ff!=='g') ty+=r.fob||0;
+    var fobCell = r.fob>0 ? (ff==='g'?'<span class="pf" style="background:#00B050;color:#08301a;padding:1px 5px">'+fUSD(r.fob)+'</span>': ff==='y'?'<span class="pf" style="background:#FFC000;color:#5a3d00;padding:1px 5px">'+fUSD(r.fob)+'</span>': ff==='v'?'<span class="pf" style="background:#E4DBF5;color:#5B3B8C;padding:1px 5px">'+fUSD(r.fob)+'</span>': fUSD(r.fob)) : '';
     return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="ctr">'+fDMY(r.arribo)+'</td><td class="num">'+fobCell+'</td><td style="text-align:left">'+pend.map(function(p){return '<span class="imchip">'+p+'</span>';}).join(' ')+'</td></tr>';
   }).join('');
   var totrow='<tr class="cobr-total-row"><td>TOTAL</td><td></td><td></td><td></td><td class="num">'+fUSD(tf)+'</td><td></td></tr>';
   var box='<div style="margin-top:.7rem;display:inline-flex;align-items:center;gap:10px;background:#FFF3CF;border:1px solid #F0D999;border-left:5px solid #FFC000;border-radius:10px;padding:9px 15px">'
-    +'<span style="font-size:11.5px;font-weight:700;color:#7a5600"><i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Total pendiente de pago · FOB en amarillo</span>'
+    +'<span style="font-size:11.5px;font-weight:700;color:#7a5600"><i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Total pendiente de pago · FOB no pagado (amarillo/violeta)</span>'
     +'<span style="font-size:19px;font-weight:800;color:#7a5600">'+fUSD(ty)+'</span></div>';
   return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>Arribo</th><th style="text-align:right">FOB (USD)</th><th style="text-align:left">Conceptos pendientes</th></tr></thead><tbody>'+body+totrow+'</tbody></table>'+box;
 }
@@ -5408,7 +5410,7 @@ function renderIMPO(){
   var CARDS=[
     {k:'gen',t:'Detalle general',ic:'ti-table',v:IMPO_D.length+' embarques',s:'cuadro completo',col:'#5a9ca8'},
     {k:'nol',t:'Aún no llegó',ic:'ti-ship',v:nNol+' embarques',s:'ordenado por arribo',col:'#3C3489'},
-    {k:'pen',t:'Pendientes de pago',ic:'ti-alert-triangle',v:nPen+' embarques',s:'FOB amarillo + conceptos vacíos',col:'#BA7517'}
+    {k:'pen',t:'Pendientes de pago',ic:'ti-alert-triangle',v:nPen+' embarques',s:'todo lo que no está en verde',col:'#BA7517'}
   ];
   if(cardsEl){ cardsEl.innerHTML=CARDS.map(function(c){var on=c.k===impoSel;
     return '<div class="impo-card'+(on?' act':'')+'" onclick="setImpoSel(\''+c.k+'\')" style="border-color:'+c.col+';border-left:5px solid '+c.col+';'+(on?'background:'+c.col+'14':'')+'">'
