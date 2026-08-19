@@ -1899,7 +1899,7 @@ function makeBarChart(canvasId,entries,colors){
   const rawData=entries.map(([,v])=>v);
   charts[canvasId]=new Chart(document.getElementById(canvasId).getContext('2d'),{
     type:'bar',
-    data:{labels:entries.map(([k])=>k.replace('Mercado Pago ','MP ').replace('Pagonube','PN')),
+    data:{labels:entries.map(([k])=>k.replace('Mercado Pago ','MP ').replace('Pagonube','PN TRF')),
           datasets:[{data:pctData,rawData,backgroundColor:entries.map(([k])=>colors[k]||'#888'),borderRadius:3,barThickness:18}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:42}},
       plugins:{legend:{display:false},tooltip:{callbacks:{label(c){const raw=c.dataset.rawData[c.dataIndex];return ` ${c.raw.toFixed(1)}%  (${fmt(raw)})`;}}}},
@@ -1910,7 +1910,7 @@ function renderFinCard(cid,pct,bkItems,mdpEntries,colorMap,pLabel,badgeClass,tit
   const bh=Math.max(160,mdpEntries.length*30+55);
   const totalMdp=mdpEntries.reduce((s,[,v])=>s+v,0);
   const bkHTML=bkItems.map(([l,v,p])=>`<div class="fb"><div class="fbl">${l}</div><div class="fbv">${fmt(v)}</div><div class="fbp">${fmtP(p)} de lista</div></div>`).join('');
-  const legHTML=mdpEntries.slice(0,6).map(([k,v])=>`<span class="li"><span class="ld" style="background:${colorMap[k]||'#888'}"></span>${k.replace('Mercado Pago ','MP ').replace('Pagonube','PN')} ${totalMdp>0?(v/totalMdp*100).toFixed(1)+'%':'—'}</span>`).join('');
+  const legHTML=mdpEntries.slice(0,6).map(([k,v])=>`<span class="li"><span class="ld" style="background:${colorMap[k]||'#888'}"></span>${k.replace('Mercado Pago ','MP ').replace('Pagonube','PN TRF')} ${totalMdp>0?(v/totalMdp*100).toFixed(1)+'%':'—'}</span>`).join('');
   document.getElementById(cid).innerHTML=`
     <div class="fin-chdr">
       <div class="fin-title">${titulo}</div>
@@ -1933,7 +1933,7 @@ function makeVBarChart(canvasId, entries, base){
   const pctData=entries.map(([,v])=>total>0?+(v/total*100).toFixed(2):0);
   const raw=entries.map(([,v])=>v);
   // Ajuste dinámico según cantidad de medios (letras grandes, en negro)
-  const raw0=entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN'));
+  const raw0=entries.map(([k])=>k.replace('Mercado Pago','MP').replace('Pagonube','PN TRF'));
   const wrapLbl=function(s){ if(s.length<=9) return s; var w=s.split(' '),l1='',l2=''; for(var i=0;i<w.length;i++){ if(!l2 && (l1?l1+' '+w[i]:w[i]).length<=9){ l1=l1?l1+' '+w[i]:w[i]; } else { l2=l2?l2+' '+w[i]:w[i]; } } return l2?[l1,l2]:l1; };
   const lbls=raw0.map(wrapLbl); // nombres largos en 2 líneas, para que se lean completos
   const barMax = n<=8?64 : n<=12?46 : n<=16?34 : 26;
