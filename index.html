@@ -1031,7 +1031,7 @@ async function handleFile(file) {
 
     let processed = 0;
     const total = rows.length - 1;
-    evReset(['2026-mar','2026-ago']); // ferias 2026 se reconstruyen en cada carga del reporte 2026
+    evReset(['2026-mar','2026-ago','2026']); // ferias 2026 se reconstruyen en cada carga del reporte 2026
 
     for (let ri = 1; ri < rows.length; ri++) {
       const row = rows[ri];
@@ -1064,7 +1064,7 @@ async function handleFile(file) {
       const qty2    = Math.round(n(row[COL.QTY]));
 
       // ── Eventos/Ferias 2026: por equipo de ventas (Presentes/Hotelga), edición por fecha (hasta 31/07 = Marzo, desde 01/08 = Agosto) ──
-      { const _evF=evFeria(row[COL.EQUIPO]); if(_evF){ const _ed=(dia.slice(5,7)<='07')?'2026-mar':'2026-ago'; evAdd(_evF,_ed,tv,n(row[COL.MGNETO]),0,row[COL.VEND]); } }
+      { const _evF=evFeria(row[COL.EQUIPO]); if(_evF){ const _ed=(_evF==='Presentes')?((dia.slice(5,7)<='07')?'2026-mar':'2026-ago'):'2026'; evAdd(_evF,_ed,tv,n(row[COL.MGNETO]),0,row[COL.VEND]); } }
 
       // ── DATA_D: facturación por día/rubro/canal ──
       if (RUBROS_VALID.has(rubro)) {
@@ -3717,8 +3717,10 @@ function renderEventos(){
   }).join('');
   var F=EVENTOS_D[evSel]||{};
   var refIpc=(F['2025']&&F['2025'].facIpc)||0;
-  var EDS=[['2025','2025 (única edición)','#888780'],['2026-mar','Marzo 2026','#2a78d6'],['2026-ago','Agosto 2026','#c98500']];
-  var body=EDS.map(function(ed){ var e=F[ed[0]]; var isPend=(ed[0]==='2026-ago' && (!e||!(e.fac>0)));
+  var EDS=(evSel==='Presentes')
+    ? [['2025','2025 (única edición)','#888780'],['2026-mar','Marzo 2026','#2a78d6'],['2026-ago','Agosto 2026','#c98500']]
+    : [['2025','2025 (única edición)','#888780'],['2026','2026','#2a78d6']];
+  var body=EDS.map(function(ed){ var e=F[ed[0]]; var isPend=(ed[0]!=='2025' && !(e&&e.fac>0));
     var fac= e? e.fac : 0; var aj= (ed[0]==='2025' && e)? e.facIpc : null; var c=coefOf(e);
     var vv= (ed[0]!=='2025' && refIpc>0 && fac>0)? ((fac/refIpc-1)*100) : null;
     return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:6px 10px;font-weight:600;color:'+ed[2]+'">'+ed[1]+'</td>'
@@ -3727,20 +3729,20 @@ function renderEventos(){
      +'<td style="text-align:right;padding:6px 10px;font-weight:700;color:#1f7a44">'+cf(c)+'</td>'
      +'<td style="text-align:right;padding:6px 10px;color:'+(vv==null?'var(--txt2)':(vv<0?'#a32d2d':'#1a7a3a'))+'">'+(vv==null?'—':(vv>=0?'+':'')+vv.toFixed(1)+'%')+'</td></tr>';
   }).join('');
-  // detalle por comercial (facturación S/IVA, sin margen)
-  var hasAgo=!!(F['2026-ago']&&F['2026-ago'].fac>0);
+  // detalle por comercial (facturación S/IVA, sin margen) · columnas dinámicas según ediciones de la feria
+  var eds26=EDS.filter(function(e){return e[0]!=='2025';});
   var vg=function(edk,v,ipc){ var e=F[edk]; if(!e||!e.byV||!e.byV[v]) return 0; return ipc?(e.byV[v].facIpc||0):(e.byV[v].fac||0); };
   var vt=function(edk,ipc){ var e=F[edk]; if(!e) return 0; return ipc?(e.facIpc||0):(e.fac||0); };
   var vset={}; EDS.forEach(function(ed){ var e=F[ed[0]]; if(e&&e.byV) for(var v in e.byV) vset[v]=1; });
-  var vArr=Object.keys(vset).sort(function(a,b){ return (vg('2026-mar',b,0)+vg('2025',b,0))-(vg('2026-mar',a,0)+vg('2025',a,0)); });
+  var vArr=Object.keys(vset).sort(function(a,b){ var sa=0,sb=0; EDS.forEach(function(ed){ sa+=vg(ed[0],a,0); sb+=vg(ed[0],b,0); }); return sb-sa; });
+  var vhead='<th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">2025</th><th style="text-align:right;padding:6px 10px">2025 aj.IPC</th>'+eds26.map(function(ed){return '<th style="text-align:right;padding:6px 10px">'+ed[1]+'</th>';}).join('');
   var vbody=vArr.map(function(v){ return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 10px;font-weight:600">'+v+'</td>'
      +'<td style="text-align:right;padding:5px 10px;color:#8a8880">'+fmt(vg('2025',v,0))+'</td>'
      +'<td style="text-align:right;padding:5px 10px">'+fmt(vg('2025',v,1))+'</td>'
-     +'<td style="text-align:right;padding:5px 10px;color:#274d80;font-weight:600">'+fmt(vg('2026-mar',v,0))+'</td>'
-     +'<td style="text-align:right;padding:5px 10px;color:#854f0b">'+(hasAgo?fmt(vg('2026-ago',v,0)):'—')+'</td></tr>'; }).join('');
-  var vtot='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#8a8880">'+fmt(vt('2025',0))+'</td><td style="text-align:right;padding:6px 10px">'+fmt(vt('2025',1))+'</td><td style="text-align:right;padding:6px 10px;color:#274d80">'+fmt(vt('2026-mar',0))+'</td><td style="text-align:right;padding:6px 10px;color:#854f0b">'+(hasAgo?fmt(vt('2026-ago',0)):'—')+'</td></tr>';
+     +eds26.map(function(ed){return '<td style="text-align:right;padding:5px 10px;color:'+ed[2]+';font-weight:600">'+fmt(vg(ed[0],v,0))+'</td>';}).join('')+'</tr>'; }).join('');
+  var vtot='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#8a8880">'+fmt(vt('2025',0))+'</td><td style="text-align:right;padding:6px 10px">'+fmt(vt('2025',1))+'</td>'+eds26.map(function(ed){return '<td style="text-align:right;padding:6px 10px;color:'+ed[2]+'">'+fmt(vt(ed[0],0))+'</td>';}).join('')+'</tr>';
   var vDetail=vArr.length? ('<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-users"></i>Detalle por comercial <span class="sec-sub">· facturación S/IVA · '+evSel+'</span></div>'
-    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">2025</th><th style="text-align:right;padding:6px 10px">2025 aj.IPC</th><th style="text-align:right;padding:6px 10px">Marzo 2026</th><th style="text-align:right;padding:6px 10px">Agosto 2026</th></tr></thead><tbody>'+vbody+vtot+'</tbody></table></div>') : '';
+    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80">'+vhead+'</tr></thead><tbody>'+vbody+vtot+'</tbody></table></div>') : '';
   wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;max-width:520px">'+cards+'</div>'
    +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-calendar-event"></i>'+evSel+' <span class="sec-sub">· por edición · facturación S/IVA, margen (coef.) y ajuste IPC</span></div>'
    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Edición</th><th style="text-align:right;padding:6px 10px">Facturación S/IVA</th><th style="text-align:right;padding:6px 10px">Fact. aj.IPC</th><th style="text-align:right;padding:6px 10px">Margen (coef.)</th><th style="text-align:right;padding:6px 10px">Var. vs 2025</th></tr></thead><tbody>'+body+'</tbody></table></div>'
