@@ -867,7 +867,7 @@ var CLIENTE_TIPO = {};   // { clienteUpper: tipo }  ← del Excel de etiquetas (
 // fac = Σ Total S/IVA · cn = Σ (TotalSIVA / MargenNeto) (para el coeficiente de margen ponderado = fac/cn) · facIpc = Σ TotalSIVA×IPC (solo 2025)
 var EVENTOS_D = {Presentes:{}, Hotelga:{}};
 function evFeria(equipo){ var s=String(equipo||'').toLowerCase(); if(s.indexOf('presente')>=0) return 'Presentes'; if(s.indexOf('hotelga')>=0) return 'Hotelga'; return null; }
-function evAdd(feria, ed, tv, mg, facIpc){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; }
+function evAdd(feria, ed, tv, mg, facIpc, vend){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0,byV:{}}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; if(!E.byV)E.byV={}; var vn=(vend&&String(vend).trim())||'(s/vend)'; var V=E.byV[vn]||(E.byV[vn]={fac:0,facIpc:0}); V.fac+=tv||0; if(facIpc)V.facIpc+=facIpc; }
 function evReset(eds){ for(var f in EVENTOS_D){ eds.forEach(function(e){ if(EVENTOS_D[f]&&EVENTOS_D[f][e]) delete EVENTOS_D[f][e]; }); } }
 var COSTFIN_D = {web:[], local:[]};
 </script>
@@ -1064,7 +1064,7 @@ async function handleFile(file) {
       const qty2    = Math.round(n(row[COL.QTY]));
 
       // ── Eventos/Ferias 2026: por equipo de ventas (Presentes/Hotelga), edición por fecha (hasta 31/07 = Marzo, desde 01/08 = Agosto) ──
-      { const _evF=evFeria(row[COL.EQUIPO]); if(_evF){ const _ed=(dia.slice(5,7)<='07')?'2026-mar':'2026-ago'; evAdd(_evF,_ed,tv,n(row[COL.MGNETO]),0); } }
+      { const _evF=evFeria(row[COL.EQUIPO]); if(_evF){ const _ed=(dia.slice(5,7)<='07')?'2026-mar':'2026-ago'; evAdd(_evF,_ed,tv,n(row[COL.MGNETO]),0,row[COL.VEND]); } }
 
       // ── DATA_D: facturación por día/rubro/canal ──
       if (RUBROS_VALID.has(rubro)) {
@@ -2477,7 +2477,7 @@ async function handleFact2025File(file){
       if(!rubro || !CANALES_ALL.has(canal)) continue;
       var dia=excelDateToStr(row[COL.FECHA]); if(!dia) continue;
       // Eventos/Ferias 2025 (única edición): por equipo de ventas, con facturación nominal + ajustada por IPC del mes.
-      { var _evF25=evFeria(row[COL.EQUIPO]); if(_evF25){ var _tvE=n(row[COL.TV]); evAdd(_evF25,'2025',_tvE,n(row[COL.MGNETO]),_tvE*ipcFactor(dia.slice(5,7))); } }
+      { var _evF25=evFeria(row[COL.EQUIPO]); if(_evF25){ var _tvE=n(row[COL.TV]); evAdd(_evF25,'2025',_tvE,n(row[COL.MGNETO]),_tvE*ipcFactor(dia.slice(5,7)),row[COL.VEND]); } }
       // CLIENTE_2025: capturar clientes Mayorista (Lett) de TODOS los meses 2025 (para el análisis de clientes)
       if(canal==='Lett' && dia.slice(0,4)==='2025'){
         var cli25=row[COL.CLIENTE]?String(row[COL.CLIENTE]).trim():'';
@@ -3727,9 +3727,24 @@ function renderEventos(){
      +'<td style="text-align:right;padding:6px 10px;font-weight:700;color:#1f7a44">'+cf(c)+'</td>'
      +'<td style="text-align:right;padding:6px 10px;color:'+(vv==null?'var(--txt2)':(vv<0?'#a32d2d':'#1a7a3a'))+'">'+(vv==null?'—':(vv>=0?'+':'')+vv.toFixed(1)+'%')+'</td></tr>';
   }).join('');
+  // detalle por comercial (facturación S/IVA, sin margen)
+  var hasAgo=!!(F['2026-ago']&&F['2026-ago'].fac>0);
+  var vg=function(edk,v,ipc){ var e=F[edk]; if(!e||!e.byV||!e.byV[v]) return 0; return ipc?(e.byV[v].facIpc||0):(e.byV[v].fac||0); };
+  var vt=function(edk,ipc){ var e=F[edk]; if(!e) return 0; return ipc?(e.facIpc||0):(e.fac||0); };
+  var vset={}; EDS.forEach(function(ed){ var e=F[ed[0]]; if(e&&e.byV) for(var v in e.byV) vset[v]=1; });
+  var vArr=Object.keys(vset).sort(function(a,b){ return (vg('2026-mar',b,0)+vg('2025',b,0))-(vg('2026-mar',a,0)+vg('2025',a,0)); });
+  var vbody=vArr.map(function(v){ return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 10px;font-weight:600">'+v+'</td>'
+     +'<td style="text-align:right;padding:5px 10px;color:#8a8880">'+fmt(vg('2025',v,0))+'</td>'
+     +'<td style="text-align:right;padding:5px 10px">'+fmt(vg('2025',v,1))+'</td>'
+     +'<td style="text-align:right;padding:5px 10px;color:#274d80;font-weight:600">'+fmt(vg('2026-mar',v,0))+'</td>'
+     +'<td style="text-align:right;padding:5px 10px;color:#854f0b">'+(hasAgo?fmt(vg('2026-ago',v,0)):'—')+'</td></tr>'; }).join('');
+  var vtot='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#8a8880">'+fmt(vt('2025',0))+'</td><td style="text-align:right;padding:6px 10px">'+fmt(vt('2025',1))+'</td><td style="text-align:right;padding:6px 10px;color:#274d80">'+fmt(vt('2026-mar',0))+'</td><td style="text-align:right;padding:6px 10px;color:#854f0b">'+(hasAgo?fmt(vt('2026-ago',0)):'—')+'</td></tr>';
+  var vDetail=vArr.length? ('<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-users"></i>Detalle por comercial <span class="sec-sub">· facturación S/IVA · '+evSel+'</span></div>'
+    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">2025</th><th style="text-align:right;padding:6px 10px">2025 aj.IPC</th><th style="text-align:right;padding:6px 10px">Marzo 2026</th><th style="text-align:right;padding:6px 10px">Agosto 2026</th></tr></thead><tbody>'+vbody+vtot+'</tbody></table></div>') : '';
   wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;max-width:520px">'+cards+'</div>'
    +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-calendar-event"></i>'+evSel+' <span class="sec-sub">· por edición · facturación S/IVA, margen (coef.) y ajuste IPC</span></div>'
    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Edición</th><th style="text-align:right;padding:6px 10px">Facturación S/IVA</th><th style="text-align:right;padding:6px 10px">Fact. aj.IPC</th><th style="text-align:right;padding:6px 10px">Margen (coef.)</th><th style="text-align:right;padding:6px 10px">Var. vs 2025</th></tr></thead><tbody>'+body+'</tbody></table></div>'
+   +vDetail
    +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coeficiente neto (precio/costo) ponderado por facturación · "Var. vs 2025" compara contra la facturación 2025 ajustada por IPC · Agosto 2026 se completa al cargar el reporte con esa edición (hasta 31/07 = Marzo, desde 01/08 = Agosto).</div>';
 }
 
