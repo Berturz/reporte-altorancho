@@ -4608,7 +4608,7 @@ renderCajas();
       </div>
     </div>
     <div class="k-card" id="stkCardMargen">
-      <div class="k-h" id="stkV2H" style="color:#B0568F">Valorización a márgenes</div>
+      <div class="k-h" id="stkV2H" style="color:#B0568F;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">Valorización a márgenes<span onclick="stkMgExportXLSX()" title="Descargar Excel por SKU (con fórmulas)" style="cursor:pointer;font-size:11px;font-weight:700;color:#7a244f;background:#f3e6ee;border:1px solid #d9a9c5;border-radius:8px;padding:4px 10px"><i class="ti ti-file-spreadsheet" style="font-size:12px;vertical-align:-2px;margin-right:4px"></i>Descargar Excel (por SKU)</span></div>
       <div class="k-sub">Por rubro · margen prom. (Mg Final May/Min) × costo galpón · selector propio</div>
       <div class="stk-row">
         <div id="stockCardsMg" class="stk-estcol"></div>
@@ -5092,6 +5092,33 @@ function stkMgDescargar(){ var arr=stkMgSinData[stockMgSin]||[]; if(!arr.length)
   var csv=lines.map(function(x){return x.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
   var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob); var a=document.createElement('a');
   a.href=url; a.download='sin_dato_'+stockMgSin+'_'+String(stockSelEstadoMg==='__ALL__'?'todos':stockSelEstadoMg||'').toLowerCase().replace(/ /g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+// Descarga Excel: stock valorizado a márgenes por SKU (todos los estados) con fórmulas (costo USD, total, margen prom, valorización). Dólar en $B$1.
+function stkMgExportXLSX(){
+  try{
+    if(typeof XLSX==='undefined'){ alert('Falta la librería de Excel.'); return; }
+    var S=STOCK_D||{}; var rows=S.stockRows||[]; if(!rows.length){ alert('No hay stock cargado. Subí el archivo de Stock valorizado primero.'); return; }
+    var C=S.costos||{}, P=S.pricing||{}, dol=S.dolar||1460;
+    var aoa=[['Dólar de cierre', dol, '', 'Fecha cierre', S.fecha||''], []];
+    aoa.push(['SKU','Rubro','Categoría','Origen','Estilo','Modelo','Proveedor','Estado','Cantidad','Costo unit. ($)','Costo unit. (USD)','Costo total (USD)','Mg May','Mg Min','Margen prom','Valoriz. total (USD)','Valoriz. total ($)']);
+    rows.forEach(function(a){ var est=a[0],ori=a[1],rub=a[2],esti=a[3],mod=a[4],cant=a[5],sku=a[7],prov=a[8]||'';
+      var cat=stkRpCat(rub,ori,prov,esti);
+      var cu=(C[sku]!=null)?C[sku]:''; var pr=P[sku]||{}; var mgMay=(pr.mgMay>0)?pr.mgMay:'', mgMin=(pr.mgMin>0)?pr.mgMin:'';
+      aoa.push([sku,rub,cat,ori,esti,mod,prov,stockCap(est||''),cant,cu,'','',mgMay,mgMin,'','','']);
+    });
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    for(var i=0;i<rows.length;i++){ var R=4+i; // fila Excel 1-based (datos desde la 4)
+      var cell=function(c){ return XLSX.utils.encode_cell({r:R-1,c:c}); };
+      ws[cell(10)]={t:'n', f:'IF(J'+R+'="","",J'+R+'/$B$1)'};                                   // Costo unit USD
+      ws[cell(11)]={t:'n', f:'IF(K'+R+'="","",I'+R+'*K'+R+')'};                                 // Costo total USD
+      ws[cell(14)]={t:'n', f:'IF(AND(M'+R+'>0,N'+R+'>0),(M'+R+'+N'+R+')/2,MAX(M'+R+',N'+R+'))'}; // Margen prom
+      ws[cell(15)]={t:'n', f:'IF(OR(L'+R+'="",O'+R+'=0),"",L'+R+'*O'+R+')'};                     // Valoriz USD
+      ws[cell(16)]={t:'n', f:'IF(P'+R+'="","",P'+R+'*$B$1)'};                                    // Valoriz ARS
+    }
+    ws['!cols']=[{wch:12},{wch:14},{wch:24},{wch:16},{wch:14},{wch:18},{wch:18},{wch:12},{wch:8},{wch:12},{wch:13},{wch:14},{wch:8},{wch:8},{wch:11},{wch:16},{wch:16}];
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Stock márgenes');
+    XLSX.writeFile(wb,'stock_valorizado_margenes_'+(S.fecha||'')+'.xlsx');
+  }catch(e){ alert('No se pudo exportar: '+(e&&e.message?e.message:e)); }
 }
 function stkRenderMg(){
   var el=document.getElementById('stkV2'); var cardsEl=document.getElementById('stockCardsMg'); if(!el) return;
