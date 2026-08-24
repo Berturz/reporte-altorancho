@@ -4791,6 +4791,7 @@ async function handleStockFile(file){
     var HS=rowsS[1]||[];
     var cS={ sku:findCol(HS,[function(t){return t==='sku';}],0),
       rub:findCol(HS,[function(t){return t==='rubro';}],1),
+      atr:findCol(HS,[function(t){return t.indexOf('atributo')>=0;}],2),
       esti:findCol(HS,[function(t){return t==='estilo';}],3),
       mod:findCol(HS,[function(t){return t==='modelo';}],4),
       ori:findCol(HS,[function(t){return t.indexOf('origen')>=0;}],5),
@@ -4803,7 +4804,7 @@ async function handleStockFile(file){
       var cant=num(r[cS.cant]), val=num(r[cS.val]); if(cant===0 && val===0) continue;
       var est=SS(r[cS.est]).toUpperCase()||'(SIN ESTADO)';
       var ori=SS(r[cS.ori])||'(Sin origen)'; var rub=SS(r[cS.rub])||'(Sin rubro)'; var esti=SS(r[cS.esti])||'(sin estilo)';
-      stockRows.push([est,ori,rub,esti,SS(r[cS.mod]),cant,val,SS(r[cS.sku]),SS(r[cS.prov])]); estadosSet[est]=1; origSet[ori]=1;
+      stockRows.push([est,ori,rub,esti,SS(r[cS.mod]),cant,val,SS(r[cS.sku]),SS(r[cS.prov]),SS(r[cS.atr])]); estadosSet[est]=1; origSet[ori]=1;
     }
     var fecha=null; try{ var c1=(rowsS[0]&&rowsS[0][2]); if(typeof c1==='number'){var d=XLSX.SSF.parse_date_code(c1); fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');} }catch(e){}
     setStockProgress(65,'<span class="spin">&#8635;</span> Procesando ventas...');
@@ -5041,11 +5042,13 @@ function setStockMgCur(c){ stockMgCur=c; renderStock(); }
 function setStockMgSin(k){ stockMgSin=(stockMgSin===k?null:k); renderStock(); }
 function stkEstLbl(e){ return e==='__ALL__'?'Todos los estados':stockCap(e); }
 function stkEstOk(est,sel){ if(sel==='__ALL__') return est!=='(SIN ESTADO)' && est!=='(VACIO)' && est!==''; return est===sel; }
-function stkRpCat(rub,ori,prov,esti){
-  var R=(rub||'').toUpperCase(), O=(ori||'').trim(), P=(prov||'').trim().toUpperCase(), E=(esti||'').toUpperCase();
-  var IN_NAC={'MIX':1,'HIERROS':1}, INALAMB={'LUX LIGHTING':1}, SILLAS={'WENDY FURNITURE':1,'URUN':1}, MUE_NAC={'CARPINTERIA':1,'MIX':1,'HIERROS':1};
-  if(R.indexOf('ILUMINAC')>=0){ if(INALAMB[P])return 'ILUMINACION INALAMBRICA'; if(O==='Importado')return 'ILUMINACION IMPORTADA'; if(IN_NAC[P]||O==='Fábrica')return 'ILUMINACION NACIONAL'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
-  else if(R.indexOf('MUEBLE')>=0){ if(SILLAS[P])return 'SILLAS IMPORTADAS'; if(O==='Importado'&&E.indexOf('SILLA')>=0)return 'SILLAS IMPORTADAS'; if(MUE_NAC[P])return 'MUEBLES NACIONALES'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
+function stkRpCat(rub,ori,prov,esti,sku,atr){
+  var R=(rub||'').toUpperCase(), O=(ori||'').trim(), P=(prov||'').trim().toUpperCase();
+  var skuU=(sku||'').toUpperCase(), A=(atr||'').toUpperCase();
+  var IN_NAC={'MIX':1,'HIERROS':1}, INALAMB={'LUX LIGHTING':1,'SYL HOME':1}, MUE_NAC={'CARPINTERIA':1,'MIX':1,'HIERROS':1};
+  var esInal=(/INAL.MBRIC/.test(A)) || (typeof BIBLIA_INAL!=='undefined'&&BIBLIA_INAL[skuU]) || INALAMB[P]; // inalámbrica: por Atributos, Biblia o proveedor
+  if(R.indexOf('ILUMINAC')>=0){ if(esInal)return 'ILUMINACION INALAMBRICA'; if(O==='Importado')return 'ILUMINACION IMPORTADA'; if(IN_NAC[P]||O==='Fábrica')return 'ILUMINACION NACIONAL'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
+  else if(R.indexOf('MUEBLE')>=0){ if(O==='Importado')return 'SILLAS IMPORTADAS'; if(O==='Fábrica')return 'MUEBLES NACIONALES'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; if(MUE_NAC[P])return 'MUEBLES NACIONALES'; }
   else { if(O==='Importado')return 'DECO/NAVIDAD/BAZAR IMPORTADO'; if(O==='Fábrica')return 'DECO/BAZAR FABRICA'; if(O==='Proveedor Nacional')return 'PROVEEDOR NACIONAL'; }
   return '(SIN CLASIF)';
 }
@@ -5055,7 +5058,7 @@ function stkMgTree(estado){
   (STOCK_D.stockRows||[]).forEach(function(a){
     if(!stkEstOk(a[0],estado)) return;
     var ori=a[1],rub=a[2],esti=a[3],cant=a[5],valS=a[6],sku=a[7],prov=a[8]||'';
-    var cat=stkRpCat(rub,ori,prov,esti);
+    var cat=stkRpCat(rub,ori,prov,esti,sku,a[9]||'');
     var costoUSD=stkRowCostoUSD(sku,cant,valS);
     var pr=P[sku]; var mgMay=pr?(pr.mgMay||0):0, mgMin=pr?(pr.mgMin||0):0;
     var okCosto=costoUSD>0, okMg=(mgMay>0||mgMin>0);
@@ -5102,7 +5105,7 @@ function stkMgExportXLSX(){
     var aoa=[['Dólar de cierre', dol, '', 'Fecha cierre', S.fecha||''], []];
     aoa.push(['SKU','Rubro','Categoría','Origen','Estilo','Modelo','Proveedor','Estado','Cantidad','Costo unit. ($)','Costo unit. (USD)','Costo total (USD)','Mg May','Mg Min','Margen prom','Valoriz. total (USD)','Valoriz. total ($)']);
     rows.forEach(function(a){ var est=a[0],ori=a[1],rub=a[2],esti=a[3],mod=a[4],cant=a[5],sku=a[7],prov=a[8]||'';
-      var cat=stkRpCat(rub,ori,prov,esti);
+      var cat=stkRpCat(rub,ori,prov,esti,sku,a[9]||'');
       var cu=(C[sku]!=null)?C[sku]:''; var pr=P[sku]||{}; var mgMay=(pr.mgMay>0)?pr.mgMay:'', mgMin=(pr.mgMin>0)?pr.mgMin:'';
       aoa.push([sku,rub,cat,ori,esti,mod,prov,stockCap(est||''),cant,cu,'','',mgMay,mgMin,'','','']);
     });
