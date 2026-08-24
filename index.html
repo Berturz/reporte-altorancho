@@ -5116,7 +5116,21 @@ function stkMgExportXLSX(){
       ws[cell(16)]={t:'n', f:'IF(P'+R+'="","",P'+R+'*$B$1)'};                                    // Valoriz ARS
     }
     ws['!cols']=[{wch:12},{wch:14},{wch:24},{wch:16},{wch:14},{wch:18},{wch:18},{wch:12},{wch:8},{wch:12},{wch:13},{wch:14},{wch:8},{wch:8},{wch:11},{wch:16},{wch:16}];
-    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Stock márgenes');
+    ws['!autofilter']={ref:'A3:Q'+(3+rows.length)}; // filtros en el detalle
+    // ── Hoja 2: Resumen por estado (rollup del detalle: SKUs con costo y margen) ──
+    var byEst={};
+    rows.forEach(function(a){ var est=stockCap(a[0]||'(sin estado)'), cant=a[5], sku=a[7];
+      var costoTot=(C[sku]!=null&&dol>0)?cant*C[sku]/dol:0; var pr=P[sku]||{}; var mgMay=pr.mgMay||0, mgMin=pr.mgMin||0;
+      if(!(costoTot>0)||!(mgMay>0||mgMin>0)) return;
+      var aM=mgMay>0?mgMay:mgMin, bM=mgMin>0?mgMin:mgMay; var mp=(aM+bM)/2;
+      var g=byEst[est]||(byEst[est]={cant:0,costo:0,val:0}); g.cant+=cant; g.costo+=costoTot; g.val+=costoTot*mp; });
+    var aoa2=[['Resumen por estado · valorización a márgenes'],['Fecha cierre',S.fecha||'','Dólar',dol],[],['Estado','Cantidad','Costo total (USD)','Valoriz. total (USD)','Margen prom']];
+    var te={cant:0,costo:0,val:0};
+    Object.keys(byEst).sort().forEach(function(est){ var g=byEst[est]; te.cant+=g.cant;te.costo+=g.costo;te.val+=g.val;
+      aoa2.push([est,g.cant,Math.round(g.costo),Math.round(g.val),g.costo>0?+(g.val/g.costo).toFixed(2):'']); });
+    aoa2.push(['Total',te.cant,Math.round(te.costo),Math.round(te.val),te.costo>0?+(te.val/te.costo).toFixed(2):'']);
+    var ws2=XLSX.utils.aoa_to_sheet(aoa2); ws2['!cols']=[{wch:20},{wch:10},{wch:16},{wch:18},{wch:12}];
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Detalle'); XLSX.utils.book_append_sheet(wb,ws2,'Resumen por estado');
     XLSX.writeFile(wb,'stock_valorizado_margenes_'+(S.fecha||'')+'.xlsx');
   }catch(e){ alert('No se pudo exportar: '+(e&&e.message?e.message:e)); }
 }
