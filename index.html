@@ -3743,11 +3743,66 @@ function renderEventos(){
   var vtot='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#8a8880">'+fmt(vt('2025',0))+'</td><td style="text-align:right;padding:6px 10px">'+fmt(vt('2025',1))+'</td>'+eds26.map(function(ed){return '<td style="text-align:right;padding:6px 10px;color:'+ed[2]+'">'+fmt(vt(ed[0],0))+'</td>';}).join('')+'</tr>';
   var vDetail=vArr.length? ('<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-users"></i>Detalle por comercial <span class="sec-sub">· facturación S/IVA · '+evSel+'</span></div>'
     +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80">'+vhead+'</tr></thead><tbody>'+vbody+vtot+'</tbody></table></div>') : '';
+  // ── Días oficiales de feria: pedido por vendedor (dinámicas del archivo de pedidos) · solo Presentes ──
+  var evExtra='';
+  if(evSel==='Presentes'){
+    var evNorm=function(s){return String(s||'').toUpperCase().replace(/\s+/g,' ').trim();};
+    var PED={}; // [nombre, mar(díasOfic), ago(díasOfic 19-22), agoTot(todo agosto)]
+    [['Matias Chiuki',22723811.40,54679920.20,54956689.55],
+     ['Laura Viviana Soldano',6936695.20,29020508.15,38669876.15],
+     ['Jose Luis Persoglia',8690802.45,23031256.65,23031256.65],
+     ['Jimena Alejandra Tobares',10335411.40,9325032.95,10106145.65],
+     ['ATENCION DECORADORES Y ARQUITECTOS',0,1268107.11,2229029.78]
+    ].forEach(function(r){ PED[evNorm(r[0])]={disp:r[0],mar:r[1],ago:r[2],agoTot:r[3]}; });
+    var EV_PED_AGO_TOTAL=128992997.78;
+    var _b25=(F['2025']&&F['2025'].byV)||{}, _bAgo=(F['2026-ago']&&F['2026-ago'].byV)||{};
+    var g25={}, gAgo={};
+    for(var _k in _b25){ g25[evNorm(_k)]={disp:_k,ipc:(_b25[_k].facIpc||0)}; }
+    for(var _k2 in _bAgo){ gAgo[evNorm(_k2)]=(_bAgo[_k2].fac||0); }
+    // Cuadro 1: variación días oficiales por vendedor
+    var _rset={}; for(var _p in PED)_rset[_p]=1; for(var _q in g25)_rset[_q]=1;
+    var r1=Object.keys(_rset).map(function(key){ var pe=PED[key]||{}, r5=g25[key]||{};
+      return {disp:(pe.disp||r5.disp||key), a25:(r5.ipc||0), mar:(pe.mar||0), ago:(pe.ago||0)}; })
+      .sort(function(a,b){return (b.ago+b.mar)-(a.ago+a.mar);});
+    var t25=0,tmar=0,tago=0;
+    var body1=r1.map(function(x){ t25+=x.a25; tmar+=x.mar; tago+=x.ago;
+      var vv=x.a25>0?((x.mar+x.ago)/x.a25-1)*100:null;
+      return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 10px;font-weight:600">'+x.disp+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;color:#8a8880">'+fmt(x.a25)+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;color:#2a78d6;font-weight:600">'+(x.mar>0?fmt(x.mar):'<span style="color:#b8b4c0">—</span>')+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;color:#c98500;font-weight:600">'+fmt(x.ago)+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;font-weight:700;color:'+(vv==null?'var(--txt2)':(vv<0?'#a32d2d':'#1a7a3a'))+'">'+(vv==null?'—':(vv>=0?'+':'')+vv.toFixed(1)+'%')+'</td></tr>'; }).join('');
+    var vvT=t25>0?((tmar+tago)/t25-1)*100:null;
+    var tot1='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#8a8880">'+fmt(t25)+'</td><td style="text-align:right;padding:6px 10px;color:#2a78d6">'+fmt(tmar)+'</td><td style="text-align:right;padding:6px 10px;color:#c98500">'+fmt(tago)+'</td><td style="text-align:right;padding:6px 10px;color:'+(vvT==null?'var(--txt2)':(vvT<0?'#a32d2d':'#1a7a3a'))+'">'+(vvT==null?'—':(vvT>=0?'+':'')+vvT.toFixed(1)+'%')+'</td></tr>';
+    var cuadro1='<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-calendar-stats"></i>Días oficiales de feria · variación por vendedor <span class="sec-sub">· pedido (Base imp.) · Var = Ago 2025 aj.IPC → (Mar+Ago) 2026</span></div>'
+     +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:820px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Ago 2025 (aj.IPC)</th><th style="text-align:right;padding:6px 10px">Mar 2026 (11–14/03)</th><th style="text-align:right;padding:6px 10px">Ago 2026 (19–22/08)</th><th style="text-align:right;padding:6px 10px">Var. Ago25→Mar+Ago26</th></tr></thead><tbody>'+body1+tot1+'</tbody></table></div>'
+     +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Ago 2025 = facturación Presentes 2025 aj.IPC (feria completa) · Mar/Ago 2026 = pedido de los días oficiales (dinámica del archivo de pedidos).</div>';
+    // Cuadro 2: pedido vs facturado Agosto 2026
+    var facAgo=(F['2026-ago']&&F['2026-ago'].fac)||0, pedAgo=EV_PED_AGO_TOTAL, penAgo=pedAgo-facAgo;
+    var pctF=pedAgo>0?(facAgo/pedAgo*100):0, pctP=Math.max(0,100-pctF);
+    var _box=function(lbl,val,col,sub){return '<div style="flex:1;min-width:150px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+lbl+'</div><div style="font-size:19px;font-weight:800;color:'+col+'">'+fmt(val)+'</div><div style="font-size:10px;color:var(--txt2)">'+sub+'</div></div>';};
+    var boxes='<div style="display:flex;gap:12px;flex-wrap:wrap;max-width:660px;margin-bottom:8px">'+_box('Total pedido Agosto 2026',pedAgo,'#D4537E','todas las fechas de agosto')+_box('Facturado',facAgo,'#1a7a3a','Presentes Ago 2026 · reporte')+_box('Pendiente de facturar',penAgo,'#c98500','pedido − facturado')+'</div>';
+    var bar='<div style="height:13px;border-radius:7px;background:#ececf0;overflow:hidden;margin:4px 0 5px;display:flex;max-width:660px"><div style="background:#1a7a3a;width:'+pctF.toFixed(1)+'%"></div><div style="background:#c98500;width:'+pctP.toFixed(1)+'%"></div></div>'
+     +'<div style="display:flex;justify-content:space-between;font-size:11px;max-width:660px;margin-bottom:12px"><span style="color:#1a7a3a;font-weight:600">'+pctF.toFixed(0)+'% facturado</span><span style="color:#c98500;font-weight:600">'+pctP.toFixed(0)+'% pendiente</span></div>';
+    var pedRows=Object.keys(PED).map(function(key){ var d=PED[key]; return {disp:d.disp,ped:d.agoTot,fac:(gAgo[key]||0)}; }).sort(function(a,b){return b.ped-a.ped;});
+    var body2=pedRows.map(function(x){ var pe2=x.ped-x.fac, pc=x.ped>0?(x.fac/x.ped*100):0;
+      return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 10px;font-weight:600">'+x.disp+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;color:#D4537E;font-weight:600">'+fmt(x.ped)+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;color:#1a7a3a">'+fmt(x.fac)+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;color:#c98500">'+fmt(pe2)+'</td>'
+       +'<td style="text-align:right;padding:5px 10px;font-weight:600">'+pc.toFixed(0)+'%</td></tr>'; }).join('');
+    var tot2='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#D4537E">'+fmt(pedAgo)+'</td><td style="text-align:right;padding:6px 10px;color:#1a7a3a">'+fmt(facAgo)+'</td><td style="text-align:right;padding:6px 10px;color:#c98500">'+fmt(penAgo)+'</td><td style="text-align:right;padding:6px 10px">'+pctF.toFixed(0)+'%</td></tr>';
+    var det2='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Pedido Ago 2026</th><th style="text-align:right;padding:6px 10px">Facturado</th><th style="text-align:right;padding:6px 10px">Pendiente</th><th style="text-align:right;padding:6px 10px">% Fact.</th></tr></thead><tbody>'+body2+tot2+'</tbody></table></div>';
+    var cuadro2='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-file-invoice"></i>Agosto 2026 · Pedido vs. Facturado <span class="sec-sub">· cuánto del pedido falta facturar</span></div>'+boxes+bar+det2
+     +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Pedido = total de pedidos de agosto (dinámica del archivo de pedidos). Facturado = facturación Presentes Ago 2026 del archivo madre.</div>';
+    evExtra=cuadro1+cuadro2;
+  }
   wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;max-width:520px">'+cards+'</div>'
    +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-calendar-event"></i>'+evSel+' <span class="sec-sub">· por edición · facturación S/IVA, margen (coef.) y ajuste IPC</span></div>'
    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Edición</th><th style="text-align:right;padding:6px 10px">Facturación S/IVA</th><th style="text-align:right;padding:6px 10px">Fact. aj.IPC</th><th style="text-align:right;padding:6px 10px">Margen (coef.)</th><th style="text-align:right;padding:6px 10px">Var. vs 2025</th></tr></thead><tbody>'+body+'</tbody></table></div>'
    +vDetail
-   +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coeficiente neto (precio/costo) ponderado por facturación · "Var. vs 2025" compara contra la facturación 2025 ajustada por IPC · Agosto 2026 se completa al cargar el reporte con esa edición (hasta 31/07 = Marzo, desde 01/08 = Agosto).</div>';
+   +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coeficiente neto (precio/costo) ponderado por facturación · "Var. vs 2025" compara contra la facturación 2025 ajustada por IPC · Agosto 2026 se completa al cargar el reporte con esa edición (hasta 31/07 = Marzo, desde 01/08 = Agosto).</div>'
+   +evExtra;
 }
 
 // ── INIT ──
