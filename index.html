@@ -867,7 +867,26 @@ var CLIENTE_TIPO = {};   // { clienteUpper: tipo }  ← del Excel de etiquetas (
 // fac = Σ Total S/IVA · cn = Σ (TotalSIVA / MargenNeto) (para el coeficiente de margen ponderado = fac/cn) · facIpc = Σ TotalSIVA×IPC (solo 2025)
 var EVENTOS_D = {Presentes:{}, Hotelga:{}};
 function evFeria(equipo){ var s=String(equipo||'').toLowerCase(); if(s.indexOf('presente')>=0) return 'Presentes'; if(s.indexOf('hotelga')>=0) return 'Hotelga'; return null; }
-function evAdd(feria, ed, tv, mg, facIpc, vend){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0,byV:{}}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; if(!E.byV)E.byV={}; var vn=(vend&&String(vend).trim())||'(s/vend)'; var V=E.byV[vn]||(E.byV[vn]={fac:0,facIpc:0}); V.fac+=tv||0; if(facIpc)V.facIpc+=facIpc; }
+function evAdd(feria, ed, tv, mg, facIpc, vend, rubroCat, cant){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0,byV:{},byR:{}}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; if(!E.byV)E.byV={}; var vn=(vend&&String(vend).trim())||'(s/vend)'; var V=E.byV[vn]||(E.byV[vn]={fac:0,facIpc:0}); V.fac+=tv||0; if(facIpc)V.facIpc+=facIpc; if(!E.byR)E.byR={}; if(rubroCat){ var R=E.byR[rubroCat]||(E.byR[rubroCat]={cant:0,fac:0}); R.fac+=tv||0; R.cant+=cant||0; } }
+// Clasificación única de ventas por rubro/proveedor (misma en parser 2026, 2025 y captura de eventos). Sillas Importadas = Wendy + Urun + Topmax.
+function rpClasificar(rubroU, provNombre, origVal, skuU){
+  var P=String(provNombre||'').trim().toUpperCase();
+  if(rubroU==='ILUMINACION'){
+    if((typeof BIBLIA_INAL!=='undefined' && BIBLIA_INAL[skuU]) || P==='LUX LIGHTING') return 'ILUMINACION INALAMBRICA';
+    if(origVal==='Importado') return 'ILUMINACION IMPORTADA';
+    if(P==='MIX' || P==='HIERROS' || origVal==='Fábrica') return 'ILUMINACION NACIONAL';
+    if(origVal==='Proveedor Nacional') return 'PROVEEDOR NACIONAL';
+  } else if(rubroU==='MUEBLES'){
+    if(P==='WENDY FURNITURE' || P==='URUN' || P==='TOPMAX') return 'SILLAS IMPORTADAS';
+    if(P==='CARPINTERIA' || P==='MIX' || P==='HIERROS') return 'MUEBLES NACIONALES';
+    if(origVal==='Proveedor Nacional') return 'PROVEEDOR NACIONAL';
+  } else {
+    if(origVal==='Importado') return 'DECO/NAVIDAD/BAZAR IMPORTADO';
+    if(origVal==='Fábrica') return 'DECO/BAZAR FABRICA';
+    if(origVal==='Proveedor Nacional') return 'PROVEEDOR NACIONAL';
+  }
+  return null;
+}
 function evReset(eds){ for(var f in EVENTOS_D){ eds.forEach(function(e){ if(EVENTOS_D[f]&&EVENTOS_D[f][e]) delete EVENTOS_D[f][e]; }); } }
 var COSTFIN_D = {web:[], local:[]};
 </script>
@@ -1063,8 +1082,7 @@ async function handleFile(file) {
       const estilo2 = row[COL.ESTILO] ? String(row[COL.ESTILO]).trim() : '';
       const qty2    = Math.round(n(row[COL.QTY]));
 
-      // ── Eventos/Ferias 2026: por equipo de ventas (Presentes/Hotelga), edición por fecha (hasta 31/07 = Marzo, desde 01/08 = Agosto) ──
-      { const _evF=evFeria(row[COL.EQUIPO]); if(_evF){ const _ed=(_evF==='Presentes')?((dia.slice(5,7)<='07')?'2026-mar':'2026-ago'):'2026'; evAdd(_evF,_ed,tv,n(row[COL.MGNETO]),0,row[COL.VEND]); } }
+      // (Eventos/Ferias 2026 se captura más abajo, después de calcular origVal, para incluir el rubro)
 
       // ── DATA_D: facturación por día/rubro/canal ──
       if (RUBROS_VALID.has(rubro)) {
@@ -1086,6 +1104,9 @@ async function handleFile(file) {
 
       // ── ORIG_D: clasificación origen por día / canal ──
       const origVal = row[COL.ORIG] ? String(row[COL.ORIG]).trim() : '';
+
+      // ── Eventos/Ferias 2026: por equipo (Presentes/Hotelga), edición por fecha (≤31/07 = Marzo, ≥01/08 = Agosto); con rubro + cantidad ──
+      { const _evF=evFeria(row[COL.EQUIPO]); if(_evF){ const _ed=(_evF==='Presentes')?((dia.slice(5,7)<='07')?'2026-mar':'2026-ago'):'2026'; const _catE=rpClasificar(rubro, row[COL.PROV], origVal, (row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():'')); evAdd(_evF,_ed,tv,n(row[COL.MGNETO]),0,row[COL.VEND],_catE,qty2); } }
       const origKey = origVal || 'Otro';
       if (!newORIG[dia]) newORIG[dia] = {
         lt:{},  lt_tot: {tv:0,fc:0,cmv:0},
@@ -1174,31 +1195,7 @@ async function handleFile(file) {
         const CANAL_MAP2 = {Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
         const canalKey2 = CANAL_MAP2[canal];
         if (canalKey2) {
-          const PROV_ILUM_NAC = new Set(['MIX','HIERROS']);
-          const PROV_ILUM_INALAMB = new Set(['LUX LIGHTING']);
-          const PROV_SILLAS_IMP = new Set(['WENDY FURNITURE','URUN']);
-          const PROV_MUEBLES_NAC = new Set(['CARPINTERIA','MIX','HIERROS']);
-          const rubroU = rubro;
-          const provNombre2 = row[COL.PROV] ? String(row[COL.PROV]).trim() : '';
-          const origVal2 = origVal;
-          let cat = null;
-          const skuU = row[COL.SKU] ? String(row[COL.SKU]).trim().toUpperCase() : '';
-          if (rubroU === 'ILUMINACION') {
-            // Inalámbrico según la Biblia (ATRIBUTOS = "ILUMINACIÓN INALÁMBRICA …") tiene prioridad, sin importar proveedor/origen.
-            if ((typeof BIBLIA_INAL!=='undefined' && BIBLIA_INAL[skuU]) || PROV_ILUM_INALAMB.has(provNombre2)) cat='ILUMINACION INALAMBRICA';
-            else if (origVal2==='Importado') cat='ILUMINACION IMPORTADA';
-            else if (PROV_ILUM_NAC.has(provNombre2) || origVal2==='Fábrica') cat='ILUMINACION NACIONAL';
-            else if (origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
-          } else if (rubroU === 'MUEBLES') {
-            if (PROV_SILLAS_IMP.has(provNombre2)) cat='SILLAS IMPORTADAS';
-            else if (PROV_MUEBLES_NAC.has(provNombre2)) cat='MUEBLES NACIONALES';
-            else if (origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
-          } else {
-            // Cualquier otro rubro (DECO, NAVIDAD, BAZAR, GIFTCARD, etc.) — excluye Muebles/Iluminacion ya tratados arriba
-            if (origVal2==='Importado') cat='DECO/NAVIDAD/BAZAR IMPORTADO';
-            else if (origVal2==='Fábrica') cat='DECO/BAZAR FABRICA';
-            else if (origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
-          }
+          const cat = rpClasificar(rubro, row[COL.PROV], origVal, (row[COL.SKU] ? String(row[COL.SKU]).trim().toUpperCase() : ''));
           if (cat) {
             if (!newRUBROPROV[mesKey]) newRUBROPROV[mesKey] = {};
             if (!newRUBROPROV[mesKey][canalKey2]) newRUBROPROV[mesKey][canalKey2] = {};
@@ -2295,7 +2292,7 @@ function ipcEstim(mm){ return !!IPC_ESTIM["2026-"+mm] || !IPC_IDX["2026-"+mm]; }
 var RP2025_CANAL = {};
 var RP2025M = {};
 let cmpSel='YTD';
-const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home','ILUMINACION NACIONAL':'Mix + Hierros','ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home','SILLAS IMPORTADAS':'Wendy + Urun','MUEBLES NACIONALES':'Carpin + Mix + Hierros (Muebles y Sillas)','PROVEEDOR NACIONAL':'(Todos)','DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)','DECO/BAZAR FABRICA':'(Todos)'};
+const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home','ILUMINACION NACIONAL':'Mix + Hierros','ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home','SILLAS IMPORTADAS':'Wendy + Urun + Topmax','MUEBLES NACIONALES':'Carpin + Mix + Hierros (Muebles y Sillas)','PROVEEDOR NACIONAL':'(Todos)','DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)','DECO/BAZAR FABRICA':'(Todos)'};
 const RP_ORDER=['ILUMINACION IMPORTADA','ILUMINACION NACIONAL','ILUMINACION INALAMBRICA','SILLAS IMPORTADAS','MUEBLES NACIONALES','PROVEEDOR NACIONAL','DECO/NAVIDAD/BAZAR IMPORTADO','DECO/BAZAR FABRICA'];
 function renderRPCompare(){
   if(typeof RUBROPROV_D==='undefined') return;
@@ -2464,10 +2461,6 @@ async function handleFact2025File(file){
       throw new Error('Las columnas no coinciden con el formato esperado. Encontrado: col'+COL.CANAL+'="'+hdr[COL.CANAL]+'", col'+COL.RUBRO+'="'+hdr[COL.RUBRO]+'", col'+COL.TV+'="'+hdr[COL.TV]+'". Avisá para ajustar el mapeo.');
     }
     var CANAL_MAP2={Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
-    var PROV_ILUM_NAC=new Set(['MIX','HIERROS']);
-    var PROV_ILUM_INALAMB=new Set(['LUX LIGHTING']);
-    var PROV_SILLAS_IMP=new Set(['WENDY FURNITURE','URUN']);
-    var PROV_MUEBLES_NAC=new Set(['CARPINTERIA','MIX','HIERROS']);
     var acc={}, nFilas=0, cliAcc={};
     evReset(['2025']); // ferias 2025 se reconstruyen en cada carga del reporte 2025
     for(var ri=1;ri<rows.length;ri++){
@@ -2477,7 +2470,7 @@ async function handleFact2025File(file){
       if(!rubro || !CANALES_ALL.has(canal)) continue;
       var dia=excelDateToStr(row[COL.FECHA]); if(!dia) continue;
       // Eventos/Ferias 2025 (única edición): por equipo de ventas, con facturación nominal + ajustada por IPC del mes.
-      { var _evF25=evFeria(row[COL.EQUIPO]); if(_evF25){ var _tvE=n(row[COL.TV]); evAdd(_evF25,'2025',_tvE,n(row[COL.MGNETO]),_tvE*ipcFactor(dia.slice(5,7)),row[COL.VEND]); } }
+      { var _evF25=evFeria(row[COL.EQUIPO]); if(_evF25){ var _tvE=n(row[COL.TV]); var _catE25=rpClasificar(rubro, row[COL.PROV], (row[COL.ORIG]?String(row[COL.ORIG]).trim():''), (row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():'')); var _qE25=Math.round(n(row[COL.QTY])); evAdd(_evF25,'2025',_tvE,n(row[COL.MGNETO]),_tvE*ipcFactor(dia.slice(5,7)),row[COL.VEND],_catE25,_qE25); } }
       // CLIENTE_2025: capturar clientes Mayorista (Lett) de TODOS los meses 2025 (para el análisis de clientes)
       if(canal==='Lett' && dia.slice(0,4)==='2025'){
         var cli25=row[COL.CLIENTE]?String(row[COL.CLIENTE]).trim():'';
@@ -2494,21 +2487,7 @@ async function handleFact2025File(file){
       var canalKey2=CANAL_MAP2[canal]; if(!canalKey2) continue;
       var provNombre2=row[COL.PROV]?String(row[COL.PROV]).trim():'';
       var origVal2=row[COL.ORIG]?String(row[COL.ORIG]).trim():'';
-      var cat=null;
-      if(rubro==='ILUMINACION'){
-        if(PROV_ILUM_INALAMB.has(provNombre2)) cat='ILUMINACION INALAMBRICA';
-        else if(origVal2==='Importado') cat='ILUMINACION IMPORTADA';
-        else if(PROV_ILUM_NAC.has(provNombre2)||origVal2==='Fábrica') cat='ILUMINACION NACIONAL';
-        else if(origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
-      } else if(rubro==='MUEBLES'){
-        if(PROV_SILLAS_IMP.has(provNombre2)) cat='SILLAS IMPORTADAS';
-        else if(PROV_MUEBLES_NAC.has(provNombre2)) cat='MUEBLES NACIONALES';
-        else if(origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
-      } else {
-        if(origVal2==='Importado') cat='DECO/NAVIDAD/BAZAR IMPORTADO';
-        else if(origVal2==='Fábrica') cat='DECO/BAZAR FABRICA';
-        else if(origVal2==='Proveedor Nacional') cat='PROVEEDOR NACIONAL';
-      }
+      var cat=rpClasificar(rubro, provNombre2, origVal2, (row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''));
       if(!cat) continue;
       var tv=n(row[COL.TV]);
       var qty2=Math.round(n(row[COL.QTY]));
@@ -2997,7 +2976,7 @@ const RP_CAT_PROV = {
   'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home',
   'ILUMINACION NACIONAL':'Mix + Hierros',
   'ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home',
-  'SILLAS IMPORTADAS':'Wendy + Urun',
+  'SILLAS IMPORTADAS':'Wendy + Urun + Topmax',
   'MUEBLES NACIONALES':'Carpin+ Mix +Hierros (Muebles y Sillas)',
   'PROVEEDOR NACIONAL':'(Todos)',
   'DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)',
@@ -3797,9 +3776,41 @@ function renderEventos(){
      +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Pedido = total de pedidos de agosto (dinámica del archivo de pedidos). Facturado = facturación Presentes Ago 2026 del archivo madre.</div>';
     evExtra=cuadro1+cuadro2;
   }
+  // ── Cuadro NUEVO: facturado por rubro y edición (cantidades juntas + facturación S/IVA juntas), al lado del cuadro de ediciones ──
+  var rubroBox='';
+  (function(){
+    var RPO=(typeof RP_CAT_ORDER!=='undefined')?RP_CAT_ORDER:[]; var eds=EDS;
+    var edLbl=eds.map(function(e){ return e[0]==='2026-mar'?'Mar 26':e[0]==='2026-ago'?'Ago 26':(e[0]==='2025'?(evSel==='Presentes'?'Ago 25':'2025'):e[0]); });
+    var qn=function(v){ return v?Math.round(v).toLocaleString('es-AR'):'—'; };
+    var totC=eds.map(function(){return 0;}), totF=eds.map(function(){return 0;}); var rows='';
+    RPO.forEach(function(rub){
+      var any=eds.some(function(e){ var E=F[e[0]]; return E&&E.byR&&E.byR[rub]&&((E.byR[rub].fac||0)||(E.byR[rub].cant||0)); });
+      if(!any) return;
+      var prov=(typeof RP_PROVDESC!=='undefined'&&RP_PROVDESC[rub])||'';
+      var cCells='', fCells='';
+      eds.forEach(function(e,ix){ var E=F[e[0]]; var d=(E&&E.byR&&E.byR[rub])||{cant:0,fac:0}; totC[ix]+=(d.cant||0); totF[ix]+=(d.fac||0);
+        cCells+='<td style="text-align:right;padding:5px 9px;color:#3a6b4f'+(ix===0?';border-left:2px solid var(--brd)':'')+'">'+qn(d.cant)+'</td>';
+        fCells+='<td style="text-align:right;padding:5px 9px;color:'+e[2]+';font-weight:600'+(ix===0?';border-left:2px solid var(--brd)':'')+'">'+fmt(d.fac||0)+'</td>';
+      });
+      rows+='<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 9px;font-weight:600">'+rub+'</td><td style="text-align:left;padding:5px 9px;color:var(--txt2);font-size:10px;max-width:160px">'+prov+'</td>'+cCells+fCells+'</tr>';
+    });
+    if(!rows) return;
+    var totCc=eds.map(function(e,ix){return '<td style="text-align:right;padding:6px 9px'+(ix===0?';border-left:2px solid var(--brd)':'')+'">'+qn(totC[ix])+'</td>';}).join('');
+    var totFc=eds.map(function(e,ix){return '<td style="text-align:right;padding:6px 9px'+(ix===0?';border-left:2px solid var(--brd)':'')+'">'+fmt(totF[ix])+'</td>';}).join('');
+    var subH=eds.map(function(e,ix){return '<th style="text-align:right;padding:5px 9px;color:'+e[2]+';font-size:10px'+(ix===0?';border-left:2px solid var(--brd)':'')+'">'+edLbl[ix]+'</th>';}).join('');
+    rubroBox='<div style="flex:1;min-width:480px">'
+     +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-layout-grid"></i>Facturado por rubro <span class="sec-sub">· cantidades e importes S/IVA por edición · solo facturado</span></div>'
+     +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:auto"><table style="border-collapse:collapse;font-size:11.5px;width:100%">'
+     +'<thead><tr><th style="background:var(--bg)"></th><th style="background:var(--bg)"></th><th colspan="'+eds.length+'" style="background:#2e8b57;color:#fff;padding:5px 9px;text-align:center;border-bottom:2px solid #fff;border-left:2px solid #fff">CANTIDAD (u)</th><th colspan="'+eds.length+'" style="background:#274d80;color:#fff;padding:5px 9px;text-align:center;border-bottom:2px solid #fff;border-left:2px solid #fff">FACTURACIÓN S/IVA</th></tr>'
+     +'<tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:5px 9px">Rubro</th><th style="text-align:left;padding:5px 9px">Proveedor</th>'+subH+subH+'</tr></thead>'
+     +'<tbody>'+rows+'<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:6px 9px">Total</td><td></td>'+totCc+totFc+'</tr></tbody></table></div></div>';
+  })();
   wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;max-width:520px">'+cards+'</div>'
-   +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-calendar-event"></i>'+evSel+' <span class="sec-sub">· por edición · facturación S/IVA, margen (coef.) y ajuste IPC</span></div>'
-   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Edición</th><th style="text-align:right;padding:6px 10px">Facturación S/IVA</th><th style="text-align:right;padding:6px 10px">Fact. aj.IPC</th><th style="text-align:right;padding:6px 10px">Margen (coef.)</th><th style="text-align:right;padding:6px 10px">Var. vs 2025</th></tr></thead><tbody>'+body+'</tbody></table></div>'
+   +'<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">'
+   +'<div><div class="sec-hdr" style="margin-top:4px"><i class="ti ti-calendar-event"></i>'+evSel+' <span class="sec-sub">· por edición · facturación S/IVA, margen (coef.) y ajuste IPC</span></div>'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Edición</th><th style="text-align:right;padding:6px 10px">Facturación S/IVA</th><th style="text-align:right;padding:6px 10px">Fact. aj.IPC</th><th style="text-align:right;padding:6px 10px">Margen (coef.)</th><th style="text-align:right;padding:6px 10px">Var. vs 2025</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'
+   +rubroBox
+   +'</div>'
    +vDetail
    +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coeficiente neto (precio/costo) ponderado por facturación · "Var. vs 2025" compara contra la facturación 2025 ajustada por IPC · Agosto 2026 se completa al cargar el reporte con esa edición (hasta 31/07 = Marzo, desde 01/08 = Agosto).</div>'
    +evExtra;
