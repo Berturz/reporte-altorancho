@@ -17,9 +17,9 @@ alter table public.presupuesto_data enable row level security;
 -- 2) Lista de mails habilitados  ← EDITAR ACÁ para sumar/quitar gente
 create or replace function public.presupuesto_ok() returns boolean
 language sql stable as $$
-  select coalesce(auth.jwt() ->> 'email', '') in (
-    'MAIL_HABILITADO@altorancho.com'   -- << reemplazar por los mails reales antes de correr
-    -- , 'otro@altorancho.com'
+  select lower(coalesce(auth.jwt() ->> 'email', '')) in (   -- lower(): no importa si el mail se escribió con mayúsculas
+    'MAIL_HABILITADO@altorancho.com'   -- << poner acá el mail real (en minúscula) al correrlo
+    -- , 'otro@altorancho.com'   -- siempre en minúscula
   );
 $$;
 
