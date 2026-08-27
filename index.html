@@ -3148,7 +3148,10 @@ function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
   if(!cats.length) return '<div class="prov-empty">Sin datos para este canal en el período</div>';
   let totVentas=0, totFC=0, totQty=0;
   const rows = cats.map(cat=>{ const [v,fc,q]=dataObj[cat]; totVentas+=v; totFC+=fc; totQty+=q; return {cat,v,fc,q}; });
+  // Ranking por facturación dentro del canal (el orden de las tarjetas NO cambia; solo se muestra el puesto)
+  const rpRank={}; rows.slice().sort((a,b)=>b.fc-a.fc).forEach((rr,ii)=>{ rpRank[rr.cat]=ii+1; });
   const cards = rows.map(r=>{
+    const rank   = rpRank[r.cat]||0;
     const ticket = r.v>0 ? r.fc/r.v : 0;
     const pct    = totFC>0 ? r.fc/totFC*100 : 0;
     const icon   = RP_CAT_ICON[r.cat]||'package';
@@ -3170,7 +3173,8 @@ function renderRPRubroCards(canalKey, dataObj, col, skuByCat){
           : (String(icon).indexOf('+')>=0
               ? `<span style="display:inline-flex;gap:6px;align-items:center;color:#1f2937">${String(icon).split('+').map(function(ic){return '<i class="ti ti-'+ic+'" style="font-size:27px"></i>';}).join('')}</span>`
               : `<i class="ti ti-${icon} rpc-ic" style="color:#1f2937"></i>`));
-    return `<div class="rpc">
+    return `<div class="rpc" style="position:relative">
+      <div style="position:absolute;top:4px;right:5px;z-index:3;font-size:9px;font-weight:700;line-height:1;border-radius:20px;padding:2px 6px;${rank===1?'background:#fff4d6;color:#a9781a;border:1px solid #e9c977':'background:rgba(241,240,244,.92);color:#8a8494;border:1px solid #e2e0e6'}">${rank===1?'🏆 #1':'#'+rank}</div>
       <div class="rpc-top">
         <div class="rpc-body"><div class="rpc-rubro" style="color:${origCol}">${r.cat}</div><div class="rpc-prov">${RP_CAT_PROV[r.cat]||''}</div></div>
         <div class="rpc-photo" style="background:${flagBg}">
