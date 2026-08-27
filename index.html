@@ -3532,15 +3532,15 @@ function makeVendBar(canvasId, items, opt){
 function renderVendChart(items){ makeVendBar('cVend', items); }
 
 // ── Gráfico Acumulado MTM: ventas por vendedor del mes elegido (Ene→Dic 2026) ──
-var vendMTMmes = null;
-function setVendMTMmes(m){ vendMTMmes=m; renderVendMTM(); }
+var vendMTMmes = null, vendMTMauto = true;
+function setVendMTMmes(m){ vendMTMmes=m; vendMTMauto=false; renderVendMTM(); }
 function renderVendMTM(){
   const cv=document.getElementById('cVendMTM'); if(!cv) return;
   const sw=document.getElementById('vendMTMselWrap');
   const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const conDatos={}; Object.keys(VEND_D).forEach(function(d){ if(/^\d{4}-\d{2}-\d{2}$/.test(d)) conDatos[d.slice(0,7)]=1; });
   const FIXED=[]; for(var mm=1;mm<=12;mm++){ var k='2026-'+String(mm).padStart(2,'0'); FIXED.push({key:k,label:MN[mm-1]+' 2026',has:!!conDatos[k]}); }
-  if(!vendMTMmes || !FIXED.some(function(f){return f.key===vendMTMmes;})){ var wd=FIXED.filter(function(f){return f.has;}); vendMTMmes = wd.length?wd[wd.length-1].key:FIXED[0].key; }
+  if(vendMTMauto || !vendMTMmes || !FIXED.some(function(f){return f.key===vendMTMmes;})){ var wd=FIXED.filter(function(f){return f.has;}); vendMTMmes = wd.length?wd[wd.length-1].key:FIXED[0].key; }
   if(sw) sw.innerHTML='<select onchange="setVendMTMmes(this.value)" style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt);cursor:pointer">'+FIXED.map(function(f){return '<option value="'+f.key+'"'+(f.key===vendMTMmes?' selected':'')+'>'+f.label+(f.has?'':' — sin datos')+'</option>';}).join('')+'</select>';
   const dates=Object.keys(VEND_D).filter(function(d){return d.slice(0,7)===vendMTMmes;});
   const items=aggVend(dates);
