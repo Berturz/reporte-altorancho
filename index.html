@@ -3731,13 +3731,13 @@ function renderEventos(){
   if(evSel==='Presentes'){
     var evNorm=function(s){return String(s||'').toUpperCase().replace(/\s+/g,' ').trim();};
     var PED={}; // [nombre, mar(díasOfic), ago(díasOfic 19-22), agoTot(todo agosto)]
-    [['Matias Chiuki',22723811.40,54679920.20,54956689.55],
-     ['Laura Viviana Soldano',6936695.20,29020508.15,38669876.15],
-     ['Jose Luis Persoglia',8690802.45,23031256.65,23031256.65],
+    [['Matias Chiuki',22723811.40,54679920.20,60131913.55],
+     ['Laura Viviana Soldano',6936695.20,29288946.65,46834714.65],
+     ['Jose Luis Persoglia',8690802.45,23031256.65,26987756.65],
      ['Jimena Alejandra Tobares',10335411.40,9325032.95,10106145.65],
      ['ATENCION DECORADORES Y ARQUITECTOS',0,1268107.11,2229029.78]
     ].forEach(function(r){ PED[evNorm(r[0])]={disp:r[0],mar:r[1],ago:r[2],agoTot:r[3]}; });
-    var EV_PED_AGO_TOTAL=128992997.78;
+    var EV_PED_AGO_TOTAL=146289560.28;
     var _b25=(F['2025']&&F['2025'].byV)||{}, _bAgo=(F['2026-ago']&&F['2026-ago'].byV)||{};
     var g25={}, gAgo={};
     for(var _k in _b25){ g25[evNorm(_k)]={disp:_k,ipc:(_b25[_k].facIpc||0)}; }
