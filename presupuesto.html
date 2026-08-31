@@ -172,6 +172,8 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
  border-left:4px solid var(--ext)}
 .mc .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);font-weight:700}
 .mc .v{font-size:1.25rem;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.mc .s{font-size:.68rem;color:var(--txt2);line-height:1.25;margin-top:.1rem}
+.mc.res .s{color:rgba(255,255,255,.8)}
 .mc.res{color:#fff;border:0}
 .mc.res.pos{background:linear-gradient(135deg,#2a6b53,#3d8f70)}
 .mc.res.neg{background:linear-gradient(135deg,#b34a26,#d85a30)}
@@ -245,6 +247,7 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
       <span><i style="background:rgba(216,90,48,.55)"></i>resultado negativo</span>
       <span><b>s/IMPO</b>: sin contar las importaciones · <b>c/IMPO</b>: contándolas</span>
     </div>
+    <div class="info" style="margin-top:.6rem"><b>*</b> Los montos de <b>IMPO son estimados</b>, salvo las importaciones que ya llegaron: esas van por su valor real. Por eso el resultado <b>c/IMPO</b> de los meses que todavía no cerraron puede moverse.</div>
   </div>
 
   <div class="sec">
@@ -755,8 +758,9 @@ function extras(){
   var g=function(a,i){return (a&&a[i])||0;};
   var rs=g(v.resS,M), rc=g(v.resC,M);
   $('mrow').innerHTML=
-    '<div class="mc"><div class="l">IMPO real + estimado</div><div class="v">'+
-      (g(v.impo,M)?fmS(v.impo[M]):'—')+'</div></div>'+
+    '<div class="mc"><div class="l">IMPO <span style="font-weight:800">*</span></div><div class="v">'+
+      (g(v.impo,M)?fmS(v.impo[M]):'—')+'</div>'+
+      '<div class="s">estimado, salvo lo ya llegado</div></div>'+
     '<div class="mc"><div class="l">Impuestos IIBB / IVA</div><div class="v">'+
       (g(v.imp,M)?fmS(v.imp[M]):'—')+'</div></div>'+
     '<div class="mc"><div class="l">Gastos totales a cubrir</div><div class="v">'+
@@ -776,7 +780,7 @@ function extras(){
   }
   var h='<thead><tr><th class="l">&nbsp;</th>'+MES.map(function(m,i){
     return '<th class="'+(i===M?'sel':'')+'" data-i="'+i+'">'+m+'</th>';}).join('')+'</tr></thead><tbody>';
-  h+=fila('IMPO real + estimado',v.impo);
+  h+=fila('IMPO real + estimado *',v.impo);
   h+=fila('Impuestos IIBB / IVA',v.imp,'band');
   h+=fila('Gastos totales a cubrir',v.cubrir);
   h+=fila('Resultado sin IMPO',v.resS,'res sep',true);
