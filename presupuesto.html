@@ -6,7 +6,7 @@
  --brd:rgba(44,44,42,.12);--brd2:rgba(44,44,42,.22);
  --ok:#2a6b53;--warn:#c8873c;--neg:#d85a30;--blue:#4472c4;--navy:#2e4c86;--ink:#2a2a30;
  --r:10px;--rl:14px;
- --s-mkt:#3C3489;--s-grupo:#2e4c86;--s-rrhh:#993556;--s-log:#2A6B53;--s-fab:#8B4630;--s-prod:#c8873c;
+ --s-mkt:#3C3489;--vta:#3C3489;--vta-d:#221d5c;--s-grupo:#2e4c86;--s-rrhh:#993556;--s-log:#2A6B53;--s-fab:#8B4630;--s-prod:#c8873c;
  color-scheme:light}
 @media(prefers-color-scheme:dark){:root{--bg:#ffffff;--bg2:#f6f6f3;--bg3:#f0efea;--txt:#2c2c2a;--txt2:#6e6d67}}
 *{box-sizing:border-box}
@@ -143,10 +143,22 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
  border-top:2px solid var(--brd2)}
 .cpill{display:inline-block;border-radius:5px;padding:.05rem .4rem;font-weight:700;font-size:.76rem;
  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
-/* ── VENTAS ── */
-.vtab td.n,.vtab th.n{text-align:right;font-variant-numeric:tabular-nums}
-.vtab tr.rt td{font-weight:800;background:var(--bg2)}
-.vtab td.sel,.vtab th.sel{outline:2px solid var(--ink);outline-offset:-2px}
+/* ── VENTAS (grilla pintada) ── */
+.vtab{border-collapse:separate;border-spacing:0;width:100%;font-size:.8rem}
+.vtab th{background:var(--vta);color:#fff;font-size:.7rem;padding:.45rem .4rem;text-align:right;
+ letter-spacing:.5px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap}
+.vtab th:first-child{text-align:left;border-radius:8px 0 0 0;cursor:default}
+.vtab th:last-child{border-radius:0 8px 0 0}
+.vtab th.sel{background:var(--vta-d)}
+.vtab th:not(:first-child):hover{background:var(--vta-d)}
+.vtab td{padding:.4rem .45rem;text-align:right;border-bottom:1px solid var(--brd);
+ font-variant-numeric:tabular-nums;white-space:nowrap}
+.vtab td.l{text-align:left;font-weight:700;white-space:normal}
+.vtab td.sel{background:rgba(60,52,137,.07)}
+.vtab tr.band td{background:var(--bg2)}
+.vtab tr.band td.sel{background:rgba(60,52,137,.13)}
+.mini{display:block;height:5px;border-radius:99px;background:#e3e2dc;overflow:hidden;margin-top:.2rem}
+.mini i{display:block;height:100%;border-radius:99px;background:var(--vta)}
 #dpanel{margin-top:.9rem}
 .dp{border:1px solid var(--brd2);border-radius:var(--r);padding:.9rem 1rem;background:var(--bg)}
 .dp-hdr{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;
@@ -649,6 +661,13 @@ function ystrip(){
   [].forEach.call(document.querySelectorAll('#ystrip .yt'),function(el){
     el.onclick=function(){M=+el.dataset.i;DS=null;render();};});
 }
+// Semáforo. inv=true cuando lo positivo es bueno (ventas por encima de lo proyectado).
+function hcol2(d,inv){
+  if(d===null||d===undefined||isNaN(d))return 'background:var(--bg2);color:var(--txt2)';
+  var bueno = inv ? d>0 : d<0, a=Math.min(Math.abs(d)/0.4,1);
+  return bueno ? 'background:rgba(42,107,83,'+(0.12+a*0.50).toFixed(2)+');color:'+(a>.60?'#fff':'var(--txt)')
+               : 'background:rgba(216,90,48,'+(0.12+a*0.58).toFixed(2)+');color:'+(a>.55?'#fff':'var(--txt)');
+}
 // Ventas del año: proyectado vs real y cuánto pesa el gasto sobre la venta.
 function ventas(){
   var v=D.fc&&D.fc.ventas;
@@ -661,23 +680,27 @@ function ventas(){
     rp.push(v.proy[i]?gp[i]/v.proy[i]:null);
     rr.push(v.real[i]?gr[i]/v.real[i]:null);
   }
-  function fila(lab,vals,fmt,cl){
-    return '<tr'+(cl?' class="'+cl+'"':'')+'><td class="l">'+lab+'</td>'+
-      vals.map(function(x,i){return '<td class="n'+(i===M?' sel':'')+'">'+fmt(x,i)+'</td>';}).join('')+'</tr>';
+  function fila(lab,cells,band){
+    return '<tr'+(band?' class="band"':'')+'><td class="l">'+lab+'</td>'+
+      cells.map(function(c,i){return '<td'+(i===M?' class="sel"':'')+'>'+c+'</td>';}).join('')+'</tr>';
   }
-  var h='<tr><th class="l">&nbsp;</th>'+MES.map(function(m,i){
-    return '<th class="n'+(i===M?' sel':'')+'">'+m+'</th>';}).join('')+'</tr>';
-  h+=fila('Ventas proyectadas',v.proy,function(x){return x?fmM(x):'—';});
-  h+=fila('Ventas reales',v.real,function(x){return x?fmM(x):'—';});
-  h+=fila('Desvío de ventas',dv,function(x){
-    return x===null?'—':'<b style="color:'+(x<0?'var(--neg)':'var(--ok)')+'">'+pc(x)+'</b>';});
-  h+=fila('Gastos sobre ventas — proyectado',rp,function(x){
-    return x===null?'—':(x*100).toFixed(0)+'%';});
-  h+=fila('Gastos sobre ventas — real',rr,function(x,i){
-    if(x===null)return '—';
-    var peor=(rp[i]!==null&&x>rp[i]);
-    return '<b style="color:'+(peor?'var(--neg)':'var(--ok)')+'">'+(x*100).toFixed(0)+'%</b>';},'rt');
-  $('vtab').innerHTML=h;
+  var h='<thead><tr><th class="l">&nbsp;</th>'+MES.map(function(m,i){
+    return '<th class="'+(i===M?'sel':'')+'" data-i="'+i+'">'+m+'</th>';}).join('')+'</tr></thead><tbody>';
+  h+=fila('Ventas proyectadas',v.proy.map(function(x){return x?fmM(x):'—';}));
+  h+=fila('Ventas reales',v.real.map(function(x,i){
+    if(!x)return '<span class="muted">—</span>';
+    return fmM(x)+'<span class="mini"><i style="width:'+
+      Math.min(x/(v.proy[i]||x)*100,100).toFixed(0)+'%"></i></span>';}),true);
+  h+=fila('Desvío de ventas',dv.map(function(x){
+    return '<span class="hm" style="'+hcol2(x,true)+'">'+(x===null?'—':pc(x))+'</span>';}));
+  h+=fila('Gastos sobre ventas · proyectado',rp.map(function(x){
+    return x===null?'—':(x*100).toFixed(0)+'%';}),true);
+  h+=fila('Gastos sobre ventas · real',rr.map(function(x,i){
+    if(x===null)return '<span class="muted">—</span>';
+    return '<span class="hm" style="'+hcol2(x-rp[i],false)+'">'+(x*100).toFixed(0)+'%</span>';}));
+  $('vtab').innerHTML=h+'</tbody>';
+  [].forEach.call(document.querySelectorAll('#vtab th[data-i]'),function(el){
+    el.onclick=function(){M=+el.dataset.i;DS=null;render();};});
 }
 function kpis(){
   if(!D.fc){$('kpis').innerHTML='';return;}
