@@ -6,7 +6,7 @@
  --brd:rgba(44,44,42,.12);--brd2:rgba(44,44,42,.22);
  --ok:#2a6b53;--warn:#c8873c;--neg:#d85a30;--blue:#4472c4;--navy:#2e4c86;--ink:#2a2a30;
  --r:10px;--rl:14px;
- --s-mkt:#3C3489;--vta:#3C3489;--vta-d:#221d5c;--s-grupo:#2e4c86;--s-rrhh:#993556;--s-log:#2A6B53;--s-fab:#8B4630;--s-prod:#c8873c;
+ --s-mkt:#3C3489;--vta:#3C3489;--vta-d:#221d5c;--ext:#8a5a2b;--ext-d:#5c3b1c;--s-grupo:#2e4c86;--s-rrhh:#993556;--s-log:#2A6B53;--s-fab:#8B4630;--s-prod:#c8873c;
  color-scheme:light}
 @media(prefers-color-scheme:dark){:root{--bg:#ffffff;--bg2:#f6f6f3;--bg3:#f0efea;--txt:#2c2c2a;--txt2:#6e6d67}}
 *{box-sizing:border-box}
@@ -160,6 +160,22 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
 .vtab tr.band td.sel{background:rgba(60,52,137,.13)}
 .mini{display:block;height:5px;border-radius:99px;background:#e3e2dc;overflow:hidden;margin-top:.2rem}
 .mini i{display:block;height:100%;border-radius:99px;background:var(--vta)}
+/* ── IMPUESTOS / IMPO / RESULTADO ── */
+.etab th{background:var(--ext)}
+.etab th.sel,.etab th:not(:first-child):hover{background:var(--ext-d)}
+.etab td.sel{background:rgba(138,90,43,.08)}
+.etab tr.band td.sel{background:rgba(138,90,43,.14)}
+.etab tr.sep td{border-top:2px solid var(--brd2)}
+.etab tr.res td{font-weight:800}
+.mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:.6rem;margin-bottom:1rem}
+.mc{border-radius:var(--r);padding:.6rem .8rem;border:1px solid var(--brd);background:var(--bg2);
+ border-left:4px solid var(--ext)}
+.mc .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);font-weight:700}
+.mc .v{font-size:1.25rem;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.mc.res{color:#fff;border:0}
+.mc.res.pos{background:linear-gradient(135deg,#2a6b53,#3d8f70)}
+.mc.res.neg{background:linear-gradient(135deg,#b34a26,#d85a30)}
+.mc.res .l{color:rgba(255,255,255,.85)}
 #dpanel{margin-top:.9rem}
 .dp{border:1px solid var(--brd2);border-radius:var(--r);padding:.9rem 1rem;background:var(--bg)}
 .dp-hdr{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;
@@ -216,6 +232,19 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
       <h2>Ventas proyectadas y peso del gasto</h2>
       <span class="muted">hoja TOTAL del forecast</span></div>
     <div class="scroll"><table class="vtab" id="vtab"></table></div>
+  </div>
+
+  <div class="sec" id="secExt">
+    <div class="sec-hdr"><span class="dot" style="background:var(--ext)"></span>
+      <h2>Impuestos, IMPO y resultado</h2>
+      <span class="muted" id="hExt"></span></div>
+    <div class="mrow" id="mrow"></div>
+    <div class="scroll"><table class="vtab etab" id="etab"></table></div>
+    <div class="legend">
+      <span><i style="background:rgba(42,107,83,.55)"></i>resultado positivo</span>
+      <span><i style="background:rgba(216,90,48,.55)"></i>resultado negativo</span>
+      <span><b>s/IMPO</b>: sin contar las importaciones · <b>c/IMPO</b>: contándolas</span>
+    </div>
   </div>
 
   <div class="sec">
@@ -419,7 +448,11 @@ function parseVentas(wb){
   for(var i=0;i<12;i++){proy.push(pB[i]+pA[i]); real.push(rB[i]+rA[i]);}
   var any=false; for(var i=0;i<12;i++) if(proy[i]){any=true;break;}
   if(!any) return null;
-  return {proy:proy,real:real,proyB:pB,proyAA:pA,realB:rB,realAA:rA};
+  // IMPO, impuestos y resultado: mismas columnas, filas mas abajo de la misma hoja.
+  function fila(rx){var i=find(rx);return i>=0?rowAt(A[i],1):null;}
+  return {proy:proy,real:real,proyB:pB,proyAA:pA,realB:rB,realAA:rA,
+    impo:fila(/^impo\b/i), imp:fila(/^impuestos/i), cubrir:fila(/^gastos totales a cubrir/i),
+    resS:fila(/^resultado.*s\/impo/i), resC:fila(/^resultado.*c\/impo/i)};
 }
 // Año del ejercicio: lo lee del encabezado de la grilla ("ene-26"), sea texto o fecha.
 function yearOf(A,iP){
@@ -703,6 +736,55 @@ function ventas(){
   [].forEach.call(document.querySelectorAll('#vtab th[data-i]'),function(el){
     el.onclick=function(){M=+el.dataset.i;DS=null;render();};});
 }
+// Impuestos, IMPO y resultado: filas de mas abajo de la hoja TOTAL.
+function fmS(v){ // con signo, para importes que pueden ser negativos
+  var s=(Math.abs(v)/1e6).toLocaleString('es-AR',{maximumFractionDigits:1});
+  return (v<0?'−$':'$')+s+' M';
+}
+function resCol(v){
+  if(!v)return 'background:var(--bg2);color:var(--txt2)';
+  var a=Math.min(Math.abs(v)/700e6,1);
+  return v>0 ? 'background:rgba(42,107,83,'+(0.14+a*0.50).toFixed(2)+');color:'+(a>.55?'#fff':'var(--txt)')
+             : 'background:rgba(216,90,48,'+(0.14+a*0.55).toFixed(2)+');color:'+(a>.50?'#fff':'var(--txt)');
+}
+function extras(){
+  var v=D.fc&&D.fc.ventas;
+  if(!v||!v.resC){$('secExt').style.display='none';return;}
+  $('secExt').style.display='';
+  $('hExt').textContent='· viendo '+MES[M]+'-'+YY();
+  var g=function(a,i){return (a&&a[i])||0;};
+  var rs=g(v.resS,M), rc=g(v.resC,M);
+  $('mrow').innerHTML=
+    '<div class="mc"><div class="l">IMPO real + estimado</div><div class="v">'+
+      (g(v.impo,M)?fmS(v.impo[M]):'—')+'</div></div>'+
+    '<div class="mc"><div class="l">Impuestos IIBB / IVA</div><div class="v">'+
+      (g(v.imp,M)?fmS(v.imp[M]):'—')+'</div></div>'+
+    '<div class="mc"><div class="l">Gastos totales a cubrir</div><div class="v">'+
+      (g(v.cubrir,M)?fmS(v.cubrir[M]):'—')+'</div></div>'+
+    '<div class="mc res '+(rs>=0?'pos':'neg')+'"><div class="l">Resultado sin IMPO</div>'+
+      '<div class="v">'+(rs?fmS(rs):'—')+'</div></div>'+
+    '<div class="mc res '+(rc>=0?'pos':'neg')+'"><div class="l">Resultado con IMPO</div>'+
+      '<div class="v">'+(rc?fmS(rc):'—')+'</div></div>';
+  function fila(lab,arr,cl,heat){
+    if(!arr) return '';
+    return '<tr'+(cl?' class="'+cl+'"':'')+'><td class="l">'+lab+'</td>'+
+      arr.map(function(x,i){
+        var c = !x ? '<span class="muted">—</span>'
+              : (heat ? '<span class="hm" style="'+resCol(x)+'">'+fmS(x)+'</span>' : fmS(x));
+        return '<td'+(i===M?' class="sel"':'')+'>'+c+'</td>';
+      }).join('')+'</tr>';
+  }
+  var h='<thead><tr><th class="l">&nbsp;</th>'+MES.map(function(m,i){
+    return '<th class="'+(i===M?'sel':'')+'" data-i="'+i+'">'+m+'</th>';}).join('')+'</tr></thead><tbody>';
+  h+=fila('IMPO real + estimado',v.impo);
+  h+=fila('Impuestos IIBB / IVA',v.imp,'band');
+  h+=fila('Gastos totales a cubrir',v.cubrir);
+  h+=fila('Resultado sin IMPO',v.resS,'res sep',true);
+  h+=fila('Resultado con IMPO',v.resC,'res',true);
+  $('etab').innerHTML=h+'</tbody>';
+  [].forEach.call(document.querySelectorAll('#etab th[data-i]'),function(el){
+    el.onclick=function(){M=+el.dataset.i;DS=null;render();};});
+}
 function kpis(){
   if(!D.fc){$('kpis').innerHTML='';return;}
   var p=blockTot('proy',M), r=blockTot('real',M), d=p?r/p-1:null, L=lastReal();
@@ -977,7 +1059,7 @@ function render(){
   // Solo se reubica el mes si no hay forecast y el mes elegido no tiene detalle.
   if(!D.fc){var ks=Object.keys(D.det).map(Number);
     if(ks.length&&D.det[M]===undefined) M=Math.max.apply(null,ks);}
-  ystrip();ventas();kpis();cards();blocks();heat();detalle();
+  ystrip();ventas();extras();kpis();cards();blocks();heat();detalle();
 }
 
 // ══════════ ARRANQUE ══════════
