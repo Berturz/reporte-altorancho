@@ -2444,7 +2444,7 @@ async function handleBibliaFile(file){
 async function handleFact2025File(file){
   if(!file) return;
   var setS=function(m){ var els=document.querySelectorAll('.rp25-status'); for(var i=0;i<els.length;i++) els[i].innerHTML=m; };
-  var MES='07', YM='2025-07';
+  // RP2025_CANAL: se cargan TODOS los meses de 2025 (acumulado por mm), no solo un mes fijo
   setS('<span class="spin">&#8635;</span> Leyendo archivo...');
   try{
     var buf=await file.arrayBuffer();
@@ -2483,23 +2483,25 @@ async function handleFact2025File(file){
           if(rubro!=='ENVIOS' && rubro!=='N/A') ce.rub[rubro]=(ce.rub[rubro]||0)+tv25;
         }
       }
-      if(dia.slice(0,7)!==YM) continue; // (RP2025_CANAL) SOLO julio 2025
+      if(dia.slice(0,4)!=='2025') continue; // (RP2025_CANAL) todos los meses de 2025
       var canalKey2=CANAL_MAP2[canal]; if(!canalKey2) continue;
       var provNombre2=row[COL.PROV]?String(row[COL.PROV]).trim():'';
       var origVal2=row[COL.ORIG]?String(row[COL.ORIG]).trim():'';
       var cat=rpClasificar(rubro, provNombre2, origVal2, (row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''));
       if(!cat) continue;
+      var mm2=dia.slice(5,7);
       var tv=n(row[COL.TV]);
       var qty2=Math.round(n(row[COL.QTY]));
-      if(!acc[canalKey2]) acc[canalKey2]={};
-      if(!acc[canalKey2][cat]) acc[canalKey2][cat]={tv:0,qty:0};
-      acc[canalKey2][cat].tv+=tv;
-      acc[canalKey2][cat].qty+=qty2;
+      if(!acc[mm2]) acc[mm2]={};
+      if(!acc[mm2][canalKey2]) acc[mm2][canalKey2]={};
+      if(!acc[mm2][canalKey2][cat]) acc[mm2][canalKey2][cat]={tv:0,qty:0};
+      acc[mm2][canalKey2][cat].tv+=tv;
+      acc[mm2][canalKey2][cat].qty+=qty2;
       nFilas++;
     }
-    if(!nFilas) throw new Error('No se encontraron filas de julio 2025 (2025-07) en la hoja. ¿El archivo llega hasta julio?');
+    if(!nFilas) throw new Error('No se encontraron filas de 2025 en la hoja "FACTURACIÓN 2025".');
     if(typeof RP2025_CANAL==='undefined'||!RP2025_CANAL) window.RP2025_CANAL={};
-    RP2025_CANAL[MES]=acc;
+    for(var _mmC in acc){ RP2025_CANAL[_mmC]=acc[_mmC]; }
     // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
     var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb,comps:Object.keys(dc.comps)}; } }
     CLIENTE_2025=finalCli25;
@@ -2507,8 +2509,8 @@ async function handleFact2025File(file){
     try{ renderEventos(); }catch(e){}
     try{ renderYTD(); }catch(e){}
     try{ renderRPCompare(); }catch(e){}
-    var tq=0,ttv=0; for(var ck in acc){ for(var c in acc[ck]){ tq+=acc[ck][c].qty; ttv+=acc[ck][c].tv; } }
-    setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>Julio 2025 cargado</b> · '+nFilas.toLocaleString('es-AR')+' filas · '+tq.toLocaleString('es-AR')+' u · $'+Math.round(ttv).toLocaleString('es-AR')+' s/IVA. <b>Ahora tocá "Guardar en Supabase"</b> para que quede publicado.');
+    var tq=0,ttv=0; var _meses=Object.keys(acc).sort(); for(var _m in acc){ for(var ck in acc[_m]){ for(var c in acc[_m][ck]){ tq+=acc[_m][ck][c].qty; ttv+=acc[_m][ck][c].tv; } } }
+    setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>2025 cargado ('+_meses.length+' meses)</b> · '+nFilas.toLocaleString('es-AR')+' filas · '+tq.toLocaleString('es-AR')+' u · $'+Math.round(ttv).toLocaleString('es-AR')+' s/IVA. <b>Ahora tocá "Guardar en Supabase"</b> para que quede publicado.');
   }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
 }
 // Importa el Excel de etiquetas de clientes → mapa CLIENTE(mayúsc) → tipo (etiqueta "Tipo de cliente / …"). El resto queda N/A.
