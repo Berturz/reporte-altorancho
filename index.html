@@ -530,7 +530,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
       <label id="uploadZone" title="Actualiza el reporte con el Reporte 2026 USAR (hoja FACTURACIÓN 2026)" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px"><i class="ti ti-file-spreadsheet" style="font-size:15px;color:#4472c4"></i>Reporte 2026 USAR<span style="color:var(--txt2);font-weight:400;margin-left:auto">FACTURACIÓN 2026</span><input type="file" accept=".xlsx,.xls" id="fileInput" onchange="handleFile(this.files[0])" style="display:none"></label>
       <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
       <div class="upload-status" id="uploadStatus" style="font-size:11px;text-align:center;justify-content:center;margin-left:0"></div>
-      <label title="Agrega el desglose 2025 (julio) al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-history-toggle" style="font-size:15px;color:#8a8f98"></i>Reporte 2025 USAR<span style="color:var(--txt2);font-weight:400;margin-left:auto">comparativo · agrega julio</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
+      <label title="Carga el desglose 2025 de todos los meses al comparativo por rubro/canal. Lee la hoja FACTURACIÓN 2025." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-history-toggle" style="font-size:15px;color:#8a8f98"></i>Reporte 2025 USAR<span style="color:var(--txt2);font-weight:400;margin-left:auto">comparativo · todos los meses</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
       <div class="rp25-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
       <label title="Conecta la Biblia de Productos: los SKUs con ATRIBUTOS inalámbrico van a ILUMINACION INALAMBRICA (2026). Lee la hoja Hoja1." style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--txt);font-weight:600;padding:6px;border-radius:7px;border-top:1px solid var(--brd);margin-top:3px"><i class="ti ti-book-2" style="font-size:15px;color:#8a6bb0"></i>Biblia de Productos<span style="color:var(--txt2);font-weight:400;margin-left:auto">inalámbricos → clasificación</span><input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleBibliaFile(this.files[0])"></label>
       <div class="biblia-status" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:2px"></div>
@@ -578,9 +578,9 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div id="rpPeriodBox"></div>
   </div>
   <div id="rp25Import" style="display:none;margin:6px 0 12px;border:1px dashed #bfc4cc;border-radius:10px;padding:8px 12px;background:var(--bg2,#f7f8fa);flex-wrap:wrap;align-items:center;gap:10px;font-size:12px">
-    <span style="font-weight:700;color:#5b6472"><i class="ti ti-history-toggle" style="vertical-align:-2px;margin-right:4px"></i>Comparativo 2025 · agregar mes</span>
+    <span style="font-weight:700;color:#5b6472"><i class="ti ti-history-toggle" style="vertical-align:-2px;margin-right:4px"></i>Comparativo 2025 · cargar meses</span>
     <label style="cursor:pointer;background:#5b6472;color:#fff;border-radius:8px;padding:5px 11px;font-weight:600"><i class="ti ti-file-spreadsheet" style="vertical-align:-2px;margin-right:4px"></i>Subir "Reporte 2025 USAR.xlsx"<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFact2025File(this.files[0])"></label>
-    <span style="color:var(--txt2)">Lee la hoja "FACTURACIÓN 2025" y agrega el desglose de <b>julio</b> (no toca ene–jun). Luego tocá "Guardar en Supabase".</span>
+    <span style="color:var(--txt2)">Lee la hoja "FACTURACIÓN 2025" y carga el desglose de <b>todos los meses</b> de 2025 (el comparativo por canal usa el mes de cierre). Luego tocá "Guardar en Supabase".</span>
     <span id="rp25Status" class="rp25-status" style="flex-basis:100%;color:var(--txt2)"></span>
   </div>
   <div id="rpCompWrap"></div>
@@ -2296,14 +2296,16 @@ const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Ho
 const RP_ORDER=['ILUMINACION IMPORTADA','ILUMINACION NACIONAL','ILUMINACION INALAMBRICA','SILLAS IMPORTADAS','MUEBLES NACIONALES','PROVEEDOR NACIONAL','DECO/NAVIDAD/BAZAR IMPORTADO','DECO/BAZAR FABRICA'];
 function renderRPCompare(){
   if(typeof RUBROPROV_D==='undefined') return;
-  const months = cmpSel==='YTD' ? ['01','02','03','04','05','06','07'] : [cmpSel];
+  const _nowRC=new Date(), _curYMrc=_nowRC.getFullYear()+'-'+String(_nowRC.getMonth()+1).padStart(2,'0');
+  const _rubAv=Object.keys(RUBROPROV_D).filter(k=>/^2026-(0[1-9]|1[0-2])$/.test(k) && k!==_curYMrc).map(k=>k.slice(5,7)).sort();
+  const months = cmpSel==='YTD' ? (_rubAv.length?_rubAv:['01']) : [cmpSel];
   const CANALES=[['lett','AR Mayorista'],['web','Web'],['lsi','San Isidro'],['lbe','Belgrano'],['alc','Alcorta'],['lnd','Nordelta']];
-  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio'];
-  const MNL=['enero','febrero','marzo','abril','mayo','junio','julio'];
+  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const MNL=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const CLOSE_DATE={lnd:'el sábado 28 de marzo 2026'};
   const OPEN_DATE={alc:'viernes 5 de junio 2026'};
   const OPEN_PREV={lbe:'el 25 de julio de 2025'};
-  const per=cmpSel==='YTD'?('YTD '+MN[+months[0]-1]+'–'+MN[+months[months.length-1]-1]):MN[parseInt(cmpSel)-1];
+  const per=cmpSel==='YTD'?('YTD '+(months.length?(MN[+months[0]-1]+'–'+MN[+months[months.length-1]-1]):'—')):MN[parseInt(cmpSel)-1];
   const pc=x=>`${x>=0?'+':''}${x.toFixed(1)}%`,col=x=>x>=0?'#2a6b53':'#c0392b';
   const gv=(cur,base)=>base>0?pc((cur-base)/base*100):(cur>0?'Nuevo':'—');
   const gcol=(cur,base)=>base>0?col((cur-base)/base*100):(cur>0?'#2a6b53':'var(--txt2)');
