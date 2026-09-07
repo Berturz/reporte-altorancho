@@ -1094,7 +1094,7 @@ async function handleFile(file) {
         newDATA[dia][rubro][canal].cmv += cmv;
         // VENTAS_D: comprobantes únicos (no NC/reversión) + unidades por día/canal
         const idRepD = row[COL.IDREP] ? String(row[COL.IDREP]).trim() : null;
-        if (idRepD && !/Reversión de:/i.test(idRepD) && !idRepD.startsWith('A-NC') && !idRepD.startsWith('NC')) {
+        if (idRepD && !/Reversión de:/i.test(idRepD) && !idRepD.startsWith('A-NC') && !idRepD.startsWith('NC') && !idRepD.startsWith('RVINTE')) {
           if (!newVENTAS[dia]) newVENTAS[dia] = {};
           if (!newVENTAS[dia][canal]) newVENTAS[dia][canal] = {set:new Set(), q:0};
           newVENTAS[dia][canal].set.add(idRepD);
@@ -1219,7 +1219,7 @@ async function handleFile(file) {
           let e = newCLI[mmC][cliente]; if(!e){ e = newCLI[mmC][cliente] = {fc:0, comps:{}, vend:'', rub:{}}; }
           e.fc += tv;
           const idRepC = row[COL.IDREP] ? String(row[COL.IDREP]).trim() : '';
-          if (idRepC && !/Reversión de:/i.test(idRepC) && idRepC.indexOf('A-NC')!==0 && idRepC.indexOf('NC')!==0) e.comps[idRepC]=1;
+          if (idRepC && !/Reversión de:/i.test(idRepC) && idRepC.indexOf('A-NC')!==0 && idRepC.indexOf('NC')!==0 && idRepC.indexOf('RVINTE')!==0) e.comps[idRepC]=1;
           const vendC = row[COL.VEND] ? String(row[COL.VEND]).trim() : '';
           if (vendC) e.vend = vendC;
           if (rubro && rubro!=='ENVIOS' && rubro!=='N/A') e.rub[rubro] = (e.rub[rubro]||0) + tv;
@@ -2480,7 +2480,7 @@ async function handleFact2025File(file){
           var ce=cliAcc[mm25][cli25]; if(!ce){ce=cliAcc[mm25][cli25]={fc:0,comps:{},vend:'',rub:{}};}
           var tv25=n(row[COL.TV]); ce.fc+=tv25;
           var idr=row[COL.IDREP]?String(row[COL.IDREP]).trim():'';
-          if(idr && !/Reversión de:/i.test(idr) && idr.indexOf('A-NC')!==0 && idr.indexOf('NC')!==0) ce.comps[idr]=1;
+          if(idr && !/Reversión de:/i.test(idr) && idr.indexOf('A-NC')!==0 && idr.indexOf('NC')!==0 && idr.indexOf('RVINTE')!==0) ce.comps[idr]=1;
           var vd=row[COL.VEND]?String(row[COL.VEND]).trim():''; if(vd) ce.vend=vd;
           if(rubro!=='ENVIOS' && rubro!=='N/A') ce.rub[rubro]=(ce.rub[rubro]||0)+tv25;
         }
@@ -3668,7 +3668,7 @@ function renderClientes(){
    // Cuadros 1 y 2 en doble columna (se apilan en pantallas angostas)
    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:14px;margin-bottom:14px">'
    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="'+HDR+'"><i class="ti ti-users-group" style="margin-right:6px"></i>1 · Análisis de clientes</div>'
-     +'<div style="overflow:auto;max-height:520px;padding:4px 10px 10px"><table style="width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed"><colgroup><col style="width:26%"><col style="width:13%"><col style="width:11%"><col style="width:6%"><col style="width:12%"><col style="width:6%"><col style="width:12%"><col style="width:4%"><col style="width:10%"></colgroup><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:4px 6px">Cliente</th><th style="text-align:left;padding:4px 6px">Vendedor</th><th onclick="setCliSort(\'ticket\')" title="Ordenar por Ticket" style="cursor:pointer;text-align:right;padding:4px 6px;white-space:nowrap">Ticket'+arrOf('ticket')+'</th><th onclick="setCliSort(\'ped25\')" title="Ordenar por cantidad de compras 2025" style="cursor:pointer;text-align:center;padding:4px 4px;white-space:nowrap">Comp.25'+arrOf('ped25')+'</th><th onclick="setCliSort(\'f25\')" title="Ordenar por Facturación 2025" style="cursor:pointer;text-align:right;padding:4px 6px;white-space:nowrap">'+(cliMesSel==='YTD'?'F.25':CLI_MN[+cliMesSel-1].slice(0,3)+'25')+arrOf('f25')+'</th><th onclick="setCliSort(\'ped26\')" title="Ordenar por cantidad de compras 2026" style="cursor:pointer;text-align:center;padding:4px 4px;white-space:nowrap">Comp.26'+arrOf('ped26')+'</th><th onclick="setCliSort(\'f26\')" title="Ordenar por Facturación 2026" style="cursor:pointer;text-align:right;padding:4px 6px;white-space:nowrap">'+(cliMesSel==='YTD'?'F.26':CLI_MN[+cliMesSel-1].slice(0,3)+'26')+arrOf('f26')+'</th><th style="text-align:right;padding:4px 4px">%</th><th style="text-align:center;padding:4px 4px">Estado</th></tr></thead><tbody>'+(t1||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+'</tbody></table></div></div>'
+     +'<div style="overflow:auto;max-height:520px;padding:4px 10px 10px"><table style="width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed"><colgroup><col style="width:24%"><col style="width:12%"><col style="width:10%"><col style="width:8%"><col style="width:11%"><col style="width:8%"><col style="width:11%"><col style="width:4%"><col style="width:12%"></colgroup><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:4px 6px">Cliente</th><th style="text-align:left;padding:4px 6px">Vendedor</th><th onclick="setCliSort(\'ticket\')" title="Ordenar por Ticket" style="cursor:pointer;text-align:right;padding:4px 6px;white-space:nowrap">Ticket'+arrOf('ticket')+'</th><th onclick="setCliSort(\'ped25\')" title="Cantidad de compras 2025 (facturas emitidas, sin NC ni RVINTE)" style="cursor:pointer;text-align:center;padding:4px 3px;line-height:1.1">Comp.<br>25'+arrOf('ped25')+'</th><th onclick="setCliSort(\'f25\')" title="Ordenar por Facturación 2025" style="cursor:pointer;text-align:right;padding:4px 6px;white-space:nowrap">'+(cliMesSel==='YTD'?'F.25':CLI_MN[+cliMesSel-1].slice(0,3)+'25')+arrOf('f25')+'</th><th onclick="setCliSort(\'ped26\')" title="Cantidad de compras 2026 (facturas emitidas, sin NC ni RVINTE)" style="cursor:pointer;text-align:center;padding:4px 3px;line-height:1.1">Comp.<br>26'+arrOf('ped26')+'</th><th onclick="setCliSort(\'f26\')" title="Ordenar por Facturación 2026" style="cursor:pointer;text-align:right;padding:4px 6px;white-space:nowrap">'+(cliMesSel==='YTD'?'F.26':CLI_MN[+cliMesSel-1].slice(0,3)+'26')+arrOf('f26')+'</th><th style="text-align:right;padding:4px 4px">%</th><th style="text-align:center;padding:4px 4px">Estado</th></tr></thead><tbody>'+(t1||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+'</tbody></table></div></div>'
    // Cuadro 2
    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="'+HDR+'"><i class="ti ti-layout-grid" style="margin-right:6px"></i>2 · Rubros por cliente <span style="font-weight:400;opacity:.85;font-size:11.5px">· facturación '+facYr+' por rubro</span></div>'
      +'<div style="overflow:auto;max-height:520px;padding:6px 10px 10px"><table style="width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed">'+cg2+'<thead><tr>'+h2+'</tr></thead><tbody>'+(t2||'<tr><td style="padding:.6rem;color:var(--txt2)">Sin datos</td></tr>')+'</tbody></table></div></div>'
