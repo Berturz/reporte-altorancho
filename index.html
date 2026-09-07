@@ -3765,14 +3765,14 @@ function renderEventos(){
      +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:820px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Ago 2025 (aj.IPC)</th><th style="text-align:right;padding:6px 10px">Mar 2026 (11–14/03)</th><th style="text-align:right;padding:6px 10px">Ago 2026 (19–22/08)</th><th style="text-align:right;padding:6px 10px">Var. Ago25→Mar+Ago26</th></tr></thead><tbody>'+body1+tot1+'</tbody></table></div>'
      +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Ago 2025 = facturación Presentes 2025 aj.IPC (feria completa) · Mar/Ago 2026 = pedido de los días oficiales (dinámica del archivo de pedidos).</div>';
     // Cuadro 2: pedido vs facturado Agosto 2026
-    var facAgo=(F['2026-ago']&&F['2026-ago'].fac)||0, pedAgo=EV_PED_AGO_TOTAL, penAgo=pedAgo-facAgo;
-    var pctF=pedAgo>0?(facAgo/pedAgo*100):0, pctP=Math.max(0,100-pctF);
+    var facAgo=(F['2026-ago']&&F['2026-ago'].fac)||0, pedAgo=EV_PED_AGO_TOTAL, penAgo=Math.max(0,pedAgo-facAgo);
+    var pctF=pedAgo>0?Math.min(100,facAgo/pedAgo*100):0, pctP=Math.max(0,100-pctF);
     var _box=function(lbl,val,col,sub){return '<div style="flex:1;min-width:150px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+lbl+'</div><div style="font-size:19px;font-weight:800;color:'+col+'">'+fmt(val)+'</div><div style="font-size:10px;color:var(--txt2)">'+sub+'</div></div>';};
     var boxes='<div style="display:flex;gap:12px;flex-wrap:wrap;max-width:660px;margin-bottom:8px">'+_box('Total pedido Ago + Sept.',pedAgo,'#D4537E','agosto + septiembre · dinámica')+_box('Facturado',facAgo,'#1a7a3a','Presentes desde 01/08 · reporte')+_box('Pendiente de facturar',penAgo,'#c98500','pedido − facturado')+'</div>';
     var bar='<div style="height:13px;border-radius:7px;background:#ececf0;overflow:hidden;margin:4px 0 5px;display:flex;max-width:660px"><div style="background:#1a7a3a;width:'+pctF.toFixed(1)+'%"></div><div style="background:#c98500;width:'+pctP.toFixed(1)+'%"></div></div>'
      +'<div style="display:flex;justify-content:space-between;font-size:11px;max-width:660px;margin-bottom:12px"><span style="color:#1a7a3a;font-weight:600">'+pctF.toFixed(0)+'% facturado</span><span style="color:#c98500;font-weight:600">'+pctP.toFixed(0)+'% pendiente</span></div>';
     var pedRows=Object.keys(PED).map(function(key){ var d=PED[key]; return {disp:d.disp,ped:d.agoTot,fac:(gAgo[key]||0)}; }).sort(function(a,b){return b.ped-a.ped;});
-    var body2=pedRows.map(function(x){ var pe2=x.ped-x.fac, pc=x.ped>0?(x.fac/x.ped*100):0;
+    var body2=pedRows.map(function(x){ var pe2=Math.max(0,x.ped-x.fac), pc=x.ped>0?Math.min(100,x.fac/x.ped*100):0;
       return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 10px;font-weight:600">'+x.disp+'</td>'
        +'<td style="text-align:right;padding:5px 10px;color:#D4537E;font-weight:600">'+fmt(x.ped)+'</td>'
        +'<td style="text-align:right;padding:5px 10px;color:#1a7a3a">'+fmt(x.fac)+'</td>'
