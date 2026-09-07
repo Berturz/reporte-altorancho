@@ -3736,12 +3736,12 @@ function renderEventos(){
     var evNorm=function(s){return String(s||'').toUpperCase().replace(/\s+/g,' ').trim();};
     var PED={}; // [nombre, mar(díasOfic), ago(díasOfic 19-22), agoTot(todo agosto)]
     [['Matias Chiuki',22723811.40,52639470.90,60650864.25],
-     ['Laura Viviana Soldano',6936695.20,19183981.35,36729749.35],
+     ['Laura Viviana Soldano',6936695.20,19183981.35,38093749.35],
      ['Jose Luis Persoglia',8690802.45,17618773.00,21575273.00],
      ['Jimena Alejandra Tobares',10335411.40,8640032.95,13680061.30],
      ['ATENCION DECORADORES Y ARQUITECTOS',0,1268107.11,2229029.78]
     ].forEach(function(r){ PED[evNorm(r[0])]={disp:r[0],mar:r[1],ago:r[2],agoTot:r[3]}; });
-    var EV_PED_AGO_TOTAL=134864977.68;
+    var EV_PED_AGO_TOTAL=136228977.68;
     var _b25=(F['2025']&&F['2025'].byV)||{}, _bAgo=(F['2026-ago']&&F['2026-ago'].byV)||{};
     var g25={}, gAgo={};
     for(var _k in _b25){ g25[evNorm(_k)]={disp:_k,ipc:(_b25[_k].facIpc||0)}; }
@@ -3768,7 +3768,7 @@ function renderEventos(){
     var facAgo=(F['2026-ago']&&F['2026-ago'].fac)||0, pedAgo=EV_PED_AGO_TOTAL, penAgo=pedAgo-facAgo;
     var pctF=pedAgo>0?(facAgo/pedAgo*100):0, pctP=Math.max(0,100-pctF);
     var _box=function(lbl,val,col,sub){return '<div style="flex:1;min-width:150px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+lbl+'</div><div style="font-size:19px;font-weight:800;color:'+col+'">'+fmt(val)+'</div><div style="font-size:10px;color:var(--txt2)">'+sub+'</div></div>';};
-    var boxes='<div style="display:flex;gap:12px;flex-wrap:wrap;max-width:660px;margin-bottom:8px">'+_box('Total pedido Agosto 2026',pedAgo,'#D4537E','todas las fechas de agosto')+_box('Facturado',facAgo,'#1a7a3a','Presentes Ago 2026 · reporte')+_box('Pendiente de facturar',penAgo,'#c98500','pedido − facturado')+'</div>';
+    var boxes='<div style="display:flex;gap:12px;flex-wrap:wrap;max-width:660px;margin-bottom:8px">'+_box('Total pedido Ago + Sept.',pedAgo,'#D4537E','agosto + septiembre · dinámica')+_box('Facturado',facAgo,'#1a7a3a','Presentes desde 01/08 · reporte')+_box('Pendiente de facturar',penAgo,'#c98500','pedido − facturado')+'</div>';
     var bar='<div style="height:13px;border-radius:7px;background:#ececf0;overflow:hidden;margin:4px 0 5px;display:flex;max-width:660px"><div style="background:#1a7a3a;width:'+pctF.toFixed(1)+'%"></div><div style="background:#c98500;width:'+pctP.toFixed(1)+'%"></div></div>'
      +'<div style="display:flex;justify-content:space-between;font-size:11px;max-width:660px;margin-bottom:12px"><span style="color:#1a7a3a;font-weight:600">'+pctF.toFixed(0)+'% facturado</span><span style="color:#c98500;font-weight:600">'+pctP.toFixed(0)+'% pendiente</span></div>';
     var pedRows=Object.keys(PED).map(function(key){ var d=PED[key]; return {disp:d.disp,ped:d.agoTot,fac:(gAgo[key]||0)}; }).sort(function(a,b){return b.ped-a.ped;});
@@ -3779,9 +3779,9 @@ function renderEventos(){
        +'<td style="text-align:right;padding:5px 10px;color:#c98500">'+fmt(pe2)+'</td>'
        +'<td style="text-align:right;padding:5px 10px;font-weight:600">'+pc.toFixed(0)+'%</td></tr>'; }).join('');
     var tot2='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#D4537E">'+fmt(pedAgo)+'</td><td style="text-align:right;padding:6px 10px;color:#1a7a3a">'+fmt(facAgo)+'</td><td style="text-align:right;padding:6px 10px;color:#c98500">'+fmt(penAgo)+'</td><td style="text-align:right;padding:6px 10px">'+pctF.toFixed(0)+'%</td></tr>';
-    var det2='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Pedido Ago 2026</th><th style="text-align:right;padding:6px 10px">Facturado</th><th style="text-align:right;padding:6px 10px">Pendiente</th><th style="text-align:right;padding:6px 10px">% Fact.</th></tr></thead><tbody>'+body2+tot2+'</tbody></table></div>';
-    var cuadro2='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-file-invoice"></i>Agosto 2026 · Pedido vs. Facturado <span class="sec-sub">· cuánto del pedido falta facturar</span></div>'+boxes+bar+det2
-     +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Pedido = total de pedidos de agosto (dinámica del archivo de pedidos). Facturado = facturación Presentes Ago 2026 del archivo madre.</div>';
+    var det2='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Pedido Ago+Sep</th><th style="text-align:right;padding:6px 10px">Facturado</th><th style="text-align:right;padding:6px 10px">Pendiente</th><th style="text-align:right;padding:6px 10px">% Fact.</th></tr></thead><tbody>'+body2+tot2+'</tbody></table></div>';
+    var cuadro2='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-file-invoice"></i>Agosto + Sept. 2026 · Pedido vs. Facturado <span class="sec-sub">· cuánto del pedido falta facturar</span></div>'+boxes+bar+det2
+     +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Pedido = total de pedidos de agosto + septiembre (dinámica del archivo de pedidos). Facturado = facturación Presentes desde agosto del archivo madre.</div>';
     evExtra=cuadro1+cuadro2;
   }
   // ── Cuadro NUEVO: facturado por rubro y edición (cantidades juntas + facturación S/IVA juntas), al lado del cuadro de ediciones ──
