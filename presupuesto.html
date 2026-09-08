@@ -232,6 +232,14 @@ table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
 .sec table.t thead th{border-bottom-color:var(--sc,var(--brd2))}
 .sec-hdr h2{color:var(--sct,var(--txt))}
 .emo{font-size:1.02rem;margin-right:.4rem;line-height:1}
+.duo2{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:.9rem 1.2rem;align-items:start}
+.tstrip{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:.5rem .8rem;align-items:center;
+ background:var(--bg2);border:1px solid var(--brd);border-left:4px solid var(--sc,var(--ink));
+ border-radius:var(--r);padding:.65rem .9rem;margin-top:.8rem}
+.tstrip .ttl{font-size:.9rem;font-weight:800;color:var(--sct,var(--txt))}
+.tstrip .k{font-size:.67rem;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);font-weight:800}
+.tstrip .v{font-size:.95rem;font-weight:800;font-variant-numeric:tabular-nums}
+@media(max-width:720px){.tstrip{grid-template-columns:1fr 1fr}}
 </style></head><body>
 
 <!-- ══════════ LOGIN ══════════ -->
@@ -314,7 +322,11 @@ table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
     <div class="sec-hdr"><h2><span class="num">4</span><span class="emo">🏷️</span>Presupuesto por sector — <span id="h4"></span></h2>
       <div class="sub">Cada línea del presupuesto del mes elegido, en importes completos.
         Los subtotales suman el total de la sección 2.</div></div>
-    <div class="scroll"><table class="t" id="t4"></table></div>
+    <div class="duo2">
+      <div class="scroll"><table class="t" id="t4a"></table></div>
+      <div class="scroll"><table class="t" id="t4b"></table></div>
+    </div>
+    <div class="tstrip" id="t4tot"></div>
   </div>
 
   <div class="sec" id="sec5" style="--sc:#d85a30;--sct:#a8431f">
@@ -780,17 +792,19 @@ function tabGastos(){
   $('t2').innerHTML=h+'</tbody>';
 }
 // ── 4. presupuesto por sector del mes elegido ─────────────
+// Se reparte en dos columnas por bloques para no quedar tan alta:
+// izquierda gastos por sector + envios, derecha salarios + compras, y el total a lo ancho.
 function tabSector(){
   if(!D.fc){$('sec4').style.display='none';return;}
   $('sec4').style.display='';
   $('h4').textContent=MESL[M]+' 20'+YY();
-  var h='<thead><tr><th class="l">Sector / línea</th><th>Presupuesto</th><th>Real</th>'+
-        '<th>Diferencia</th><th>Desvío</th></tr></thead><tbody>';
+  var HD='<thead><tr><th class="l">Sector / línea</th><th>Presupuesto</th><th>Real</th>'+
+         '<th>Diferencia</th><th>Desvío</th></tr></thead><tbody>';
   var TP=0,TR=0;
-  BLK.forEach(function(b){
+  function bloque(b){
     var P=D.fc.proy[b[0]]||[], R=D.fc.real[b[0]]||[];
     var sp=sum(P,M), sr=sum(R,M); TP+=sp; TR+=sr;
-    h+='<tr class="grp"><td class="l" colspan="5">'+b[1]+'</td></tr>';
+    var h='<tr class="grp"><td class="l" colspan="5">'+b[1]+'</td></tr>';
     P.forEach(function(row,i){
       var p=row.v[M], r=(R[i]&&R[i].v[M])||0;
       if(!p&&!r)return;
@@ -802,11 +816,19 @@ function tabSector(){
     h+='<tr class="sub"><td class="l">Subtotal '+b[1]+'</td><td>'+$$(sp)+'</td>'+
        '<td>'+(sr?$$(sr):'—')+'</td><td>'+(sr?dif(sr,sp):'—')+'</td>'+
        '<td>'+cel(sr?dv(sr,sp):null)+'</td></tr>';
-  });
-  h+='<tr class="tot"><td class="l">TOTAL '+MESL[M]+'</td><td>'+$$(TP)+'</td>'+
-     '<td>'+(TR?$$(TR):'—')+'</td><td>'+(TR?dif(TR,TP):'—')+'</td>'+
-     '<td>'+cel(TR?dv(TR,TP):null)+'</td></tr>';
-  $('t4').innerHTML=h+'</tbody>';
+    return h;
+  }
+  var izq=HD, der=HD;
+  BLK.forEach(function(b,i){ if(i<2) izq+=bloque(b); else der+=bloque(b); });
+  $('t4a').innerHTML=izq+'</tbody>';
+  $('t4b').innerHTML=der+'</tbody>';
+  $('t4tot').innerHTML=
+    '<div class="ttl">TOTAL '+MESL[M]+' 20'+YY()+'</div>'+
+    '<div><div class="k">Presupuesto</div><div class="v">'+$$(TP)+'</div></div>'+
+    '<div><div class="k">Real</div><div class="v">'+(TR?$$(TR):'—')+'</div></div>'+
+    '<div><div class="k">Diferencia</div><div class="v '+(TR&&TR>TP?'pos':'neg')+'">'+
+      (TR?dif(TR,TP):'—')+'</div></div>'+
+    '<div><div class="k">Desvío</div><div class="v">'+cel(TR?dv(TR,TP):null)+'</div></div>';
 }
 // ── 5. desvio global por sector y mes + que incluye cada uno ──
 function desvGlobal(){
