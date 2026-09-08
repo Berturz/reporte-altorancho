@@ -232,7 +232,19 @@ table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
 .sec table.t thead th{border-bottom-color:var(--sc,var(--brd2))}
 .sec-hdr h2{color:var(--sct,var(--txt))}
 .emo{font-size:1.02rem;margin-right:.4rem;line-height:1}
-.duo2{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:.9rem 1.2rem;align-items:start}
+.duo2{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:1.2rem 1.8rem;align-items:start}
+/* cada columna en su propio cuadro, para que no queden pegadas */
+.duo2 > .scroll{border:1px solid var(--brd2);border-radius:var(--r);background:var(--bg);
+ box-shadow:0 2px 8px rgba(44,44,42,.06);overflow:auto}
+.duo2 table.t th:first-child,.duo2 table.t td:first-child{padding-left:.75rem}
+.duo2 table.t th:last-child,.duo2 table.t td:last-child{padding-right:.75rem}
+.duo2 table.t tbody tr:last-child td{border-bottom:0}
+/* titulos de bloque: color propio + emoji */
+table.t tr.grp td{background:color-mix(in srgb,var(--gc,#4472c4) 12%,#fff);
+ color:var(--gc,var(--txt2));border-bottom:1px solid color-mix(in srgb,var(--gc,#4472c4) 30%,#fff)}
+table.t tr.sub td{background:color-mix(in srgb,var(--gc,#999) 7%,#fff);
+ border-top:1px solid color-mix(in srgb,var(--gc,#999) 25%,#fff)}
+.gemo{margin-right:.4rem;font-size:.95rem;line-height:1}
 .tstrip{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:.5rem .8rem;align-items:center;
  background:var(--bg2);border:1px solid var(--brd);border-left:4px solid var(--sc,var(--ink));
  border-radius:var(--r);padding:.65rem .9rem;margin-top:.8rem}
@@ -393,7 +405,8 @@ var TOK=null,RT=null,EMAIL=null;
 
 var MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 var MESL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-var BLK=[['sectores','Gastos por sector'],['envios','Logística — envíos'],['salarios','Salarios + HHEE'],['compras','Compras (insumos + prov. nacional)']];
+var BLK=[['sectores','Gastos por sector','🏢','#3C3489'],['envios','Logística — envíos','🚚','#2A6B53'],
+         ['salarios','Salarios + HHEE','👥','#993556'],['compras','Compras (insumos + prov. nacional)','📦','#8a5a2b']];
 var D={fc:null,det:{},upd:null,by:null};   // det: {0..11: {mes,can,rows}}
 var M=0, DS=null, DIRTY=false;
 
@@ -804,7 +817,9 @@ function tabSector(){
   function bloque(b){
     var P=D.fc.proy[b[0]]||[], R=D.fc.real[b[0]]||[];
     var sp=sum(P,M), sr=sum(R,M); TP+=sp; TR+=sr;
-    var h='<tr class="grp"><td class="l" colspan="5">'+b[1]+'</td></tr>';
+    var bc=b[3]||'#4472c4';
+    var h='<tr class="grp" style="--gc:'+bc+'"><td class="l" colspan="5">'+
+          '<span class="gemo">'+(b[2]||'')+'</span>'+b[1]+'</td></tr>';
     P.forEach(function(row,i){
       var p=row.v[M], r=(R[i]&&R[i].v[M])||0;
       if(!p&&!r)return;
@@ -813,7 +828,7 @@ function tabSector(){
          '<td>'+(r?('<span class="'+(r>p?'pos':'neg')+'">'+dif(r,p)+'</span>'):'<span class="cero">—</span>')+'</td>'+
          '<td>'+cel(r?dv(r,p):null)+'</td></tr>';
     });
-    h+='<tr class="sub"><td class="l">Subtotal '+b[1]+'</td><td>'+$$(sp)+'</td>'+
+    h+='<tr class="sub" style="--gc:'+bc+'"><td class="l">Subtotal '+b[1]+'</td><td>'+$$(sp)+'</td>'+
        '<td>'+(sr?$$(sr):'—')+'</td><td>'+(sr?dif(sr,sp):'—')+'</td>'+
        '<td>'+cel(sr?dv(sr,sp):null)+'</td></tr>';
     return h;
