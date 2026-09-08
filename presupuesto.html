@@ -847,7 +847,9 @@ function tabSector(){
        '<td>'+cel(sr?dv(sr,sp):null)+'</td></tr>';
     return h+'</tbody></table></div></div>';
   }
-  $('t4box').innerHTML=BLK.map(bloque).join('');
+  // Orden en pantalla pedido por la usuaria: compras antes que salarios.
+  var ORD=[0,1,3,2];
+  $('t4box').innerHTML=ORD.map(function(i){return bloque(BLK[i]);}).join('');
   $('t4tot').innerHTML=
     '<div class="ttl">TOTAL '+MESL[M]+' 20'+YY()+'</div>'+
     '<div><div class="k">Presupuesto</div><div class="v">'+$$(TP)+'</div></div>'+
