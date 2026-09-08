@@ -252,6 +252,22 @@ table.t tr.sub td{background:color-mix(in srgb,var(--gc,#999) 7%,#fff);
 .tstrip .k{font-size:.67rem;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);font-weight:800}
 .tstrip .v{font-size:.95rem;font-weight:800;font-variant-numeric:tabular-nums}
 @media(max-width:720px){.tstrip{grid-template-columns:1fr 1fr}}
+.blkgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:1.3rem 1.8rem;align-items:start}
+/* cada bloque es su propio cuadro, con su titulo y sus encabezados */
+.blk{border:1px solid var(--brd2);border-radius:var(--r);background:var(--bg);overflow:hidden;
+ box-shadow:0 2px 10px rgba(44,44,42,.07)}
+.blkh{display:flex;align-items:center;font-size:.8rem;font-weight:800;text-transform:uppercase;
+ letter-spacing:.5px;padding:.5rem .75rem;background:var(--bg2);color:var(--txt2);
+ background:color-mix(in srgb,var(--gc,#4472c4) 14%,#fff);color:var(--gc,var(--txt2));
+ border-bottom:1px solid color-mix(in srgb,var(--gc,#4472c4) 32%,#fff)}
+.blk table.t{font-size:.81rem}
+.blk table.t th{border-bottom:1px solid var(--brd);padding:.35rem .45rem}
+.blk table.t td{padding:.34rem .45rem}
+.blk table.t th:first-child,.blk table.t td:first-child{padding-left:.75rem}
+.blk table.t th:last-child,.blk table.t td:last-child{padding-right:.75rem}
+.blk table.t tbody tr:last-child td{border-bottom:0}
+.blk table.t tr.sub td{background:var(--bg2);background:color-mix(in srgb,var(--gc,#999) 8%,#fff);
+ border-top:1px solid color-mix(in srgb,var(--gc,#999) 26%,#fff)}
 </style></head><body>
 
 <!-- ══════════ LOGIN ══════════ -->
@@ -334,10 +350,7 @@ table.t tr.sub td{background:color-mix(in srgb,var(--gc,#999) 7%,#fff);
     <div class="sec-hdr"><h2><span class="num">4</span><span class="emo">🏷️</span>Presupuesto por sector — <span id="h4"></span></h2>
       <div class="sub">Cada línea del presupuesto del mes elegido, en importes completos.
         Los subtotales suman el total de la sección 2.</div></div>
-    <div class="duo2">
-      <div class="scroll"><table class="t" id="t4a"></table></div>
-      <div class="scroll"><table class="t" id="t4b"></table></div>
-    </div>
+    <div class="blkgrid" id="t4box"></div>
     <div class="tstrip" id="t4tot"></div>
   </div>
 
@@ -811,32 +824,30 @@ function tabSector(){
   if(!D.fc){$('sec4').style.display='none';return;}
   $('sec4').style.display='';
   $('h4').textContent=MESL[M]+' 20'+YY();
-  var HD='<thead><tr><th class="l">Sector / línea</th><th>Presupuesto</th><th>Real</th>'+
-         '<th>Diferencia</th><th>Desvío</th></tr></thead><tbody>';
   var TP=0,TR=0;
+  // Un cuadro por bloque: titulo propio con su color y emoji, sus encabezados, y su subtotal.
   function bloque(b){
     var P=D.fc.proy[b[0]]||[], R=D.fc.real[b[0]]||[];
     var sp=sum(P,M), sr=sum(R,M); TP+=sp; TR+=sr;
     var bc=b[3]||'#4472c4';
-    var h='<tr class="grp" style="--gc:'+bc+'"><td class="l" colspan="5">'+
-          '<span class="gemo">'+(b[2]||'')+'</span>'+b[1]+'</td></tr>';
+    var h='<div class="blk" style="--gc:'+bc+'">'+
+      '<div class="blkh"><span class="gemo">'+(b[2]||'')+'</span>'+b[1]+'</div>'+
+      '<div class="scroll"><table class="t"><thead><tr><th class="l">Línea</th>'+
+      '<th>Presupuesto</th><th>Real</th><th>Diferencia</th><th>Desvío</th></tr></thead><tbody>';
     P.forEach(function(row,i){
       var p=row.v[M], r=(R[i]&&R[i].v[M])||0;
       if(!p&&!r)return;
-      h+='<tr><td class="l" style="padding-left:1.1rem;border-left:3px solid '+dcol(row.n)+'">'+row.n+'</td>'+
+      h+='<tr><td class="l" style="border-left:3px solid '+dcol(row.n)+'">'+row.n+'</td>'+
          '<td>'+$$(p)+'</td><td>'+(r?$$(r):'<span class="cero">—</span>')+'</td>'+
          '<td>'+(r?('<span class="'+(r>p?'pos':'neg')+'">'+dif(r,p)+'</span>'):'<span class="cero">—</span>')+'</td>'+
          '<td>'+cel(r?dv(r,p):null)+'</td></tr>';
     });
-    h+='<tr class="sub" style="--gc:'+bc+'"><td class="l">Subtotal '+b[1]+'</td><td>'+$$(sp)+'</td>'+
+    h+='<tr class="sub"><td class="l">Subtotal</td><td>'+$$(sp)+'</td>'+
        '<td>'+(sr?$$(sr):'—')+'</td><td>'+(sr?dif(sr,sp):'—')+'</td>'+
        '<td>'+cel(sr?dv(sr,sp):null)+'</td></tr>';
-    return h;
+    return h+'</tbody></table></div></div>';
   }
-  var izq=HD, der=HD;
-  BLK.forEach(function(b,i){ if(i<2) izq+=bloque(b); else der+=bloque(b); });
-  $('t4a').innerHTML=izq+'</tbody>';
-  $('t4b').innerHTML=der+'</tbody>';
+  $('t4box').innerHTML=BLK.map(bloque).join('');
   $('t4tot').innerHTML=
     '<div class="ttl">TOTAL '+MESL[M]+' 20'+YY()+'</div>'+
     '<div><div class="k">Presupuesto</div><div class="v">'+$$(TP)+'</div></div>'+
