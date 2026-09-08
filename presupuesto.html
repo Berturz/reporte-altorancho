@@ -186,6 +186,39 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
 .xbtn{border:1px solid var(--brd2);background:var(--bg2);border-radius:999px;width:26px;height:26px;
  cursor:pointer;font-size:.85rem;font-weight:800;color:var(--txt2);line-height:1}
 .xbtn:hover{border-color:var(--neg);color:var(--neg)}
+/* ══ VISTA SIMPLE ══ */
+.msel{background:var(--bg);border:1px solid var(--brd);border-radius:var(--rl);padding:.7rem .9rem;
+ margin-bottom:1.1rem;box-shadow:0 3px 12px rgba(44,44,42,.05);display:flex;align-items:center;
+ gap:.4rem;flex-wrap:wrap}
+.msel .lb{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;
+ color:var(--txt2);margin-right:.2rem}
+.sec-hdr{display:block}   /* en la vista simple el subtitulo va debajo del titulo */
+.sec-hdr .sub{font-size:.8rem;color:var(--txt2);margin-top:.15rem;font-weight:400}
+.sec-hdr h2{display:flex;align-items:center;gap:.1rem;flex-wrap:wrap}
+.num{font-size:.7rem;font-weight:800;color:#fff;background:var(--ink);border-radius:5px;
+ padding:.05rem .4rem;margin-right:.45rem}
+table.t{border-collapse:collapse;width:100%;font-size:.84rem}
+table.t th{font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);
+ font-weight:800;text-align:right;padding:.4rem .55rem;border-bottom:2px solid var(--brd2);
+ white-space:nowrap;background:none}
+table.t th.l{text-align:left}
+table.t td{text-align:right;padding:.38rem .55rem;border-bottom:1px solid var(--brd);
+ white-space:nowrap;font-variant-numeric:tabular-nums}
+table.t td.l{text-align:left;font-weight:600;white-space:normal}
+table.t tbody tr:hover td{background:#f7f8fa}
+table.t tr.sel td{background:#eef2f9}
+table.t tr.grp td{font-weight:800;background:var(--bg2);font-size:.78rem;text-transform:uppercase;
+ letter-spacing:.4px;color:var(--txt2)}
+table.t tr.sub td{font-weight:800;background:#f3f2ee}
+table.t tr.tot td{font-weight:800;border-top:2px solid var(--brd2);background:var(--bg2)}
+table.t.hz th{font-size:.68rem;padding:.35rem .3rem;text-align:center}
+table.t.hz td{text-align:center;padding:.25rem .3rem}
+table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
+.pos{color:var(--neg);font-weight:800}
+.neg{color:var(--ok);font-weight:800}
+.cero{color:var(--txt2)}
+.desc{font-size:.78rem;color:var(--txt2);line-height:1.35}
+.desc b{color:var(--txt)}
 </style></head><body>
 
 <!-- ══════════ LOGIN ══════════ -->
@@ -229,17 +262,26 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
 </div>
 
 <div id="pBody">
-  <div class="sec" id="secVtas">
-    <div class="sec-hdr"><span class="dot" style="background:var(--s-mkt)"></span>
-      <h2>Ventas proyectadas y peso del gasto</h2>
-      <span class="muted">hoja TOTAL del forecast</span></div>
-    <div class="scroll"><table class="vtab" id="vtab"></table></div>
+  <div class="msel" id="msel"></div>
+
+  <div class="sec" id="sec1">
+    <div class="sec-hdr"><h2><span class="num">1</span>Facturación sin IVA</h2>
+      <div class="sub">Ventas del mes: proyectado, real y desvío. Los importes son
+        <b>facturación sin IVA</b>.</div></div>
+    <div class="scroll"><table class="t" id="t1"></table></div>
+  </div>
+
+  <div class="sec" id="sec2">
+    <div class="sec-hdr"><h2><span class="num">2</span>Presupuesto de gastos por mes</h2>
+      <div class="sub">Total de gastos del mes: presupuestado, real y desvío. El total del año
+        muestra siempre el presupuesto completo.</div></div>
+    <div class="scroll"><table class="t" id="t2"></table></div>
   </div>
 
   <div class="sec" id="secExt">
-    <div class="sec-hdr"><span class="dot" style="background:var(--ext)"></span>
-      <h2>Impuestos, IMPO y resultado</h2>
-      <span class="muted" id="hExt"></span></div>
+    <div class="sec-hdr"><h2><span class="num">3</span>Impuestos, IMPO y resultado</h2>
+      <div class="sub">Lo que se suma al gasto operativo y el resultado del mes ·
+        <span id="hExt"></span></div></div>
     <div class="mrow" id="mrow"></div>
     <div class="scroll"><table class="vtab etab" id="etab"></table></div>
     <div class="legend">
@@ -247,54 +289,37 @@ tr.tot td{font-weight:800;border-top:1px solid var(--brd2);background:var(--bg2)
       <span><i style="background:rgba(216,90,48,.55)"></i>resultado negativo</span>
       <span><b>s/IMPO</b>: sin contar las importaciones · <b>c/IMPO</b>: contándolas</span>
     </div>
-    <div class="info" style="margin-top:.6rem"><b>*</b> Los montos de <b>IMPO son estimados</b>, salvo las importaciones que ya llegaron: esas van por su valor real. Por eso el resultado <b>c/IMPO</b> de los meses que todavía no cerraron puede moverse.</div>
+    <div class="info" style="margin-top:.6rem"><b>*</b> Los montos de <b>IMPO son estimados</b>,
+      salvo las importaciones que ya llegaron: esas van por su valor real. Por eso el resultado
+      <b>c/IMPO</b> de los meses que todavía no cerraron puede moverse.</div>
   </div>
 
-  <div class="sec">
-    <div class="sec-hdr"><span class="dot"></span><h2>Presupuesto del año — <span id="hAnio"></span></h2>
-      <span class="muted" id="hSel"></span></div>
-    <div class="ystrip" id="ystrip"></div>
-    <div class="legend">
-      <span>Tocá un mes para verlo en detalle</span>
-      <span><i style="background:var(--ok)"></i>cerrado, dentro de presupuesto</span>
-      <span><i style="background:var(--neg)"></i>cerrado, por encima</span>
-      <span><i style="background:#e3e2dc"></i>por venir (solo presupuesto)</span>
+  <div class="sec" id="sec4">
+    <div class="sec-hdr"><h2><span class="num">4</span>Presupuesto por sector — <span id="h4"></span></h2>
+      <div class="sub">Cada línea del presupuesto del mes elegido, en importes completos.
+        Los subtotales suman el total de la sección 2.</div></div>
+    <div class="scroll"><table class="t" id="t4"></table></div>
+  </div>
+
+  <div class="sec" id="sec5">
+    <div class="sec-hdr"><h2><span class="num">5</span>Desvío global por sector</h2>
+      <div class="sub">Porcentaje de desvío de cada sector, mes por mes.
+        <b style="color:var(--neg)">Rojo</b> = gastó más de lo presupuestado ·
+        <b style="color:var(--ok)">Verde</b> = gastó menos.</div></div>
+    <div class="scroll"><table class="t hz" id="t5"></table></div>
+    <div style="margin-top:.9rem;border-top:1px solid var(--brd);padding-top:.7rem">
+      <div class="muted" style="font-weight:800;margin-bottom:.35rem">QUÉ INCLUYE CADA SECTOR</div>
+      <div class="desc" id="d5"></div>
     </div>
   </div>
 
-  <div class="kpis" id="kpis"></div>
-
-  <div class="sec">
-    <div class="sec-hdr"><span class="dot"></span><h2>Presupuesto vs. real por sector — <span id="hMes"></span></h2></div>
-    <div class="cards" id="cards"></div>
-    <div class="legend">
-      <span><i style="background:var(--blue)"></i>Presupuestado</span>
-      <span><i style="background:var(--ok)"></i>Real dentro de presupuesto</span>
-      <span><i style="background:var(--neg)"></i>Real por encima del presupuesto</span>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-hdr"><span class="dot" style="background:var(--s-grupo)"></span><h2>Bloques de gasto — resumen del mes</h2></div>
-    <div class="cards" id="blocks"></div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-hdr"><span class="dot" style="background:var(--neg)"></span><h2>Mapa de desvíos por sector y mes (%)</h2></div>
-    <div class="scroll"><table id="heat"></table></div>
-    <div class="legend"><span>Convención: <b>desvío = real / presupuesto − 1</b></span>
-      <span><i style="background:var(--neg)"></i>+ sobregasto</span>
-      <span><i style="background:var(--ok)"></i>− ahorro</span></div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-hdr"><span class="dot" style="background:var(--s-log)"></span><h2>Detalle de gastos — en qué gasta cada sector</h2>
-      <span class="muted" id="dMes"></span></div>
+  <div class="sec" id="sec6">
+    <div class="sec-hdr"><h2><span class="num">6</span>Detalle de gastos por sector — <span id="dMes"></span></h2>
+      <div class="sub">Gasto total del mes por sector. Tocá una tarjeta para abrir el detalle.</div></div>
     <div class="cards" id="dcards"></div>
     <div id="dpanel"></div>
   </div>
 </div>
-
 <div id="pEmpty" style="display:none">
   <div class="empty">Todavía no hay datos cargados.<br><br>
     Subí el <b>Forecast anual</b> (Forecast anual de gastos + Análisis de desvíos) y el
@@ -348,8 +373,6 @@ var M=0, DS=null, DIRTY=false;
 function $(i){return document.getElementById(i);}
 function txt(v){return (v===null||v===undefined)?'':String(v).trim();}
 function numv(v){if(typeof v==='number')return isFinite(v)?v:0;var s=txt(v);if(!s)return 0;var n=parseFloat(s.replace(/[^0-9.,-]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.'));return isFinite(n)?n:0;}
-function fm(v){if(!v)return '0';return '$'+Math.round(v/1000).toLocaleString('es-AR')+' k';}
-function fmM(v){return '$'+(v/1e6).toLocaleString('es-AR',{maximumFractionDigits:1})+' M';}
 function pc(v){return (v>0?'+':'')+(v*100).toFixed(1)+'%';}
 function cls(d){if(d===null||d===undefined||isNaN(d))return '';return d>0.10?'p-bad':(d>0.03?'p-w':'p-ok');}
 var SCOL={'MKT':'var(--s-mkt)','GRUPO':'var(--s-grupo)','RRHH':'var(--s-rrhh)','LOGISTICA':'var(--s-log)','FABRICA':'var(--s-fab)','PRODUCTO':'var(--s-prod)'};
@@ -619,7 +642,7 @@ function upCf(file){
       var cf=parseCf(wb); cf.compras=parseCompras(wb);
       D.det[cf.mi]=cf; DIRTY=true; M=cf.mi; DS=null;
       var tot=cf.rows.reduce(function(a,x){return a+x.v;},0);
-      var msg='✔ Detalle de <b>'+cf.mes+'</b> cargado · '+cf.rows.length+' movimientos · '+fmM(tot);
+      var msg='✔ Detalle de <b>'+cf.mes+'</b> cargado · '+cf.rows.length+' movimientos · '+$$(tot);
       var fr=fcRealSectores(cf.mi);
       if(fr){var d=fr?tot/fr-1:0;
         msg+=' · conciliación vs forecast: '+(Math.abs(d)>0.02?'⚠ ':'✔ ')+pc(d);}
@@ -627,7 +650,7 @@ function upCf(file){
       if(ni||nr){
         var ti=cf.compras.insumos.reduce(function(a,x){return a+x.v;},0);
         var tv=cf.compras.reventa.reduce(function(a,x){return a+x.v;},0);
-        msg+='<br>✔ Compras: insumos '+ni+' comprob. '+fmM(ti)+' · reventa '+nr+' comprob. '+fmM(tv);
+        msg+='<br>✔ Compras: insumos '+ni+' comprob. '+$$(ti)+' · reventa '+nr+' comprob. '+$$(tv);
         var cp=comprasReal(cf.mi);
         if(cp.ins){var di=ti/cp.ins-1; msg+=' · insumos vs forecast '+(Math.abs(di)>0.02?'⚠ ':'✔ ')+pc(di);}
         if(cp.rev){var dv=tv/cp.rev-1; msg+=' · reventa '+(Math.abs(dv)>0.02?'⚠ ':'✔ ')+pc(dv);}
@@ -675,69 +698,136 @@ function hdrUpd(){
 }
 // Franja del año: los 12 meses arriba de todo. Los cerrados van pintados por desvío,
 // los que faltan quedan en punteado mostrando solo el presupuesto.
-function ystrip(){
-  $('hAnio').textContent='20'+YY();
-  $('hSel').textContent='· viendo '+MES[M]+'-'+YY();
-  var hayDet=D.det||{};
-  $('ystrip').innerHTML=MES.map(function(m,i){
-    var p=blockTot('proy',i), r=blockTot('real',i);
-    var cerrado=r>0, d=(cerrado&&p)?r/p-1:null;
-    var det=!!hayDet[i];
-    return '<div class="yt'+(cerrado?'':' fut')+(i===M?' sel':'')+'" data-i="'+i+'"'+
-      (cerrado?(' style="'+hcol(d)+'"'):'')+'>'+
-      '<div class="ym">'+m+'</div>'+
-      '<div class="yp">'+(p?fmM(p):'—')+'</div>'+
-      (cerrado
-        ? '<div class="yd">'+pc(d)+'</div><div class="yv">real '+fmM(r)+'</div>'
-        : '<div class="yd">—</div><div class="yv">por venir</div>')+
-      '<div class="ybar"><i style="width:'+(cerrado?Math.min(r/(p||1)*100,100):0)+'%;background:'+
-        (d>0?'var(--neg)':'var(--ok)')+'"></i></div>'+
-      (det?'<div class="yv" style="font-weight:700">con detalle</div>':'')+
-      '</div>';
-  }).join('');
-  [].forEach.call(document.querySelectorAll('#ystrip .yt'),function(el){
-    el.onclick=function(){M=+el.dataset.i;DS=null;render();};});
+// ══════════ VISTA SIMPLE ══════════
+// Importes completos (sin redondear a millones) y una tabla por seccion.
+function $$(v){if(v===null||v===undefined)return '—';return '$'+Math.round(v).toLocaleString('es-AR');}
+function dif(a,b){var d=a-b;return (d>0?'+':'−')+'$'+Math.round(Math.abs(d)).toLocaleString('es-AR');}
+function dv(a,b){return b?a/b-1:null;}
+// inv=true para ventas: vender menos de lo proyectado es lo malo
+function cel(d,inv){
+  if(d===null||d===undefined||isNaN(d))return '<span class="cero">—</span>';
+  var mal = inv ? d<0 : d>0;
+  return '<span class="'+(mal?'pos':'neg')+'">'+pc(d)+'</span>';
 }
-// Semáforo. inv=true cuando lo positivo es bueno (ventas por encima de lo proyectado).
-function hcol2(d,inv){
-  if(d===null||d===undefined||isNaN(d))return 'background:var(--bg2);color:var(--txt2)';
-  var bueno = inv ? d>0 : d<0, a=Math.min(Math.abs(d)/0.4,1);
-  return bueno ? 'background:rgba(42,107,83,'+(0.12+a*0.50).toFixed(2)+');color:'+(a>.60?'#fff':'var(--txt)')
-               : 'background:rgba(216,90,48,'+(0.12+a*0.58).toFixed(2)+');color:'+(a>.55?'#fff':'var(--txt)');
+// ── selector de mes, uno solo para toda la pagina ─────────
+function msel(){
+  var det=D.det||{};
+  $('msel').innerHTML='<span class="lb">Mes</span>'+MES.map(function(m,i){
+    return '<button class="chip'+(i===M?' on':'')+'" data-i="'+i+'">'+m+'-'+YY()+
+      (det[i]?' •':'')+'</button>';}).join('')+
+    '<span class="muted" style="margin-left:auto">• con detalle cargado</span>';
+  [].forEach.call(document.querySelectorAll('#msel .chip'),function(b){
+    b.onclick=function(){M=+b.dataset.i;DS=null;render();};});
 }
-// Ventas del año: proyectado vs real y cuánto pesa el gasto sobre la venta.
-function ventas(){
+// ── 1. facturacion sin IVA ────────────────────────────────
+function tabFact(){
   var v=D.fc&&D.fc.ventas;
-  if(!v){$('secVtas').style.display='none';return;}
-  $('secVtas').style.display='';
-  var gp=[],gr=[],dv=[],rp=[],rr=[];
+  if(!v){$('sec1').style.display='none';return;}
+  $('sec1').style.display='';
+  var h='<thead><tr><th class="l">Mes</th><th>Proyectado</th><th>Real</th><th>Desvío</th></tr></thead><tbody>';
+  var tp=0,cp=0,cr=0,ult=-1;
   for(var i=0;i<12;i++){
-    gp.push(blockTot('proy',i)); gr.push(blockTot('real',i));
-    dv.push((v.real[i]&&v.proy[i])?v.real[i]/v.proy[i]-1:null);
-    rp.push(v.proy[i]?gp[i]/v.proy[i]:null);
-    rr.push(v.real[i]?gr[i]/v.real[i]:null);
+    var p=v.proy[i]||0, r=v.real[i]||0; tp+=p;
+    if(r){cp+=p;cr+=r;ult=i;}
+    h+='<tr'+(i===M?' class="sel"':'')+'><td class="l">'+MESL[i]+'</td><td>'+$$(p)+'</td>'+
+       '<td>'+(r?$$(r):'<span class="cero">—</span>')+'</td>'+
+       '<td>'+cel(r?dv(r,p):null,true)+'</td></tr>';
   }
-  function fila(lab,cells,band){
-    return '<tr'+(band?' class="band"':'')+'><td class="l">'+lab+'</td>'+
-      cells.map(function(c,i){return '<td'+(i===M?' class="sel"':'')+'>'+c+'</td>';}).join('')+'</tr>';
+  h+='<tr class="sub"><td class="l">Acumulado '+(ult>=0?('enero–'+MESL[ult].toLowerCase()):'—')+
+     ' <span class="muted">(meses cerrados)</span></td><td>'+$$(cp)+'</td><td>'+$$(cr)+'</td>'+
+     '<td>'+cel(cr?dv(cr,cp):null,true)+'</td></tr>';
+  h+='<tr class="tot"><td class="l">TOTAL AÑO</td><td>'+$$(tp)+'</td><td>'+$$(cr)+'</td>'+
+     '<td>'+(tp?('<span class="muted">'+(cr/tp*100).toFixed(0)+'% facturado</span>'):'—')+'</td></tr>';
+  $('t1').innerHTML=h+'</tbody>';
+}
+// ── 2. presupuesto de gastos por mes ──────────────────────
+function tabGastos(){
+  if(!D.fc){$('sec2').style.display='none';return;}
+  $('sec2').style.display='';
+  var h='<thead><tr><th class="l">Mes</th><th>Presupuesto</th><th>Real</th><th>Diferencia</th>'+
+        '<th>Desvío</th></tr></thead><tbody>';
+  var tp=0,cp=0,cr=0,ult=-1;
+  for(var i=0;i<12;i++){
+    var p=blockTot('proy',i), r=blockTot('real',i); tp+=p;
+    if(r){cp+=p;cr+=r;ult=i;}
+    h+='<tr'+(i===M?' class="sel"':'')+'><td class="l">'+MESL[i]+'</td><td>'+$$(p)+'</td>'+
+       '<td>'+(r?$$(r):'<span class="cero">—</span>')+'</td>'+
+       '<td>'+(r?('<span class="'+(r>p?'pos':'neg')+'">'+dif(r,p)+'</span>'):'<span class="cero">—</span>')+'</td>'+
+       '<td>'+cel(r?dv(r,p):null)+'</td></tr>';
   }
-  var h='<thead><tr><th class="l">&nbsp;</th>'+MES.map(function(m,i){
-    return '<th class="'+(i===M?'sel':'')+'" data-i="'+i+'">'+m+'</th>';}).join('')+'</tr></thead><tbody>';
-  h+=fila('Ventas proyectadas',v.proy.map(function(x){return x?fmM(x):'—';}));
-  h+=fila('Ventas reales',v.real.map(function(x,i){
-    if(!x)return '<span class="muted">—</span>';
-    return fmM(x)+'<span class="mini"><i style="width:'+
-      Math.min(x/(v.proy[i]||x)*100,100).toFixed(0)+'%"></i></span>';}),true);
-  h+=fila('Desvío de ventas',dv.map(function(x){
-    return '<span class="hm" style="'+hcol2(x,true)+'">'+(x===null?'—':pc(x))+'</span>';}));
-  h+=fila('Gastos sobre ventas · proyectado',rp.map(function(x){
-    return x===null?'—':(x*100).toFixed(0)+'%';}),true);
-  h+=fila('Gastos sobre ventas · real',rr.map(function(x,i){
-    if(x===null)return '<span class="muted">—</span>';
-    return '<span class="hm" style="'+hcol2(x-rp[i],false)+'">'+(x*100).toFixed(0)+'%</span>';}));
-  $('vtab').innerHTML=h+'</tbody>';
-  [].forEach.call(document.querySelectorAll('#vtab th[data-i]'),function(el){
-    el.onclick=function(){M=+el.dataset.i;DS=null;render();};});
+  h+='<tr class="sub"><td class="l">Acumulado '+(ult>=0?('enero–'+MESL[ult].toLowerCase()):'—')+
+     ' <span class="muted">(meses cerrados)</span></td><td>'+$$(cp)+'</td><td>'+$$(cr)+'</td>'+
+     '<td>'+(cr?dif(cr,cp):'—')+'</td><td>'+cel(cr?dv(cr,cp):null)+'</td></tr>';
+  h+='<tr class="tot"><td class="l">TOTAL AÑO</td><td>'+$$(tp)+'</td><td>'+$$(cr)+'</td>'+
+     '<td><span class="muted">quedan '+$$(tp-cr)+'</span></td>'+
+     '<td>'+(tp?('<span class="muted">'+(cr/tp*100).toFixed(0)+'% gastado</span>'):'—')+'</td></tr>';
+  $('t2').innerHTML=h+'</tbody>';
+}
+// ── 4. presupuesto por sector del mes elegido ─────────────
+function tabSector(){
+  if(!D.fc){$('sec4').style.display='none';return;}
+  $('sec4').style.display='';
+  $('h4').textContent=MESL[M]+' 20'+YY();
+  var h='<thead><tr><th class="l">Sector / línea</th><th>Presupuesto</th><th>Real</th>'+
+        '<th>Diferencia</th><th>Desvío</th></tr></thead><tbody>';
+  var TP=0,TR=0;
+  BLK.forEach(function(b){
+    var P=D.fc.proy[b[0]]||[], R=D.fc.real[b[0]]||[];
+    var sp=sum(P,M), sr=sum(R,M); TP+=sp; TR+=sr;
+    h+='<tr class="grp"><td class="l" colspan="5">'+b[1]+'</td></tr>';
+    P.forEach(function(row,i){
+      var p=row.v[M], r=(R[i]&&R[i].v[M])||0;
+      if(!p&&!r)return;
+      h+='<tr><td class="l" style="padding-left:1.1rem;border-left:3px solid '+dcol(row.n)+'">'+row.n+'</td>'+
+         '<td>'+$$(p)+'</td><td>'+(r?$$(r):'<span class="cero">—</span>')+'</td>'+
+         '<td>'+(r?('<span class="'+(r>p?'pos':'neg')+'">'+dif(r,p)+'</span>'):'<span class="cero">—</span>')+'</td>'+
+         '<td>'+cel(r?dv(r,p):null)+'</td></tr>';
+    });
+    h+='<tr class="sub"><td class="l">Subtotal '+b[1]+'</td><td>'+$$(sp)+'</td>'+
+       '<td>'+(sr?$$(sr):'—')+'</td><td>'+(sr?dif(sr,sp):'—')+'</td>'+
+       '<td>'+cel(sr?dv(sr,sp):null)+'</td></tr>';
+  });
+  h+='<tr class="tot"><td class="l">TOTAL '+MESL[M]+'</td><td>'+$$(TP)+'</td>'+
+     '<td>'+(TR?$$(TR):'—')+'</td><td>'+(TR?dif(TR,TP):'—')+'</td>'+
+     '<td>'+cel(TR?dv(TR,TP):null)+'</td></tr>';
+  $('t4').innerHTML=h+'</tbody>';
+}
+// ── 5. desvio global por sector y mes + que incluye cada uno ──
+function desvGlobal(){
+  if(!D.fc){$('sec5').style.display='none';return;}
+  $('sec5').style.display='';
+  var P=D.fc.proy.sectores||[], R=D.fc.real.sectores||[];
+  var h='<thead><tr><th class="l">Sector</th>'+MES.map(function(m,i){
+    return '<th'+(i===M?' style="color:var(--ink)"':'')+'>'+m+'</th>';}).join('')+'</tr></thead><tbody>';
+  P.forEach(function(row,i){
+    h+='<tr><td class="l" style="border-left:3px solid '+dcol(row.n)+'">'+row.n+'</td>'+
+      MES.map(function(m,j){
+        var r=(R[i]&&R[i].v[j])||0, p=row.v[j], d=(r&&p)?r/p-1:null;
+        return '<td><span class="hm" style="'+hcol(d)+'">'+(d===null?'–':pc(d))+'</span></td>';
+      }).join('')+'</tr>';
+  });
+  h+='<tr class="tot"><td class="l">TOTAL</td>'+MES.map(function(m,j){
+      var p=blockTot('proy',j), r=blockTot('real',j), d=(r&&p)?r/p-1:null;
+      return '<td><span class="hm" style="'+hcol(d)+'">'+(d===null?'–':pc(d))+'</span></td>';
+    }).join('')+'</tr>';
+  $('t5').innerHTML=h+'</tbody>';
+  // que incluye cada sector: se arma con sus propias categorias del CF-gastos cargado
+  var cf=null, ks=Object.keys(D.det||{});
+  if(D.det[M]) cf=D.det[M]; else if(ks.length) cf=D.det[ks[ks.length-1]];
+  var cat={};
+  if(cf) (cf.rows||[]).forEach(function(x){cat[x.s]=cat[x.s]||{};cat[x.s][x.c]=(cat[x.s][x.c]||0)+x.v;});
+  var d='';
+  P.forEach(function(row){
+    var key=null;
+    Object.keys(cat).forEach(function(s){if(txt(row.n).toUpperCase().indexOf(s.toUpperCase())===0)key=s;});
+    var lista='<span class="muted">se completa al subir el CF-gastos del mes</span>';
+    if(key){
+      var cs=Object.keys(cat[key]).sort(function(a,b){return cat[key][b]-cat[key][a];});
+      lista=cs.slice(0,4).map(function(k){return k.replace(/_/g,' ');}).join(', ');
+    }
+    d+='<div style="margin-bottom:.3rem"><b style="color:'+dcol(row.n)+'">'+row.n+'</b> — '+lista+'</div>';
+  });
+  $('d5').innerHTML=d;
 }
 // Impuestos, IMPO y resultado: filas de mas abajo de la hoja TOTAL.
 function fmS(v){ // con signo, para importes que pueden ser negativos
@@ -788,85 +878,6 @@ function extras(){
   $('etab').innerHTML=h+'</tbody>';
   [].forEach.call(document.querySelectorAll('#etab th[data-i]'),function(el){
     el.onclick=function(){M=+el.dataset.i;DS=null;render();};});
-}
-function kpis(){
-  if(!D.fc){$('kpis').innerHTML='';return;}
-  var p=blockTot('proy',M), r=blockTot('real',M), d=p?r/p-1:null, L=lastReal();
-  var pY=0,rY=0; for(var i=0;i<=L;i++){pY+=blockTot('proy',i);rY+=blockTot('real',i);}
-  var dY=pY?rY/pY-1:null;
-  var k=[
-    {l:'Presupuesto del mes',v:fmM(p),s:MES[M]+'-'+YY(),c:''},
-    {l:'Gasto real del mes',v:r?fmM(r):'—',s:r?'cargado':'sin reales todavía',c:''},
-    {l:'Desvío del mes',v:(d===null||!r)?'—':pc(d),s:r?((r>p?'sobregasto ':'ahorro ')+fmM(Math.abs(r-p))):'',c:(r&&d>0.03)?'k-bad':(r?'k-ok':'')},
-    {l:'Acumulado ene–'+(L>=0?MES[L]:'—'),v:rY?fmM(rY):'—',s:'presupuesto '+fmM(pY),c:''},
-    {l:'Desvío acumulado',v:(dY===null||!rY)?'—':pc(dY),s:rY?((rY>pY?'sobregasto ':'ahorro ')+fmM(Math.abs(rY-pY))):'',c:(rY&&dY>0.03)?'k-bad':(rY?'k-ok':'')}
-  ];
-  var vv=D.fc.ventas;
-  if(vv){
-    var vp=vv.proy[M], vr=vv.real[M];
-    var razP=vp?p/vp:null, razR=vr?r/vr:null;
-    k.push({l:'Gastos sobre ventas',
-      v:(razR!==null?(razR*100).toFixed(0)+'%':(razP!==null?(razP*100).toFixed(0)+'%':'—')),
-      s:(razR!==null&&razP!==null)?('proyectado '+(razP*100).toFixed(0)+'% · ventas '+fmM(vr))
-        :(razP!==null?('proyectado · ventas '+fmM(vp)):''),
-      c:(razR!==null&&razP!==null)?(razR>razP?'k-bad':'k-ok'):''});
-  }
-  $('kpis').innerHTML=k.map(function(x){
-    return '<div class="kpi '+x.c+'"><div class="lab">'+x.l+'</div><div class="val">'+x.v+'</div><div class="sub">'+x.s+'</div></div>';
-  }).join('');
-}
-function cards(){
-  if(!D.fc){$('cards').innerHTML='';return;}
-  $('hMes').textContent=MES[M]+'-'+YY();
-  var P=D.fc.proy.sectores||[], R=D.fc.real.sectores||[];
-  $('cards').innerHTML=P.map(function(row,i){
-    var p=row.v[M], r=(R[i]&&R[i].v[M])||0, d=p?r/p-1:null, col=scol(row.n), mx=Math.max(p,r)||1;
-    return '<div class="card"><div class="pill '+(r?cls(d):'')+'">'+(r?pc(d):'—')+'</div>'+
-      '<div class="ct" style="border-left-color:'+col+'">'+row.n+'</div>'+
-      '<div class="row"><span class="muted">Presupuesto</span><b>'+fm(p)+'</b></div>'+
-      '<div class="bar"><i style="width:'+(p/mx*100)+'%;background:var(--blue)"></i></div>'+
-      '<div class="row"><span class="muted">Real</span><b>'+(r?fm(r):'—')+'</b></div>'+
-      '<div class="bar"><i style="width:'+(r/mx*100)+'%;background:'+(r>p?'var(--neg)':'var(--ok)')+'"></i></div>'+
-      '<div class="row" style="margin-top:.3rem"><span class="muted">Diferencia</span><b style="color:'+
-        (r>p?'var(--neg)':'var(--ok)')+'">'+(r?((r>p?'+':'−')+fm(Math.abs(r-p))):'—')+'</b></div></div>';
-  }).join('');
-}
-function blocks(){
-  if(!D.fc){$('blocks').innerHTML='';return;}
-  $('blocks').innerHTML=BLK.map(function(b){
-    var P=D.fc.proy[b[0]]||[], R=D.fc.real[b[0]]||[];
-    var p=sum(P,M), r=sum(R,M), d=p?r/p-1:null;
-    var lines=P.map(function(row,i){
-      var pp=row.v[M], rr=(R[i]&&R[i].v[M])||0;
-      if(!pp&&!rr) return '';
-      var dd=pp?rr/pp-1:null;
-      return '<div class="row"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+row.n+
-        '</span><b>'+(rr?fm(rr):fm(pp))+' <span class="tag" style="color:'+(dd>0?'var(--neg)':'var(--ok)')+'">'+
-        (rr&&dd!==null?pc(dd):'—')+'</span></b></div>';
-    }).join('');
-    return '<div class="card"><div class="pill '+(r?cls(d):'')+'">'+(r?pc(d):'—')+'</div>'+
-      '<div class="ct" style="border-left-color:var(--navy)">'+b[1]+'</div>'+
-      '<div class="row"><span class="muted">Presup. / Real</span><b>'+fm(p)+' → '+(r?fm(r):'—')+'</b></div>'+
-      '<div class="bar"><i style="width:'+Math.min(r/(p||1)*100,100)+'%;background:'+(r>p?'var(--neg)':'var(--ok)')+'"></i></div>'+
-      '<div style="margin-top:.45rem;border-top:1px solid var(--brd);padding-top:.35rem">'+lines+'</div></div>';
-  }).join('');
-}
-function heat(){
-  if(!D.fc){$('heat').innerHTML='';return;}
-  var P=D.fc.proy.sectores||[], R=D.fc.real.sectores||[];
-  var h='<tr><th class="l">Sector</th>'+MES.map(function(m){return '<th>'+m+'</th>';}).join('')+'</tr>';
-  h+=P.map(function(row,i){
-    return '<tr><td class="l" style="border-left:3px solid '+scol(row.n)+'">'+row.n+'</td>'+
-      MES.map(function(m,j){
-        var rr=(R[i]&&R[i].v[j])||0, pp=row.v[j], d=(rr&&pp)?rr/pp-1:null;
-        return '<td><span class="hm" style="'+hcol(d)+'">'+(d===null?'–':pc(d))+'</span></td>';
-      }).join('')+'</tr>';
-  }).join('');
-  h+='<tr class="tot"><td class="l">TOTAL presupuestario</td>'+MES.map(function(m,j){
-      var pp=blockTot('proy',j), rr=blockTot('real',j), d=(rr&&pp)?rr/pp-1:null;
-      return '<td><span class="hm" style="'+hcol(d)+'">'+(d===null?'–':pc(d))+'</span></td>';
-    }).join('')+'</tr>';
-  $('heat').innerHTML=h;
 }
 var CANCOL=['var(--s-grupo)','var(--s-rrhh)','var(--s-log)','var(--s-prod)','var(--s-mkt)','var(--s-fab)'];
 // Colores fijos por sector (los de compras van con su propio color)
@@ -934,9 +945,9 @@ function detalle(){
     return '<div class="dcard'+(DS===c.n?' open':'')+'" data-i="'+i+'" style="border-left-color:'+col+'">'+
       '<div class="dx">'+(DS===c.n?'▾':'▸')+'</div>'+
       '<div class="dn" style="color:'+col+'">'+c.n+'</div>'+
-      '<div class="dv">'+fmM(c.v)+'</div>'+
+      '<div class="dv">'+$$(c.v)+'</div>'+
       '<div class="dm">'+(tot?(c.v/tot*100).toFixed(0):0)+'% del mes'+
-        (f.p?(' · presup. '+fm(f.p)):'')+'</div>'+
+        (f.p?(' · presup. '+$$(f.p)):'')+'</div>'+
       '<div class="bar"><i style="width:'+Math.min(f.p?c.v/f.p*100:0,100)+'%;background:'+
         (d!==null&&d>0?'var(--neg)':col)+'"></i></div>'+
       (d===null?'':'<div class="dm" style="margin-top:.2rem;color:'+(d>0?'var(--neg)':'var(--ok)')+
@@ -958,7 +969,7 @@ function detalle(){
   }
 }
 function panelHdr(sel,extra){
-  return '<div class="dp-hdr"><h3 style="color:'+dcol(sel.n)+'">'+sel.n+' · '+fmM(sel.v)+'</h3>'+
+  return '<div class="dp-hdr"><h3 style="color:'+dcol(sel.n)+'">'+sel.n+' · '+$$(sel.v)+'</h3>'+
     '<span class="muted">'+extra+'</span><button class="xbtn" title="cerrar">✕</button></div>';
 }
 function panelSector(sel,cf){
@@ -976,25 +987,25 @@ function panelSector(sel,cf){
   var h=panelHdr(sel,rows.length+' movimientos · '+ck.length+' categorías');
   h+='<div class="dgrid">'+
     '<div class="card"><div class="ct" style="border-left-color:'+col+'">Contra el presupuesto</div>'+
-      '<div class="row"><span class="muted">Presupuesto</span><b>'+(f.p?fm(f.p):'—')+'</b></div>'+
-      '<div class="row"><span class="muted">Real (forecast)</span><b>'+(f.r?fm(f.r):'—')+'</b></div>'+
-      '<div class="row"><span class="muted">Detalle CF-gastos</span><b>'+fm(tot)+'</b></div>'+
+      '<div class="row"><span class="muted">Presupuesto</span><b>'+(f.p?$$(f.p):'—')+'</b></div>'+
+      '<div class="row"><span class="muted">Real (forecast)</span><b>'+(f.r?$$(f.r):'—')+'</b></div>'+
+      '<div class="row"><span class="muted">Detalle CF-gastos</span><b>'+$$(tot)+'</b></div>'+
       '<div class="row"><span class="muted">Conciliación</span><b style="color:'+(okc?'var(--ok)':'var(--warn)')+'">'+
-        (f.r?((okc?'✔ ':'⚠ ')+(dif>0?'+':'−')+fm(Math.abs(dif))):'sin real cargado')+'</b></div></div>'+
+        (f.r?((okc?'✔ ':'⚠ ')+(dif>0?'+':'−')+$$(Math.abs(dif))):'sin real cargado')+'</b></div></div>'+
     '<div class="card"><div class="ct" style="border-left-color:'+col+'">Composición por categoría</div>'+
       ck.slice(0,7).map(function(k){
         return '<div class="catbar"><i style="width:'+(cat[k]/tot*100).toFixed(1)+'%;background:'+col+'"></i></div>'+
           '<div class="catrow"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k+
-          '</span><b>'+fm(cat[k])+' · '+(cat[k]/tot*100).toFixed(0)+'%</b></div>';
+          '</span><b>'+$$(cat[k])+' · '+(cat[k]/tot*100).toFixed(0)+'%</b></div>';
       }).join('')+'</div>'+
     '<div class="card"><div class="ct" style="border-left-color:'+col+'">Prorrateo por canal</div>'+
       (cf.can||[]).map(function(c,i){
         return '<div class="catbar"><i style="width:'+(can[i]/tot*100).toFixed(1)+'%;background:'+CANCOL[i%6]+'"></i></div>'+
-          '<div class="catrow"><span>'+c+'</span><b>'+fm(can[i])+' · '+(can[i]/tot*100).toFixed(0)+'%</b></div>';
+          '<div class="catrow"><span>'+c+'</span><b>'+$$(can[i])+' · '+(can[i]/tot*100).toFixed(0)+'%</b></div>';
       }).join('')+
       '<div style="margin-top:.5rem;border-top:1px solid var(--brd);padding-top:.4rem">'+
-      Object.keys(fv).map(function(k){return '<span class="tag" style="margin-right:.3rem">'+k+': '+fm(fv[k])+'</span>';}).join('')+
-      Object.keys(asg).map(function(k){return '<span class="tag" style="margin-right:.3rem">'+k+': '+fm(asg[k])+'</span>';}).join('')+
+      Object.keys(fv).map(function(k){return '<span class="tag" style="margin-right:.3rem">'+k+': '+$$(fv[k])+'</span>';}).join('')+
+      Object.keys(asg).map(function(k){return '<span class="tag" style="margin-right:.3rem">'+k+': '+$$(asg[k])+'</span>';}).join('')+
       '</div></div></div>';
   rows.sort(function(a,b){return b.v-a.v;});
   var cmap={};
@@ -1006,10 +1017,10 @@ function panelSector(sel,cf){
       '<td class="l">'+cpill(x.k,cmap)+'</td>'+
       '<td class="l muted" style="max-width:340px;overflow:hidden;text-overflow:ellipsis">'+x.p+
       '</td><td><span class="tag">'+(x.f||'—')+'</span></td><td><span class="tag">'+(x.a||'—')+'</span></td>'+
-      '<td><b>'+fm(x.v)+'</b></td><td class="muted">'+(x.v/tot*100).toFixed(1)+'%</td></tr>';
+      '<td><b>'+$$(x.v)+'</b></td><td class="muted">'+(x.v/tot*100).toFixed(1)+'%</td></tr>';
   }).join('')+'</tbody>';
   t+='<tfoot><tr><td class="l" colspan="5">Total '+sel.n+' · '+rows.length+' movimientos</td>'+
-     '<td>'+fm(tot)+'</td><td>100%</td></tr></tfoot>';
+     '<td>'+$$(tot)+'</td><td>100%</td></tr></tfoot>';
   return '<div class="dp">'+h+'<div class="tscroll" style="--thbg:'+col+'"><table>'+t+'</table></div></div>';
 }
 function panelCompras(sel,cf){
@@ -1023,19 +1034,19 @@ function panelCompras(sel,cf){
   var h=panelHdr(sel,rows.length+' comprobantes · '+pk.length+' proveedores');
   h+='<div class="dgrid">'+
     '<div class="card"><div class="ct" style="border-left-color:'+col+'">Contra el presupuesto</div>'+
-      '<div class="row"><span class="muted">Presupuesto</span><b>'+(f.p?fm(f.p):'—')+'</b></div>'+
-      '<div class="row"><span class="muted">Real (forecast)</span><b>'+(f.r?fm(f.r):'—')+'</b></div>'+
-      '<div class="row"><span class="muted">Detalle de compras</span><b>'+fm(tot)+'</b></div>'+
+      '<div class="row"><span class="muted">Presupuesto</span><b>'+(f.p?$$(f.p):'—')+'</b></div>'+
+      '<div class="row"><span class="muted">Real (forecast)</span><b>'+(f.r?$$(f.r):'—')+'</b></div>'+
+      '<div class="row"><span class="muted">Detalle de compras</span><b>'+$$(tot)+'</b></div>'+
       '<div class="row"><span class="muted">Conciliación</span><b style="color:'+(okc?'var(--ok)':'var(--warn)')+'">'+
-        (f.r?((okc?'✔ ':'⚠ ')+(dif>0?'+':'−')+fm(Math.abs(dif))):'sin real cargado')+'</b></div>'+
+        (f.r?((okc?'✔ ':'⚠ ')+(dif>0?'+':'−')+$$(Math.abs(dif))):'sin real cargado')+'</b></div>'+
       (Object.keys(ori).length?('<div style="margin-top:.5rem;border-top:1px solid var(--brd);padding-top:.4rem">'+
-        Object.keys(ori).map(function(k){return '<span class="tag" style="margin-right:.3rem">'+k+': '+fm(ori[k])+'</span>';}).join('')+
+        Object.keys(ori).map(function(k){return '<span class="tag" style="margin-right:.3rem">'+k+': '+$$(ori[k])+'</span>';}).join('')+
         '</div>'):'')+'</div>'+
     '<div class="card" style="grid-column:span 2"><div class="ct" style="border-left-color:'+col+'">Concentración por proveedor</div>'+
       pk.slice(0,8).map(function(k){
         return '<div class="catbar"><i style="width:'+(prov[k]/tot*100).toFixed(1)+'%;background:'+col+'"></i></div>'+
           '<div class="catrow"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k+
-          '</span><b>'+fm(prov[k])+' · '+(prov[k]/tot*100).toFixed(0)+'%</b></div>';
+          '</span><b>'+$$(prov[k])+' · '+(prov[k]/tot*100).toFixed(0)+'%</b></div>';
       }).join('')+'</div></div>';
   rows.sort(function(a,b){return b.v-a.v;});
   var hayOri=Object.keys(ori).length>0, nc=hayOri?7:6, pmap={};
@@ -1047,10 +1058,10 @@ function panelCompras(sel,cf){
       '<td class="l muted">'+(x.cmp||'—')+'</td><td class="l">'+cpill(x.p,pmap)+'</td>'+
       '<td class="l muted" style="max-width:320px;overflow:hidden;text-overflow:ellipsis">'+(x.d||'')+'</td>'+
       (hayOri?('<td><span class="tag">'+(x.o||'—')+'</span></td>'):'')+
-      '<td><b>'+fm(x.v)+'</b></td><td class="muted">'+(x.v/tot*100).toFixed(1)+'%</td></tr>';
+      '<td><b>'+$$(x.v)+'</b></td><td class="muted">'+(x.v/tot*100).toFixed(1)+'%</td></tr>';
   }).join('')+'</tbody>';
   t+='<tfoot><tr><td class="l" colspan="'+(nc-2)+'">Total '+sel.n+' · '+rows.length+' comprobantes</td>'+
-     '<td>'+fm(tot)+'</td><td>100%</td></tr></tfoot>';
+     '<td>'+$$(tot)+'</td><td>100%</td></tr></tfoot>';
   return '<div class="dp">'+h+'<div class="tscroll" style="--thbg:'+col+'"><table>'+t+'</table></div></div>';
 }
 function render(){
@@ -1059,11 +1070,9 @@ function render(){
   $('pEmpty').style.display=hay?'none':'';
   hdrUpd();
   if(!hay) return;
-  // Con la franja del año todos los meses son navegables (los futuros muestran solo presupuesto).
-  // Solo se reubica el mes si no hay forecast y el mes elegido no tiene detalle.
   if(!D.fc){var ks=Object.keys(D.det).map(Number);
     if(ks.length&&D.det[M]===undefined) M=Math.max.apply(null,ks);}
-  ystrip();ventas();extras();kpis();cards();blocks();heat();detalle();
+  msel();tabFact();tabGastos();extras();tabSector();desvGlobal();detalle();
 }
 
 // ══════════ ARRANQUE ══════════
