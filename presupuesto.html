@@ -219,6 +219,19 @@ table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
 .cero{color:var(--txt2)}
 .desc{font-size:.78rem;color:var(--txt2);line-height:1.35}
 .desc b{color:var(--txt)}
+/* ══ dos columnas para las tablas gemelas (1 y 2) ══ */
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(530px,1fr));gap:1.1rem;
+ align-items:start;margin-bottom:1.1rem}
+.duo > .sec{margin-bottom:0;height:100%}
+.duo table.t{font-size:.79rem}
+.duo table.t th{padding:.35rem .35rem}
+.duo table.t td{padding:.33rem .35rem}
+/* ══ color por seccion ══ */
+.sec{border-left:4px solid var(--sc,transparent)}
+.sec .num{background:var(--sc,var(--ink))}
+.sec table.t thead th{border-bottom-color:var(--sc,var(--brd2))}
+.sec-hdr h2{color:var(--sct,var(--txt))}
+.emo{font-size:1.02rem;margin-right:.4rem;line-height:1}
 </style></head><body>
 
 <!-- ══════════ LOGIN ══════════ -->
@@ -262,24 +275,26 @@ table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
 </div>
 
 <div id="pBody">
-  <div class="msel" id="msel"></div>
 
-  <div class="sec" id="sec1">
-    <div class="sec-hdr"><h2><span class="num">1</span>Facturación sin IVA</h2>
+  <div class="duo">
+  <div class="sec" id="sec1" style="--sc:#2a6b53;--sct:#1f5540">
+    <div class="sec-hdr"><h2><span class="num">1</span><span class="emo">💵</span>Facturación sin IVA</h2>
       <div class="sub">Ventas del mes: proyectado, real y desvío. Los importes son
         <b>facturación sin IVA</b>.</div></div>
     <div class="scroll"><table class="t" id="t1"></table></div>
   </div>
 
-  <div class="sec" id="sec2">
-    <div class="sec-hdr"><h2><span class="num">2</span>Presupuesto de gastos por mes</h2>
+  <div class="sec" id="sec2" style="--sc:#2e4c86;--sct:#243c6b">
+    <div class="sec-hdr"><h2><span class="num">2</span><span class="emo">📊</span>Presupuesto de gastos por mes</h2>
       <div class="sub">Total de gastos del mes: presupuestado, real y desvío. El total del año
         muestra siempre el presupuesto completo.</div></div>
     <div class="scroll"><table class="t" id="t2"></table></div>
   </div>
 
-  <div class="sec" id="secExt">
-    <div class="sec-hdr"><h2><span class="num">3</span>Impuestos, IMPO y resultado</h2>
+  </div>
+
+  <div class="sec" id="secExt" style="--sc:#8a5a2b;--sct:#5c3b1c">
+    <div class="sec-hdr"><h2><span class="num">3</span><span class="emo">🚢</span>Impuestos, IMPO y resultado</h2>
       <div class="sub">Lo que se suma al gasto operativo y el resultado del mes ·
         <span id="hExt"></span></div></div>
     <div class="mrow" id="mrow"></div>
@@ -294,15 +309,16 @@ table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
       <b>c/IMPO</b> de los meses que todavía no cerraron puede moverse.</div>
   </div>
 
-  <div class="sec" id="sec4">
-    <div class="sec-hdr"><h2><span class="num">4</span>Presupuesto por sector — <span id="h4"></span></h2>
+  <div class="msel" id="msel"></div>
+  <div class="sec" id="sec4" style="--sc:#3C3489;--sct:#2b2566">
+    <div class="sec-hdr"><h2><span class="num">4</span><span class="emo">🏷️</span>Presupuesto por sector — <span id="h4"></span></h2>
       <div class="sub">Cada línea del presupuesto del mes elegido, en importes completos.
         Los subtotales suman el total de la sección 2.</div></div>
     <div class="scroll"><table class="t" id="t4"></table></div>
   </div>
 
-  <div class="sec" id="sec5">
-    <div class="sec-hdr"><h2><span class="num">5</span>Desvío global por sector</h2>
+  <div class="sec" id="sec5" style="--sc:#d85a30;--sct:#a8431f">
+    <div class="sec-hdr"><h2><span class="num">5</span><span class="emo">🎯</span>Desvío global por sector</h2>
       <div class="sub">Porcentaje de desvío de cada sector, mes por mes.
         <b style="color:var(--neg)">Rojo</b> = gastó más de lo presupuestado ·
         <b style="color:var(--ok)">Verde</b> = gastó menos.</div></div>
@@ -313,8 +329,8 @@ table.t.hz td.l{text-align:left;font-weight:700;font-size:.8rem}
     </div>
   </div>
 
-  <div class="sec" id="sec6">
-    <div class="sec-hdr"><h2><span class="num">6</span>Detalle de gastos por sector — <span id="dMes"></span></h2>
+  <div class="sec" id="sec6" style="--sc:#993556;--sct:#7a2a45">
+    <div class="sec-hdr"><h2><span class="num">6</span><span class="emo">🔍</span>Detalle de gastos por sector — <span id="dMes"></span></h2>
       <div class="sub">Gasto total del mes por sector. Tocá una tarjeta para abrir el detalle.</div></div>
     <div class="cards" id="dcards"></div>
     <div id="dpanel"></div>
@@ -715,7 +731,7 @@ function msel(){
   $('msel').innerHTML='<span class="lb">Mes</span>'+MES.map(function(m,i){
     return '<button class="chip'+(i===M?' on':'')+'" data-i="'+i+'">'+m+'-'+YY()+
       (det[i]?' •':'')+'</button>';}).join('')+
-    '<span class="muted" style="margin-left:auto">• con detalle cargado</span>';
+    '<span class="muted" style="margin-left:auto">manda en las secciones 4 y 6 · <b>•</b> = con detalle cargado</span>';
   [].forEach.call(document.querySelectorAll('#msel .chip'),function(b){
     b.onclick=function(){M=+b.dataset.i;DS=null;render();};});
 }
@@ -929,7 +945,7 @@ function fcDe(card){
 }
 function detalle(){
   var cf=D.det[M];
-  $('dMes').textContent = cf ? ('· '+cf.mes+' 20'+YY()) : '';
+  $('dMes').textContent = MESL[M]+' 20'+YY()+(cf?'':' · sin detalle cargado');
   $('dpanel').innerHTML='';
   if(!cf){
     $('dcards').innerHTML='';
