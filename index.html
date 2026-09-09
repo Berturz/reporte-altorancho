@@ -3923,10 +3923,7 @@ function renderEventos(){
   <!-- Panel principal: 3 cajas (Líquido pesos / A liquidar / Líquido USD) con composición por línea -->
   <div id="cajasPanel" style="margin-bottom:.9rem"></div>
 
-  <!-- Rentabilidad de inversiones vs inflación (hoja "Rentabilidad % Inversiones") -->
-  <div id="cajasRentab" style="margin-bottom:.9rem"></div>
-
-  <!-- Tabla comparativa semana actual vs anterior -->
+  <!-- Rentabilidad (izq) + Variación semana a semana (der, tablas apiladas) -->
   <style>
   .cajas-var-table{width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
   .cajas-var-table thead th{color:#fff;font-weight:600;text-align:right;padding:.45rem .6rem;font-size:11px;white-space:nowrap}
@@ -3937,10 +3934,13 @@ function renderEventos(){
   #arMayoristaTableWrap table thead th{background:#4472c4!important;color:#fff!important}
   #arMayoristaTableWrap .cobr-total-row td{font-weight:800!important;color:#4472c4!important;border-top:2px solid #4472c4!important;background:var(--bg3)!important}
   </style>
-  <div class="orig-group-label" style="margin-bottom:.5rem"><span class="orig-dot" style="background:#1D9E75"></span>Variación semana a semana</div>
-  <div class="charts2" style="margin-bottom:.85rem;align-items:start">
-    <div id="cajasVarARSWrap"></div>
-    <div id="cajasVarUSDWrap"></div>
+  <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:.9rem">
+    <div id="cajasRentab" style="flex:2;min-width:460px"></div>
+    <div style="flex:1;min-width:320px">
+      <div class="orig-group-label" style="margin-bottom:.5rem"><span class="orig-dot" style="background:#1D9E75"></span>Variación semana a semana</div>
+      <div id="cajasVarARSWrap" style="margin-bottom:.6rem"></div>
+      <div id="cajasVarUSDWrap"></div>
+    </div>
   </div>
 
   <!-- Tabla detalle por cuenta -->
