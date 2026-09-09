@@ -4392,7 +4392,7 @@ function renderRentab(){
     +'</div>'
     +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .6rem">'+sel.label+' · % nominal y real (descontada la inflación)</div>'
     +det+'<div style="font-size:10.5px;color:var(--txt2);margin:.1rem 0 .2rem"><i class="ti ti-arrows-diff" style="font-size:11px;vertical-align:-1px"></i> Desvío vs IPC (rentabilidad − inflación) · sobre 0 le gana a la inflación</div>'
-    +'<div style="position:relative;height:245px"><canvas id="cRentab"></canvas></div></div>';
+    +'<div style="position:relative;height:175px"><canvas id="cRentab"></canvas></div></div>';
   var labels=R.map(function(m){return m.label;});
   var mk=function(lbl,key,c){return {label:lbl,data:R.map(function(m){return m[key]==null?null:+(m[key]*100).toFixed(2);}),backgroundColor:c,borderRadius:4,maxBarThickness:26};};
   if(rentabChart) rentabChart.destroy();
