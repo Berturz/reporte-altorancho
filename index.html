@@ -553,7 +553,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <button onclick="showTab('cajas',this)" class="tabnav-btn" style="--tc:#1D9E75">Cajas</button>
   <button onclick="showTab('impo',this)" class="tabnav-btn" style="--tc:#5a9ca8">IMPO</button>
   <button onclick="showTab('stock',this)" class="tabnav-btn" style="--tc:#A0673B">Stock MTM</button>
-  <button onclick="showTab('logistica',this)" class="tabnav-btn" style="--tc:#7A5CA6">Logística</button>
+  <button onclick="showTab('logistica',this)" class="tabnav-btn" style="--tc:#7A5CA6;display:none">Logística</button>
 </nav>
 <div id="periodoBar" style="padding:12px 2px 0"></div>
 <!-- SECCIÓN 0: COMPARATIVA YTD 2025 vs 2026 -->
@@ -5351,7 +5351,7 @@ function renderStock(){
 <!-- ════════════════════════════════════════════════ -->
 <!-- SECCIÓN LOGÍSTICA -->
 <!-- ════════════════════════════════════════════════ -->
-<div class="sec" id="secLogistica" style="margin-top:1.2rem;border-top:3px solid #7A5CA6">
+<div class="sec" id="secLogistica" style="margin-top:1.2rem;border-top:3px solid #7A5CA6;display:none">
   <style>
   #secLogistica .log-table{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--brd);border-radius:10px;overflow:hidden}
   #secLogistica .log-table th{padding:.5rem .7rem;font-size:11px;font-weight:700;color:#fff;text-align:right;white-space:nowrap}
