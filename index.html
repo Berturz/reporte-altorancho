@@ -3753,16 +3753,16 @@ function renderEventos(){
       .sort(function(a,b){return (b.ago+b.mar)-(a.ago+a.mar);});
     var t25=0,tmar=0,tago=0;
     var body1=r1.map(function(x){ t25+=x.a25; tmar+=x.mar; tago+=x.ago;
-      var vv=x.a25>0?((x.mar+x.ago)/x.a25-1)*100:null;
+      var vv=x.a25>0?(x.ago/x.a25-1)*100:null;
       return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:5px 10px;font-weight:600">'+x.disp+'</td>'
        +'<td style="text-align:right;padding:5px 10px;color:#8a8880">'+fmt(x.a25)+'</td>'
        +'<td style="text-align:right;padding:5px 10px;color:#2a78d6;font-weight:600">'+(x.mar>0?fmt(x.mar):'<span style="color:#b8b4c0">—</span>')+'</td>'
        +'<td style="text-align:right;padding:5px 10px;color:#c98500;font-weight:600">'+fmt(x.ago)+'</td>'
        +'<td style="text-align:right;padding:5px 10px;font-weight:700;color:'+(vv==null?'var(--txt2)':(vv<0?'#a32d2d':'#1a7a3a'))+'">'+(vv==null?'—':(vv>=0?'+':'')+vv.toFixed(1)+'%')+'</td></tr>'; }).join('');
-    var vvT=t25>0?((tmar+tago)/t25-1)*100:null;
+    var vvT=t25>0?(tago/t25-1)*100:null;
     var tot1='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#8a8880">'+fmt(t25)+'</td><td style="text-align:right;padding:6px 10px;color:#2a78d6">'+fmt(tmar)+'</td><td style="text-align:right;padding:6px 10px;color:#c98500">'+fmt(tago)+'</td><td style="text-align:right;padding:6px 10px;color:'+(vvT==null?'var(--txt2)':(vvT<0?'#a32d2d':'#1a7a3a'))+'">'+(vvT==null?'—':(vvT>=0?'+':'')+vvT.toFixed(1)+'%')+'</td></tr>';
-    var cuadro1='<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-calendar-stats"></i>Días oficiales de feria · variación por vendedor <span class="sec-sub">· pedido (Base imp.) · Var = Ago 2025 aj.IPC → (Mar+Ago) 2026</span></div>'
-     +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:820px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Ago 2025 (aj.IPC)</th><th style="text-align:right;padding:6px 10px">Mar 2026 (11–14/03)</th><th style="text-align:right;padding:6px 10px">Ago 2026 (19–22/08)</th><th style="text-align:right;padding:6px 10px">Var. Ago25→Mar+Ago26</th></tr></thead><tbody>'+body1+tot1+'</tbody></table></div>'
+    var cuadro1='<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-calendar-stats"></i>Días oficiales de feria · variación por vendedor <span class="sec-sub">· pedido (Base imp.) · Var = Ago 2026 vs Ago 2025 aj.IPC</span></div>'
+     +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:820px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Ago 2025 (aj.IPC)</th><th style="text-align:right;padding:6px 10px">Mar 2026 (11–14/03)</th><th style="text-align:right;padding:6px 10px">Ago 2026 (19–22/08)</th><th style="text-align:right;padding:6px 10px">Var. Agosto 25/26</th></tr></thead><tbody>'+body1+tot1+'</tbody></table></div>'
      +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Ago 2025 = facturación Presentes 2025 aj.IPC (feria completa) · Mar/Ago 2026 = pedido de los días oficiales (dinámica del archivo de pedidos).</div>';
     // Cuadro 2: pedido vs facturado Agosto 2026
     var facAgo=(F['2026-ago']&&F['2026-ago'].fac)||0, pedAgo=EV_PED_AGO_TOTAL, penAgo=Math.max(0,pedAgo-facAgo);
