@@ -3734,11 +3734,12 @@ function renderEventos(){
   var evExtra='';
   if(evSel==='Presentes'){
     var evNorm=function(s){return String(s||'').toUpperCase().replace(/\s+/g,' ').trim();};
-    var PED={}; // [nombre, mar(díasOfic), ago(díasOfic 19-22), agoTot(todo agosto)]
+    var PED={}; // [nombre, mar(díasOfic 11-14), ago(díasOfic 19-22), agoTot(todo agosto+sept)]
+    // Dinámica "Pedidos totales al 14-09.xlsx" (hojas Agosto/Marzo 2026 dias oficiales)
     [['Matias Chiuki',22723811.40,52639470.90,60650864.25],
      ['Laura Viviana Soldano',6936695.20,19183981.35,38093749.35],
      ['Jose Luis Persoglia',8690802.45,17618773.00,21575273.00],
-     ['Jimena Alejandra Tobares',10335411.40,8640032.95,13680061.30],
+     ['Jimena Alejandra Tobares',9295915.70,8640032.95,13680061.30],
      ['ATENCION DECORADORES Y ARQUITECTOS',0,1268107.11,2229029.78]
     ].forEach(function(r){ PED[evNorm(r[0])]={disp:r[0],mar:r[1],ago:r[2],agoTot:r[3]}; });
     var EV_PED_AGO_TOTAL=136228977.68;
