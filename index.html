@@ -3181,10 +3181,10 @@ function rpMetricCell(cell, col, rank, pct){
     +'<span class="rpt-rank '+(rank===1?'top':'oth')+'">'+(rank===1?'🏆 #1':'#'+rank)+'</span>'
     +'<div class="rpt-faclbl">Facturación s/IVA</div><div class="rpt-fac" style="color:'+col+'">'+ffl(fc)+'</div>'
     +'<div class="rpt-metrics">'
-    +'<div class="rpt-m"><span class="rpt-ml">Cantidad</span><span class="rpt-mv">'+qty.toLocaleString('es-AR')+'</span></div>'
-    +'<div class="rpt-m"><span class="rpt-ml">Ticket</span><span class="rpt-mv">'+ffl(ticket)+'</span></div>'
-    +'<div class="rpt-m"><span class="rpt-ml">Ventas</span><span class="rpt-mv">'+ventas+'</span></div>'
-    +'<div class="rpt-m"><span class="rpt-ml">%</span><span class="rpt-mv">'+pct.toFixed(2)+'%</span></div>'
+    +'<div class="rpt-m" style="--mc:#0F7A34"><span class="rpt-ml">Cantidad</span><span class="rpt-mv">'+qty.toLocaleString('es-AR')+'</span></div>'
+    +'<div class="rpt-m" style="--mc:#B26A00"><span class="rpt-ml">Ticket</span><span class="rpt-mv">'+ffl(ticket)+'</span></div>'
+    +'<div class="rpt-m" style="--mc:#2A6FD6"><span class="rpt-ml">Ventas</span><span class="rpt-mv">'+ventas+'</span></div>'
+    +'<div class="rpt-m" style="--mc:#9B3D8C"><span class="rpt-ml">%</span><span class="rpt-mv">'+pct.toFixed(2)+'%</span></div>'
     +'</div></div>';
 }
 function rpSection(titleHtml, gradFrom, gradTo, channels, mesData){
@@ -3214,7 +3214,7 @@ function rpStyleBlockT(){ return '<style>'
   +'#rpCanalBlocks .rpt-scroll{overflow-x:auto}'
   +'#rpCanalBlocks .rpt-head{display:grid;background:#f4f4f2;font-size:10.5px;font-weight:800;color:#666;text-transform:uppercase;letter-spacing:.3px}'
   +'#rpCanalBlocks .rpt-head>div{padding:7px 12px}'
-  +'#rpCanalBlocks .rpt-chh{text-align:center;border-left:1px solid var(--brd)}'
+  +'#rpCanalBlocks .rpt-chh{text-align:center;border-left:1px solid var(--brd);font-size:14px;font-weight:800;padding-block:9px}'
   +'#rpCanalBlocks .rpt-row{display:grid;border-top:1px solid var(--brd)}'
   +'#rpCanalBlocks .rpt-row:hover{background:var(--info-bg,#f6fafb)}'
   +'#rpCanalBlocks .rpt-ident{display:flex;gap:9px;align-items:center;padding:10px 12px;min-width:0}'
@@ -3227,11 +3227,13 @@ function rpStyleBlockT(){ return '<style>'
   +'#rpCanalBlocks .rpt-rank{position:absolute;top:6px;right:8px;font-size:8.5px;font-weight:700;border-radius:20px;padding:2px 6px;line-height:1}'
   +'#rpCanalBlocks .rpt-rank.top{background:#fff4d6;color:#a9781a;border:1px solid #e9c977}'
   +'#rpCanalBlocks .rpt-rank.oth{background:#f1f0f4;color:#8a8494;border:1px solid #e2e0e6}'
-  +'#rpCanalBlocks .rpt-faclbl{font-size:8.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:1px}'
+  +'#rpCanalBlocks .rpt-faclbl{font-size:8.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:1px;font-weight:800}'
   +'#rpCanalBlocks .rpt-fac{font-size:18px;font-weight:800;line-height:1}'
-  +'#rpCanalBlocks .rpt-metrics{display:flex;gap:13px;margin-top:7px;flex-wrap:wrap}'
-  +'#rpCanalBlocks .rpt-ml{font-size:8.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.2px;display:block}'
-  +'#rpCanalBlocks .rpt-mv{font-size:12px;font-weight:700}'
+  +'#rpCanalBlocks .rpt-metrics{display:grid;grid-template-columns:repeat(4,1fr);margin-top:8px;border:1px solid var(--brd);border-radius:7px;overflow:hidden}'
+  +'#rpCanalBlocks .rpt-m{padding:6px 8px 5px;border-left:1px solid var(--brd);border-top:3px solid var(--mc)}'
+  +'#rpCanalBlocks .rpt-m:first-child{border-left:0}'
+  +'#rpCanalBlocks .rpt-ml{font-size:9px;color:var(--mc);font-weight:800;text-transform:uppercase;letter-spacing:.2px;display:block}'
+  +'#rpCanalBlocks .rpt-mv{font-size:12px;font-weight:700;color:var(--txt)}'
   +'#rpCanalBlocks .rpt-tot{display:grid;border-top:2px solid var(--brd);background:#f7f7f5;font-weight:700}'
   +'#rpCanalBlocks .rpt-tot>div{padding:8px 13px;font-size:11.5px}'
   +'#rpCanalBlocks .rpt-tot>div:first-child{display:flex;align-items:center}'
@@ -3247,7 +3249,7 @@ function renderRP(){
   var locCh  = ['lsi','lbe','alc','lnd'].filter(function(c){return mesData[c];});
   var webCol=CH_LIGHT[RP_CANAL_CHKEY['web']]||'#7B6BC8', mayCol=CH_LIGHT[RP_CANAL_CHKEY['lett']]||'#2f7ec4';
   var html='';
-  html += rpSection('<i class="ti ti-shopping-cart" style="font-size:15px"></i> Principales · Web + Mayorista', webCol, mayCol, mainCh, mesData);
+  html += rpSection('<i class="ti ti-shopping-cart" style="font-size:15px"></i> Canales · Web + Mayorista', webCol, mayCol, mainCh, mesData);
   if(locCh.length){
     var c1=CH_LIGHT[RP_CANAL_CHKEY[locCh[0]]]||'#2a9d8f', c2=CH_LIGHT[RP_CANAL_CHKEY[locCh[locCh.length-1]]]||'#c1873b';
     html += rpSection('<i class="ti ti-map-pin" style="font-size:15px"></i> Locales', c1, c2, locCh, mesData);
