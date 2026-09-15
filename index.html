@@ -3204,7 +3204,7 @@ function rpSection(titleHtml, gradFrom, gradTo, channels, mesData){
     var cells = chInfo.map(function(ci){ var cell=ci.d[cat]; var pct=(ci.tfc>0&&cell)?((cell[1]||0)/ci.tfc*100):0; return rpMetricCell(cell, ci.col, ci.rank[cat]||0, pct); }).join('');
     return '<div class="rpt-row" style="grid-template-columns:'+cols+'">'+rpIdentCell(cat)+cells+'</div>';
   }).join('');
-  var totcells = chInfo.map(function(ci){ var tk=ci.tv>0?ci.tfc/ci.tv:0; return '<div class="rpt-tc"><span>'+ci.tv+' ventas · '+ci.tq.toLocaleString('es-AR')+' u. · '+ffl(tk)+'</span><span style="color:'+ci.col+';font-weight:800">'+ffl(ci.tfc)+'</span></div>'; }).join('');
+  var totcells = chInfo.map(function(ci){ var tk=ci.tv>0?ci.tfc/ci.tv:0; return '<div class="rpt-tc"><span class="rpt-tcm"><b style="color:#0F7A34">Cant.</b> '+ci.tq.toLocaleString('es-AR')+' <span class="rpt-tcsep">·</span> <b style="color:#B26A00">Ticket</b> '+ffl(tk)+' <span class="rpt-tcsep">·</span> <b style="color:#2A6FD6">Ventas</b> '+ci.tv+'</span><span style="color:'+ci.col+';font-weight:800;font-size:13px;white-space:nowrap">'+ffl(ci.tfc)+'</span></div>'; }).join('');
   var tot = '<div class="rpt-tot" style="grid-template-columns:'+cols+'"><div>TOTAL</div>'+totcells+'</div>';
   return '<div class="rpt-sec"><div class="rpt-sechd" style="background:linear-gradient(90deg,'+gradFrom+','+gradTo+')">'+titleHtml+'</div><div class="rpt-scroll">'+head+body+tot+'</div></div>';
 }
@@ -3237,7 +3237,10 @@ function rpStyleBlockT(){ return '<style>'
   +'#rpCanalBlocks .rpt-tot{display:grid;border-top:2px solid var(--brd);background:#f7f7f5;font-weight:700}'
   +'#rpCanalBlocks .rpt-tot>div{padding:8px 13px;font-size:11.5px}'
   +'#rpCanalBlocks .rpt-tot>div:first-child{display:flex;align-items:center}'
-  +'#rpCanalBlocks .rpt-tc{border-left:1px solid var(--brd);display:flex;justify-content:space-between;gap:8px;align-items:baseline}'
+  +'#rpCanalBlocks .rpt-tc{border-left:1px solid var(--brd);display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}'
+  +'#rpCanalBlocks .rpt-tcm{color:#1f2937;font-weight:700}'
+  +'#rpCanalBlocks .rpt-tcm b{font-weight:800}'
+  +'#rpCanalBlocks .rpt-tcsep{color:#c9c9c9;font-weight:400;margin:0 1px}'
   +'</style>'; }
 function renderRP(){
   var host=document.getElementById('rpCanalBlocks'); if(!host) return;
