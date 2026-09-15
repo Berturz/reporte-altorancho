@@ -3001,6 +3001,12 @@ const RP_CAT_ICON = {
   'DECO/NAVIDAD/BAZAR IMPORTADO':'tools-kitchen-2',
   'DECO/BAZAR FABRICA':'building-factory-2',
 };
+// fondo suave por rubro (toda la fila) para seguir cada rubro sin marearse
+const RP_CAT_TINT = {
+  'ILUMINACION IMPORTADA':'#fdeff0','ILUMINACION NACIONAL':'#eef4fb','ILUMINACION INALAMBRICA':'#fdf6ea',
+  'SILLAS IMPORTADAS':'#f0f7ec','REPOSERAS IMPORTADAS':'#f5f0fb','MUEBLES NACIONALES':'#eaf6f3',
+  'PROVEEDOR NACIONAL':'#f9f0f5','DECO/NAVIDAD/BAZAR IMPORTADO':'#fbf2ea','DECO/BAZAR FABRICA':'#f1f1ef',
+};
 // origen por categoría → bandera de fondo: importado/inalámbrica = China; nacional/fábrica = Argentina
 function rpOrigen(cat){ var u=String(cat).toUpperCase(); return (/IMPORTAD|INALAMBRICA/.test(u)) ? 'cn' : 'ar'; }
 // PNG transparente embebido por categoría (recorte con IA, sin fondo). Tiene PRIORIDAD sobre la foto del CDN + recorte automático.
@@ -3202,7 +3208,8 @@ function rpSection(titleHtml, gradFrom, gradTo, channels, mesData){
     + chInfo.map(function(ci){ return '<div class="rpt-chh" style="color:'+ci.col+'"><i class="ti ti-'+(RP_CANAL_ICONS[ci.c]||'building')+'"></i> '+RP_CANAL_LABELS[ci.c]+'</div>'; }).join('') + '</div>';
   var body = cats.map(function(cat){
     var cells = chInfo.map(function(ci){ var cell=ci.d[cat]; var pct=(ci.tfc>0&&cell)?((cell[1]||0)/ci.tfc*100):0; return rpMetricCell(cell, ci.col, ci.rank[cat]||0, pct); }).join('');
-    return '<div class="rpt-row" style="grid-template-columns:'+cols+'">'+rpIdentCell(cat)+cells+'</div>';
+    var tint=(typeof RP_CAT_TINT!=='undefined'&&RP_CAT_TINT[cat])||'#fff';
+    return '<div class="rpt-row" style="grid-template-columns:'+cols+';background:'+tint+'">'+rpIdentCell(cat)+cells+'</div>';
   }).join('');
   var totcells = chInfo.map(function(ci){ var tk=ci.tv>0?ci.tfc/ci.tv:0; return '<div class="rpt-tc"><span class="rpt-tcm"><b style="color:#0F7A34">Cant.</b> '+ci.tq.toLocaleString('es-AR')+' <span class="rpt-tcsep">·</span> <b style="color:#B26A00">Ticket</b> '+ffl(tk)+' <span class="rpt-tcsep">·</span> <b style="color:#2A6FD6">Ventas</b> '+ci.tv+'</span><span style="color:'+ci.col+';font-weight:800;font-size:13px;white-space:nowrap">'+ffl(ci.tfc)+'</span></div>'; }).join('');
   var tot = '<div class="rpt-tot" style="grid-template-columns:'+cols+'"><div>TOTAL</div>'+totcells+'</div>';
@@ -3211,8 +3218,8 @@ function rpSection(titleHtml, gradFrom, gradTo, channels, mesData){
 function rpStyleBlockT(){ return '<style>'
   +'#rpCanalBlocks .rpt-sec{border:1px solid var(--brd);border-radius:14px;overflow:hidden;margin-bottom:16px;background:#fff}'
   +'#rpCanalBlocks .rpt-sechd{padding:9px 15px;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px}'
-  +'#rpCanalBlocks .rpt-scroll{overflow-x:auto}'
-  +'#rpCanalBlocks .rpt-head{display:grid;background:#f4f4f2;font-size:10.5px;font-weight:800;color:#666;text-transform:uppercase;letter-spacing:.3px}'
+  +'#rpCanalBlocks .rpt-scroll{overflow:auto;max-height:65vh}'
+  +'#rpCanalBlocks .rpt-head{display:grid;background:#eef0f2;font-size:10.5px;font-weight:800;color:#666;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0;z-index:4}'
   +'#rpCanalBlocks .rpt-head>div{padding:7px 12px}'
   +'#rpCanalBlocks .rpt-chh{text-align:center;border-left:1px solid var(--brd);font-size:14px;font-weight:800;padding-block:9px}'
   +'#rpCanalBlocks .rpt-row{display:grid;border-top:1px solid var(--brd)}'
@@ -3229,12 +3236,12 @@ function rpStyleBlockT(){ return '<style>'
   +'#rpCanalBlocks .rpt-rank.oth{background:#f1f0f4;color:#8a8494;border:1px solid #e2e0e6}'
   +'#rpCanalBlocks .rpt-faclbl{font-size:8.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:1px;font-weight:800}'
   +'#rpCanalBlocks .rpt-fac{font-size:18px;font-weight:800;line-height:1}'
-  +'#rpCanalBlocks .rpt-metrics{display:grid;grid-template-columns:repeat(4,1fr);margin-top:8px;border:1px solid var(--brd);border-radius:7px;overflow:hidden}'
+  +'#rpCanalBlocks .rpt-metrics{display:grid;grid-template-columns:repeat(4,1fr);margin-top:8px;border:1px solid var(--brd);border-radius:7px;overflow:hidden;background:#fff}'
   +'#rpCanalBlocks .rpt-m{padding:6px 8px 5px;border-left:1px solid var(--brd);border-top:3px solid var(--mc)}'
   +'#rpCanalBlocks .rpt-m:first-child{border-left:0}'
   +'#rpCanalBlocks .rpt-ml{font-size:9px;color:var(--mc);font-weight:800;text-transform:uppercase;letter-spacing:.2px;display:block}'
   +'#rpCanalBlocks .rpt-mv{font-size:12px;font-weight:700;color:var(--txt)}'
-  +'#rpCanalBlocks .rpt-tot{display:grid;border-top:2px solid var(--brd);background:#f7f7f5;font-weight:700}'
+  +'#rpCanalBlocks .rpt-tot{display:grid;border-top:2px solid #c9c9c9;background:#eef0f2;font-weight:700;position:sticky;bottom:0;z-index:3}'
   +'#rpCanalBlocks .rpt-tot>div{padding:8px 13px;font-size:11.5px}'
   +'#rpCanalBlocks .rpt-tot>div:first-child{display:flex;align-items:center}'
   +'#rpCanalBlocks .rpt-tc{border-left:1px solid var(--brd);display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}'
