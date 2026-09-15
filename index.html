@@ -3178,7 +3178,7 @@ function rpMetricCell(cell, col, rank, pct){
   var ventas=cell[0]||0, fc=cell[1]||0, qty=cell[2]||0;
   var ticket = ventas>0 ? fc/ventas : 0;
   return '<div class="rpt-cell">'
-    +'<span class="rpt-rank '+(rank===1?'top':'oth')+'">'+(rank===1?'🏆 #1':'#'+rank)+'</span>'
+    +(rank?'<span class="rpt-rank '+(rank===1?'top':'oth')+'">'+(rank===1?'🏆 #1':'#'+rank)+'</span>':'')
     +'<div class="rpt-faclbl">Facturación s/IVA</div><div class="rpt-fac" style="color:'+col+'">'+ffl(fc)+'</div>'
     +'<div class="rpt-metrics">'
     +'<div class="rpt-m" style="--mc:#0F7A34"><span class="rpt-ml">Cantidad</span><span class="rpt-mv">'+qty.toLocaleString('es-AR')+'</span></div>'
@@ -3204,8 +3204,8 @@ function rpSection(titleHtml, gradFrom, gradTo, channels, mesData){
     var cells = chInfo.map(function(ci){ var cell=ci.d[cat]; var pct=(ci.tfc>0&&cell)?((cell[1]||0)/ci.tfc*100):0; return rpMetricCell(cell, ci.col, ci.rank[cat]||0, pct); }).join('');
     return '<div class="rpt-row" style="grid-template-columns:'+cols+'">'+rpIdentCell(cat)+cells+'</div>';
   }).join('');
-  var totcells = chInfo.map(function(ci){ var tk=ci.tv>0?ci.tfc/ci.tv:0; return '<div class="rpt-tc"><span>'+ci.tv+' ventas · '+ci.tq.toLocaleString('es-AR')+' u. · '+ffl(tk)+'</span><span style="color:'+ci.col+';font-weight:800">'+ffl(ci.tfc)+'</span></div>'; }).join('');
-  var tot = '<div class="rpt-tot" style="grid-template-columns:'+cols+'"><div>TOTAL</div>'+totcells+'</div>';
+  var totcells = chInfo.map(function(ci){ return rpMetricCell([ci.tv, ci.tfc, ci.tq], ci.col, 0, 100); }).join('');
+  var tot = '<div class="rpt-row rpt-totrow" style="grid-template-columns:'+cols+'"><div class="rpt-totlbl"><i class="ti ti-sigma" style="font-size:14px;margin-right:5px"></i>TOTAL</div>'+totcells+'</div>';
   return '<div class="rpt-sec"><div class="rpt-sechd" style="background:linear-gradient(90deg,'+gradFrom+','+gradTo+')">'+titleHtml+'</div><div class="rpt-scroll">'+head+body+tot+'</div></div>';
 }
 function rpStyleBlockT(){ return '<style>'
@@ -3234,10 +3234,9 @@ function rpStyleBlockT(){ return '<style>'
   +'#rpCanalBlocks .rpt-m:first-child{border-left:0}'
   +'#rpCanalBlocks .rpt-ml{font-size:9px;color:var(--mc);font-weight:800;text-transform:uppercase;letter-spacing:.2px;display:block}'
   +'#rpCanalBlocks .rpt-mv{font-size:12px;font-weight:700;color:var(--txt)}'
-  +'#rpCanalBlocks .rpt-tot{display:grid;border-top:2px solid var(--brd);background:#f7f7f5;font-weight:700}'
-  +'#rpCanalBlocks .rpt-tot>div{padding:8px 13px;font-size:11.5px}'
-  +'#rpCanalBlocks .rpt-tot>div:first-child{display:flex;align-items:center}'
-  +'#rpCanalBlocks .rpt-tc{border-left:1px solid var(--brd);display:flex;justify-content:space-between;gap:8px;align-items:baseline}'
+  +'#rpCanalBlocks .rpt-totrow{border-top:2px solid #c9c9c9;background:#f7f7f5}'
+  +'#rpCanalBlocks .rpt-totrow .rpt-cell{background:#f7f7f5}'
+  +'#rpCanalBlocks .rpt-totlbl{display:flex;align-items:center;padding:10px 12px;font-weight:800;font-size:13px;color:#3a3a3a}'
   +'</style>'; }
 function renderRP(){
   var host=document.getElementById('rpCanalBlocks'); if(!host) return;
