@@ -5639,16 +5639,27 @@ function impoTblNoLlego(){
 function impoTblPend(){
   var rows=IMPO_D.filter(impoIsPend);
   if(!rows.length) return '<div class="prov-empty" style="padding:1rem">Sin pendientes de pago.</div>';
-  var tf=0, ty=0;
-  var body=rows.map(function(r){ var pend=impoPendList(r); var ff=impoFill(r,'fob'); tf+=r.fob||0; if(ff!=='g') ty+=r.fob||0;
-    var fobCell = r.fob>0 ? (ff==='g'?'<span class="pf" style="background:#00B050;color:#08301a;padding:1px 5px">'+fUSD(r.fob)+'</span>': ff==='y'?'<span class="pf" style="background:#FFC000;color:#5a3d00;padding:1px 5px">'+fUSD(r.fob)+'</span>': ff==='v'?'<span class="pf" style="background:#E4DBF5;color:#5B3B8C;padding:1px 5px">'+fUSD(r.fob)+'</span>': fUSD(r.fob)) : '';
-    return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="ctr">'+fDMY(r.arribo)+'</td><td class="num">'+fobCell+'</td><td style="text-align:left">'+pend.map(function(p){return '<span class="imchip">'+p+'</span>';}).join(' ')+'</td></tr>';
+  // Verde = pagado. Amarillo o violeta (estimado/no confirmado) o sin color = pendiente.
+  var pill=function(v,f,cur){ if(!(v>0)) return '';
+    var bg = f==='g'?'background:#00B050;color:#08301a': f==='y'?'background:#FFC000;color:#5a3d00': f==='v'?'background:#E4DBF5;color:#5B3B8C':'';
+    var txt = cur==='usd'?fUSD(v):fARS(v);
+    return f?('<span class="pf" style="'+bg+';padding:1px 5px">'+txt+'</span>'):txt; };
+  var tf=0, ty=0, tt=0, tty=0; // FOB total/pendiente (USD) · Tributos total/pendiente ($)
+  var body=rows.map(function(r){ var pend=impoPendList(r);
+    var ff=impoFill(r,'fob'), ft=impoFill(r,'trib');
+    tf+=r.fob||0; if(ff!=='g') ty+=r.fob||0;
+    tt+=r.trib||0; if(ft!=='g') tty+=r.trib||0;
+    return '<tr><td class="prov">'+r.prov+'</td><td class="ctr">'+r.emb+'</td><td class="tipo">'+r.tipo+'</td><td class="ctr">'+fDMY(r.arribo)+'</td>'
+      +'<td class="num">'+pill(r.fob,ff,'usd')+'</td><td class="num">'+pill(r.trib,ft,'ars')+'</td>'
+      +'<td style="text-align:left">'+pend.map(function(p){return '<span class="imchip">'+p+'</span>';}).join(' ')+'</td></tr>';
   }).join('');
-  var totrow='<tr class="cobr-total-row"><td>TOTAL</td><td></td><td></td><td></td><td class="num">'+fUSD(tf)+'</td><td></td></tr>';
-  var box='<div style="margin-top:.7rem;display:inline-flex;align-items:center;gap:10px;background:#FFF3CF;border:1px solid #F0D999;border-left:5px solid #FFC000;border-radius:10px;padding:9px 15px">'
-    +'<span style="font-size:11.5px;font-weight:700;color:#7a5600"><i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Total pendiente de pago · FOB no pagado (amarillo/violeta)</span>'
-    +'<span style="font-size:19px;font-weight:800;color:#7a5600">'+fUSD(ty)+'</span></div>';
-  return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>Arribo</th><th style="text-align:right">FOB (USD)</th><th style="text-align:left">Conceptos pendientes</th></tr></thead><tbody>'+body+totrow+'</tbody></table>'+box;
+  var totrow='<tr class="cobr-total-row"><td>TOTAL</td><td></td><td></td><td></td><td class="num">'+fUSD(tf)+'</td><td class="num">'+fARS(tt)+'</td><td></td></tr>';
+  var boxCss='display:inline-flex;align-items:center;gap:10px;background:#FFF3CF;border:1px solid #F0D999;border-left:5px solid #FFC000;border-radius:10px;padding:9px 15px';
+  var box='<div style="margin-top:.7rem;display:flex;flex-wrap:wrap;gap:10px">'
+    +'<div style="'+boxCss+'"><span style="font-size:11.5px;font-weight:700;color:#7a5600"><i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>FOB pendiente de pago<br><span style="font-weight:600;font-size:10px;color:#8a6a1a">no pagado (amarillo/violeta)</span></span><span style="font-size:19px;font-weight:800;color:#7a5600">'+fUSD(ty)+'</span></div>'
+    +'<div style="'+boxCss+'"><span style="font-size:11.5px;font-weight:700;color:#7a5600"><i class="ti ti-receipt-2" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Tributos pendientes<br><span style="font-weight:600;font-size:10px;color:#8a6a1a">no pagado (amarillo/violeta)</span></span><span style="font-size:19px;font-weight:800;color:#7a5600">'+fARS(tty)+'</span></div>'
+    +'</div>';
+  return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th>Arribo</th><th style="text-align:right">FOB (USD)</th><th style="text-align:right">Tributos ($)</th><th style="text-align:left">Conceptos pendientes</th></tr></thead><tbody>'+body+totrow+'</tbody></table>'+box;
 }
 function renderIMPO(){
   var wrap=document.getElementById('impoTableWrap'); var cardsEl=document.getElementById('impoCards'); if(!wrap) return;
