@@ -839,6 +839,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
       <div style="position:relative;width:100%;height:190px"><canvas id="cVendMTM"></canvas></div>
     </div>
   </div>
+  <div id="vendDashWrap" style="margin-top:18px"></div>
   <div id="cliWrap" style="margin-top:18px"></div>
 </div>
 
@@ -3621,7 +3622,115 @@ function exportClientesNA(){
     XLSX.writeFile(wb,'clientes_sin_etiqueta_'+(cliMesSel==='YTD'?'YTD':cliMesSel)+'.xlsx');
   }catch(e){ alert('No se pudo exportar: '+(e&&e.message?e.message:e)); }
 }
+// ══ Dashboard Vendedores (mayorista) — sobre CLIENTE_2025/2026, 2025 ajustado por IPC ══
+var vdTab='todos', vdSort='f26', vdDir=-1, vdVen='', vdMes='YTD';
+function setVdTab(t){ vdTab=t; if(t==='reco'){vdSort='f25';vdDir=-1;} renderVendDash(); }
+function setVdVen(v){ vdVen=v; renderVendDash(); }
+function setVdMes(v){ vdMes=v; renderVendDash(); }
+function setVdSort(k){ if(vdSort===k)vdDir=-vdDir; else {vdSort=k;vdDir=-1;} renderVendDash(); }
+function vdAgg(months){
+  var by={};
+  function acc(src,mm,y26){ var md=src&&src[mm]; if(!md)return; var f=y26?1:((typeof ipcFactor==='function')?ipcFactor(mm):1);
+    for(var cl in md){ var d=md[cl]; var o=by[cl]||(by[cl]={f25:0,f26:0,p25:0,p26:0,vend:''});
+      if(y26){ o.f26+=d.fc||0; o.p26+=d.ped||0; } else { o.f25+=(d.fc||0)*f; o.p25+=d.ped||0; }
+      if(d.vend){ if(VEND_MAYORISTA[String(d.vend).toUpperCase()]) o.vend=d.vend; else if(!o.vend) o.vend=d.vend; } } }
+  months.forEach(function(mm){ acc(CLIENTE_2026,mm,true); acc(CLIENTE_2025,mm,false); });
+  var arr=[]; for(var cl in by){ var o=by[cl]; var est=(o.f25>0&&o.f26>0)?'siempre':((o.f25<=0&&o.f26>0)?'nuevo':((o.f25>0&&o.f26<=0)?'fue':'')); if(!est)continue;
+    if(!VEND_MAYORISTA[String(o.vend||'').toUpperCase()]) continue;
+    arr.push({cli:cl,f25:o.f25,f26:o.f26,p25:o.p25,p26:o.p26,vend:o.vend,est:est}); }
+  return arr;
+}
+function renderVendDash(){
+  var w=document.getElementById('vendDashWrap'); if(!w) return;
+  var closed=(typeof cliClosedMonths==='function')?cliClosedMonths():[];
+  if(!closed.length){ w.innerHTML=''; return; }
+  if(vdMes!=='YTD' && closed.indexOf(vdMes)<0) vdMes='YTD';
+  var months=(vdMes==='YTD')?closed:[vdMes];
+  var data=vdAgg(months);
+  if(!data.length){ w.innerHTML=''; return; }
+  var fM=function(v){ if(!(v>0))return '—'; return '$ '+(v/1e6).toFixed(1).replace('.',',')+'M'; };
+  var fP=function(v){ return v>0?'$ '+Math.round(v).toLocaleString('es-AR'):'—'; };
+  var tot26=0,tot25=0,vt26=0,vt25=0,nuevos=0,fueron=0,actives=0,recNow=0,recBase=0,churn=0,newf=0;
+  data.forEach(function(d){ tot26+=d.f26; tot25+=d.f25; vt26+=d.p26; vt25+=d.p25; if(d.f26>0)actives++;
+    if(d.est==='nuevo'){nuevos++;newf+=d.f26;} if(d.est==='fue'){fueron++;churn+=d.f25;} if(d.est==='siempre'){recNow+=d.f26;recBase+=d.f25;} });
+  data.forEach(function(d){ d.pct=tot26>0?d.f26/tot26*100:0; d.gro=(d.f25>0&&d.f26>0)?(d.f26/d.f25-1):(d.est==='nuevo'?999:-1); });
+  var groR=tot25>0?((tot26/tot25-1)*100):0, recR=recBase>0?((recNow/recBase-1)*100):0;
+  var vends=[]; data.forEach(function(d){ if(vends.indexOf(d.vend)<0)vends.push(d.vend); }); vends.sort();
+  var rows=data.filter(function(d){return !vdVen||d.vend===vdVen;});
+  if(vdTab==='nuevo')rows=rows.filter(function(d){return d.est==='nuevo';});
+  else if(vdTab==='fue'||vdTab==='reco')rows=rows.filter(function(d){return d.est==='fue';});
+  rows=rows.slice().sort(function(a,b){return (a[vdSort]-b[vdSort])*vdDir;});
+  var maxf=1; data.forEach(function(d){maxf=Math.max(maxf,d.f26,d.f25);});
+  var VC=function(v){ return (typeof vendColor==='function')?vendColor(v):'#4472c4'; };
+  var BB={siempre:['#eaf3ec','#2a6b53','Desde siempre'],nuevo:['#eaf1fb','#3d74ae','Nuevo'],fue:['#fdecec','#c0392b','Se fue']};
+  var BC={siempre:'#2a6b53',nuevo:'#3d74ae',fue:'#c0392b'};
+  var perLbl=(vdMes==='YTD')?('YTD '+CLI_MN[+closed[0]-1].slice(0,3)+'–'+CLI_MN[+closed[closed.length-1]-1].slice(0,3)):CLI_MN[+vdMes-1];
+  var arr=function(k){ return vdSort===k?(vdDir<0?' ▼':' ▲'):''; };
+  // KPIs
+  var kpi=function(l,v,s,sc){ return '<div style="background:var(--bg2,#f7f7f5);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px">'+l+'</div><div style="font-size:18px;font-weight:800;margin-top:1px">'+v+'</div><div style="font-size:10px;font-weight:800;margin-top:1px;color:'+(sc||'var(--txt2)')+'">'+s+'</div></div>'; };
+  var kpis='<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:9px;margin-bottom:11px">'
+    +kpi('Facturación mayorista · '+perLbl,'<span style="color:#2a6b53">'+fM(tot26)+'</span>',(groR>=0?'▲ +':'▼ ')+groR.toFixed(1)+'% real (aj.IPC)',groR>=0?'#1a7a3a':'#c0392b')
+    +kpi('YTD 2025 aj.IPC',fM(tot25),'base real comparable','var(--txt2)')
+    +kpi('Ventas 26 / 25',vt26+' / '+vt25,(vt26-vt25>=0?'▲ +':'▼ ')+(vt26-vt25)+' ventas',vt26-vt25>=0?'#1a7a3a':'#c0392b')
+    +kpi('Clientes activos',actives,'+'+nuevos+' nuevos · −'+fueron+' se fueron','#3d74ae')
+    +'</div>';
+  // chips
+  var chip=function(bg,bd,cl,lbl,val){ return '<div style="flex:1;min-width:150px;border-radius:9px;padding:8px 11px;border:1px solid '+bd+';background:'+bg+'"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:'+cl+'">'+lbl+'</div><div style="font-size:15px;font-weight:800;margin-top:1px;color:'+cl+'">'+val+'</div></div>'; };
+  var chips='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
+    +chip('#fdecec','#f2c4c4','#c0392b','Churn — se fue del total 2025 aj.IPC',(tot25>0?(churn/tot25*100).toFixed(1):'0')+'% ('+fM(churn)+')')
+    +chip('#eef2fb','#c3d4ee','#3d74ae','Aporte de nuevos al crecimiento','+'+(tot25>0?(newf/tot25*100).toFixed(1):'0')+'% ('+fM(newf)+')')
+    +chip('#eef6f1','#bfe0cd','#2a6b53','Recurrentes — crecimiento real',(recR>=0?'▲ +':'▼ ')+recR.toFixed(1)+'%')
+    +'</div>';
+  // tabs + selects
+  var TB=[['todos','Todos','#5b6472'],['nuevo','Nuevos','#3d74ae'],['fue','Se fueron','#c0392b'],['reco','A recontactar','#b26a00']];
+  var tabs=TB.map(function(t){var on=vdTab===t[0];return '<button onclick="setVdTab(\''+t[0]+'\')" style="font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;border:1px solid '+(on?'transparent':'var(--brd)')+';cursor:pointer;background:'+(on?t[2]:'var(--bg)')+';color:'+(on?'#fff':'var(--txt2)')+'">'+t[1]+'</button>';}).join('');
+  var vsel='<select onchange="setVdVen(this.value)" style="font-size:12px;font-weight:700;padding:6px 8px;border-radius:8px;border:1px solid var(--brd);background:var(--bg);color:var(--txt)"><option value="">Todos los vendedores</option>'+vends.map(function(v){return '<option value="'+String(v).replace(/"/g,'&quot;')+'"'+(vdVen===v?' selected':'')+'>'+v+'</option>';}).join('')+'</select>';
+  var msel='<select onchange="setVdMes(this.value)" style="font-size:12px;font-weight:700;padding:6px 8px;border-radius:8px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);margin-left:6px"><option value="YTD"'+(vdMes==='YTD'?' selected':'')+'>YTD</option>'+closed.map(function(mm){return '<option value="'+mm+'"'+(vdMes===mm?' selected':'')+'>'+CLI_MN[+mm-1]+'</option>';}).join('')+'</select>';
+  var bar='<div style="display:flex;gap:6px;align-items:center;margin-bottom:9px;flex-wrap:wrap">'+tabs+'<span style="margin-left:auto">'+vsel+msel+'</span></div>';
+  // summary
+  var sum='';
+  if(vdTab==='fue'){var c=rows.reduce(function(s,d){return s+d.f25;},0);sum='<span style="color:#c0392b;font-weight:800">'+rows.length+' se fueron</span> · se cayeron <b>'+fP(c)+'</b> = '+(tot25>0?(c/tot25*100).toFixed(1):'0')+'% de la facturación 2025 aj.IPC';}
+  else if(vdTab==='reco'){sum='<b style="color:#b26a00">A recontactar</b> — se fueron pero pesaban en 2025. Ordená por <b>FC 25</b> para ver a quién recuperar primero.';}
+  else if(vdTab==='nuevo'){var c2=rows.reduce(function(s,d){return s+d.f26;},0);sum='<span style="color:#3d74ae;font-weight:800">'+rows.length+' nuevos</span> · aportan <b>'+fP(c2)+'</b> = +'+(tot25>0?(c2/tot25*100).toFixed(1):'0')+'% de crecimiento';}
+  else sum='<b>'+rows.length+' clientes</b> · facturación '+fP(rows.reduce(function(s,d){return s+d.f26;},0));
+  // header cells
+  var TH25='background:#395fa8', TH26='background:#5183d4';
+  var thbase='color:#fff;padding:9px 6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap;position:sticky;top:0;z-index:2;border-bottom:2px solid #345aa0';
+  var head='<thead><tr>'
+    +'<th style="'+thbase+';background:#4472c4;text-align:left">Cliente</th>'
+    +'<th style="'+thbase+';background:#4472c4;text-align:left">Vendedor</th>'
+    +'<th onclick="setVdSort(\'p25\')" style="'+thbase+';'+TH25+';text-align:right;cursor:pointer">V.25'+arr('p25')+'</th>'
+    +'<th onclick="setVdSort(\'p26\')" style="'+thbase+';'+TH26+';text-align:right;cursor:pointer">V.26'+arr('p26')+'</th>'
+    +'<th onclick="setVdSort(\'f25\')" style="'+thbase+';'+TH25+';text-align:right;cursor:pointer">FC 25 aj.IPC'+arr('f25')+'</th>'
+    +'<th onclick="setVdSort(\'f26\')" style="'+thbase+';'+TH26+';text-align:right;cursor:pointer">FC 26'+arr('f26')+'</th>'
+    +'<th onclick="setVdSort(\'pct\')" style="'+thbase+';background:#4472c4;text-align:right;cursor:pointer">% tot'+arr('pct')+'</th>'
+    +'<th onclick="setVdSort(\'gro\')" style="'+thbase+';background:#4472c4;text-align:right;cursor:pointer">vs 25 real'+arr('gro')+'</th>'
+    +'<th style="'+thbase+';background:#4472c4;text-align:left">Estado</th></tr></thead>';
+  var body=rows.map(function(d){
+    var vc=VC(d.vend);
+    var gro=(d.f25>0&&d.f26>0)?('<span style="font-weight:800;color:'+(d.f26>=d.f25?'#1a7a3a':'#c0392b')+'">'+(d.f26>=d.f25?'▲ +':'▼ ')+((d.f26/d.f25-1)*100).toFixed(0)+'%</span>'):(d.est==='nuevo'?'<span style="color:#3d74ae">nuevo</span>':'<span style="color:#c0392b;font-weight:800">−100%</span>');
+    var b=BB[d.est];
+    return '<tr style="border-bottom:.5px solid #f0f0f0">'
+      +'<td title="'+String(d.cli).replace(/"/g,'&quot;')+'" style="padding:5px 6px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px">'+d.cli+'</td>'
+      +'<td style="padding:5px 6px;white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+vc+';margin-right:5px;vertical-align:1px"></span><span style="font-weight:700;color:'+vc+'">'+d.vend+'</span></td>'
+      +'<td style="padding:5px 6px;text-align:right;background:#eef1f7">'+(d.p25||'—')+'</td>'
+      +'<td style="padding:5px 6px;text-align:right;background:#edf6f0">'+(d.p26||'—')+'</td>'
+      +'<td style="padding:5px 6px;text-align:right;background:#eef1f7;color:#5a6b86;white-space:nowrap">'+fP(d.f25)+'</td>'
+      +'<td style="padding:5px 6px;text-align:right;background:#edf6f0;white-space:nowrap"><b>'+fP(d.f26)+'</b><div style="height:5px;border-radius:3px;background:#dfe6df;overflow:hidden;margin-top:2px"><i style="display:block;height:100%;width:'+(d.f26/maxf*100)+'%;background:'+BC[d.est]+'"></i></div></td>'
+      +'<td style="padding:5px 6px;text-align:right;color:var(--txt2)">'+(d.f26>0?d.pct.toFixed(1)+'%':'—')+'</td>'
+      +'<td style="padding:5px 6px;text-align:right">'+gro+'</td>'
+      +'<td style="padding:5px 6px"><span style="background:'+b[0]+';color:'+b[1]+';font-weight:800;border-radius:20px;padding:1px 7px;font-size:9px;white-space:nowrap">'+b[2]+'</span></td></tr>';
+  }).join('');
+  var table='<div style="max-height:340px;overflow:auto;border:1px solid var(--brd);border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:11px">'+head+'<tbody>'+(body||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes</td></tr>')+'</tbody></table></div>';
+  w.innerHTML=''
+    +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-chart-arrows-vertical"></i>Dashboard mayorista <span class="sec-sub">· clientes por vendedor · '+perLbl+' · crecimiento real (aj.IPC)</span></div>'
+    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px;margin-bottom:16px">'
+    +kpis+chips+bar
+    +'<div style="font-size:12px;font-weight:700;color:#444;margin-bottom:8px">'+sum+'</div>'
+    +table+'</div>';
+}
 function renderClientes(){
+  try{ renderVendDash(); }catch(e){}
   var wrap=document.getElementById('cliWrap'); if(!wrap) return;
   var closed=cliClosedMonths();
   if(!closed.length || (!Object.keys(CLIENTE_2026||{}).length && !Object.keys(CLIENTE_2025||{}).length)){
