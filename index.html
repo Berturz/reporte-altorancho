@@ -3765,7 +3765,7 @@ function renderClientes(){
   var pedOf = function(x){ return use25 ? x.ped25 : x.ped26; };
   var facYr = use25 ? '2025' : '2026';
   // orden de la tabla 1: por defecto facturación de referencia (desc); flechas en Ticket/F.25/F.26
-  var sortVal=function(x){ if(cliSortK==='f25')return x.f25; if(cliSortK==='f25aj')return x.f25aj||0; if(cliSortK==='f26')return x.f26; if(cliSortK==='ped25')return x.ped25; if(cliSortK==='ped26')return x.ped26; if(cliSortK==='gro')return (x.f25aj>0&&x.f26>0)?(x.f26/x.f25aj-1):(x.est==='nuevo'?999:-2); if(cliSortK==='ticket')return pedOf(x)>0?facOf(x)/pedOf(x):0; return facOf(x); };
+  var sortVal=function(x){ if(cliSortK==='f25')return x.f25; if(cliSortK==='f25aj')return x.f25aj||0; if(cliSortK==='f26')return x.f26; if(cliSortK==='ped25')return x.ped25; if(cliSortK==='ped26')return x.ped26; if(cliSortK==='gro')return (x.f25aj>0&&x.f26>0)?(x.f26/x.f25aj-1):(x.est==='nuevo'?999:-2); if(cliSortK==='pct')return x.f26; if(cliSortK==='ticket')return pedOf(x)>0?facOf(x)/pedOf(x):0; return facOf(x); };
   var arrOf=function(k){ return cliSortK===k?(cliSortDir<0?' <i class="ti ti-caret-down-filled" style="font-size:9px;vertical-align:0"></i>':' <i class="ti ti-caret-up-filled" style="font-size:9px;vertical-align:0"></i>'):' <i class="ti ti-arrows-sort" style="font-size:9px;opacity:.35;vertical-align:0"></i>'; };
   var g26 = grp.filter(function(x){return facOf(x)>0;}).sort(function(a,b){return facOf(b)-facOf(a);});
   var gt = g26.reduce(function(s,x){return s+facOf(x);},0);
@@ -3835,7 +3835,7 @@ function renderClientes(){
   var _th=function(k,lbl,bg,al){ return '<th'+(k?' onclick="setCliSort(\''+k+'\')" style="cursor:pointer;':' style="')+_thb+';background:'+bg+';text-align:'+al+'">'+lbl+(k?arrOf(k):'')+'</th>'; };
   var cuadro1new='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-bottom:14px"><div style="background:#4472c4;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px"><i class="ti ti-users-group" style="margin-right:6px"></i>1 · Análisis de clientes <span style="font-weight:400;opacity:.85;font-size:11.5px">· 2025 aj.IPC · clic en encabezados para ordenar</span></div>'
    +'<div style="overflow:auto;max-height:360px"><table style="width:100%;border-collapse:collapse;font-size:11px">'
-   +'<thead><tr>'+_th('','Cliente','#4472c4','left')+_th('','Vendedor','#4472c4','left')+_th('ped25','V.25','#395fa8','right')+_th('ped26','V.26','#5183d4','right')+_th('f25aj','FC 25 aj.IPC','#395fa8','right')+_th('f26','FC 26','#5183d4','right')+_th('f26','% tot','#4472c4','right')+_th('gro','vs 25 real','#4472c4','right')+_th('','Estado','#4472c4','left')+'</tr></thead>'
+   +'<thead><tr>'+_th('','Cliente','#4472c4','left')+_th('','Vendedor','#4472c4','left')+_th('ped25','Ventas 2025','#395fa8','right')+_th('ped26','Ventas 2026','#5183d4','right')+_th('f25aj','Facturación 2025 aj.IPC','#395fa8','right')+_th('f26','Facturación 2026','#5183d4','right')+_th('pct','% del total','#4472c4','right')+_th('gro','vs 2025 real','#4472c4','right')+_th('','Estado','#4472c4','left')+'</tr></thead>'
    +'<tbody>'+(_t1||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+'</tbody></table></div></div>';
   var HDR='background:#3d74ae;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px';
   wrap.innerHTML=''
