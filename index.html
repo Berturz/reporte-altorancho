@@ -868,7 +868,7 @@ var CLIENTE_TIPO = {};   // { clienteUpper: tipo }  ← del Excel de etiquetas (
 var EVENTOS_D = {Presentes:{}, Hotelga:{}};
 function evFeria(equipo){ var s=String(equipo||'').toLowerCase(); if(s.indexOf('presente')>=0) return 'Presentes'; if(s.indexOf('hotelga')>=0) return 'Hotelga'; return null; }
 function evAdd(feria, ed, tv, mg, facIpc, vend, rubroCat, cant){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0,byV:{},byR:{}}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; if(!E.byV)E.byV={}; var vn=(vend&&String(vend).trim())||'(s/vend)'; var V=E.byV[vn]||(E.byV[vn]={fac:0,facIpc:0}); V.fac+=tv||0; if(facIpc)V.facIpc+=facIpc; if(!E.byR)E.byR={}; if(rubroCat){ var R=E.byR[rubroCat]||(E.byR[rubroCat]={cant:0,fac:0}); R.fac+=tv||0; R.cant+=cant||0; } }
-// Clasificación única de ventas por rubro/proveedor (misma en parser 2026, 2025 y captura de eventos). Sillas Importadas = Wendy + Urun + Topmax.
+// Clasificación única de ventas por rubro/proveedor (misma en parser 2026, 2025 y captura de eventos). Sillas Importadas = Wendy + Urun + Zhaolu Thomas · Reposeras Importadas = Topmax.
 function rpClasificar(rubroU, provNombre, origVal, skuU){
   var P=String(provNombre||'').trim().toUpperCase();
   if(rubroU==='ILUMINACION'){
@@ -878,7 +878,7 @@ function rpClasificar(rubroU, provNombre, origVal, skuU){
     if(origVal==='Proveedor Nacional') return 'PROVEEDOR NACIONAL';
   } else if(rubroU==='MUEBLES'){
     if(P==='TOPMAX') return 'REPOSERAS IMPORTADAS';
-    if(P==='WENDY FURNITURE' || P==='URUN') return 'SILLAS IMPORTADAS';
+    if(P==='WENDY FURNITURE' || P==='URUN' || P.indexOf('ZHAOLU')===0) return 'SILLAS IMPORTADAS';
     if(P==='CARPINTERIA' || P==='MIX' || P==='HIERROS') return 'MUEBLES NACIONALES';
     if(origVal==='Proveedor Nacional') return 'PROVEEDOR NACIONAL';
   } else {
@@ -2293,7 +2293,7 @@ function ipcEstim(mm){ return !!IPC_ESTIM["2026-"+mm] || !IPC_IDX["2026-"+mm]; }
 var RP2025_CANAL = {};
 var RP2025M = {};
 let cmpSel='YTD';
-const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home','ILUMINACION NACIONAL':'Mix + Hierros','ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home','SILLAS IMPORTADAS':'Wendy + Urun','REPOSERAS IMPORTADAS':'Topmax','MUEBLES NACIONALES':'Carpin + Mix + Hierros (Muebles y Sillas)','PROVEEDOR NACIONAL':'(Todos)','DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)','DECO/BAZAR FABRICA':'(Todos)'};
+const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home','ILUMINACION NACIONAL':'Mix + Hierros','ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home','SILLAS IMPORTADAS':'Wendy + Urun + Zhaolu Thomas','REPOSERAS IMPORTADAS':'Topmax','MUEBLES NACIONALES':'Carpin + Mix + Hierros (Muebles y Sillas)','PROVEEDOR NACIONAL':'(Todos)','DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)','DECO/BAZAR FABRICA':'(Todos)'};
 const RP_ORDER=['ILUMINACION IMPORTADA','ILUMINACION NACIONAL','ILUMINACION INALAMBRICA','SILLAS IMPORTADAS','MUEBLES NACIONALES','PROVEEDOR NACIONAL','DECO/NAVIDAD/BAZAR IMPORTADO','DECO/BAZAR FABRICA'];
 function renderRPCompare(){
   if(typeof RUBROPROV_D==='undefined') return;
@@ -2981,7 +2981,7 @@ const RP_CAT_PROV = {
   'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home',
   'ILUMINACION NACIONAL':'Mix + Hierros',
   'ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home',
-  'SILLAS IMPORTADAS':'Wendy + Urun',
+  'SILLAS IMPORTADAS':'Wendy + Urun + Zhaolu Thomas',
   'REPOSERAS IMPORTADAS':'Topmax',
   'MUEBLES NACIONALES':'Carpin+ Mix +Hierros (Muebles y Sillas)',
   'PROVEEDOR NACIONAL':'(Todos)',
