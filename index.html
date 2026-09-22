@@ -3966,13 +3966,13 @@ function renderEventos(){
   else if(evSel==='Hotelga'){
     var evNorm=function(s){return String(s||'').toUpperCase().replace(/\s+/g,' ').trim();};
     var PEDH={}; // [nombre, díasOfic(02+03-sep), total(todos los días de la dinámica: 02→14-sep)]
-    // Dinámica "Pedidos totales al 14-09.xlsx" (hoja Hotelga)
-    [['Jose Luis Persoglia',2820660,2820660],
-     ['Laura Viviana Soldano',1349730,3471191.10],
-     ['Matias Chiuki',675000,2497084.30],
+    // Dinámica "Pedidos totales al 22-09.xlsx" (hoja Hotelga, pivot = detalle, verificado)
+    [['Jose Luis Persoglia',2820660,4398893.25],
+     ['Laura Viviana Soldano',1349730,3887733.60],
+     ['Matias Chiuki',675000,3142084.30],
      ['Jimena Alejandra Tobares',0,1532000]
     ].forEach(function(r){ PEDH[evNorm(r[0])]={disp:r[0],dof:r[1],tot:r[2]}; });
-    var EV_HOT_TOTAL=10320935.40;
+    var EV_HOT_TOTAL=12960711.15;
     var _b25=(F['2025']&&F['2025'].byV)||{}, _b26=(F['2026']&&F['2026'].byV)||{};
     var g25={}, gFac={};
     for(var _k in _b25){ g25[evNorm(_k)]={disp:_k,ipc:(_b25[_k].facIpc||0)}; }
