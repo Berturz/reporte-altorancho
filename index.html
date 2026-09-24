@@ -5937,13 +5937,13 @@ var SALIDAS_EXTRA_D = {};
 const SALIDAS_CAT_LABELS = {
   Insumos:'Insumos', MDR:'MDR proveedor nacional', GastosFabrica:'Gastos Varios Fabrica/rolon',
   Honorarios:'Honorarios/formularios IMPO', MKT:'Varios MKT', GastosVarios:'Gastos Varios', CajaAA:'Caja AA',
-  Salarios:'Salarios', Sindicatos:'Sindicatos', Impo:'Impo', Impuestos:'Impuestos', CCSS:'Cargas Sociales', RetGanancias:'Retención de ganancias', PagoTarjeta:'Pago tarjeta',
+  Salarios:'Salarios', Sindicatos:'Sindicatos', Impo:'Impo', Impuestos:'Impuestos', CCSS:'Cargas Sociales', RetGanancias:'Retención de ganancias', SalidasBSinFactura:'Salidas B sin factura', PagoTarjeta:'Pago tarjeta',
   Alquileres:'Alquileres', Envios:'Envíos'
 };
 const SALIDAS_CAT_COLORS = {
   Insumos:'#4472c4', GastosVarios:'#c8ab6f', MKT:'#8e6e9d', CajaAA:'#c8873c',
   MDR:'#5a9ca8', GastosFabrica:'#2c2c2a', Honorarios:'#5a7a99',
-  Salarios:'#3f8e68', Sindicatos:'#b5714a', Impo:'#7fb0d6', Impuestos:'#7fa07a', CCSS:'#b07d2b', RetGanancias:'#a86f9e', PagoTarjeta:'#9bb8b4',
+  Salarios:'#3f8e68', Sindicatos:'#b5714a', Impo:'#7fb0d6', Impuestos:'#7fa07a', CCSS:'#b07d2b', RetGanancias:'#a86f9e', SalidasBSinFactura:'#c05a3a', PagoTarjeta:'#9bb8b4',
   Alquileres:'#9c5b45', Envios:'#b0576f'
 };
 
@@ -6046,7 +6046,7 @@ function renderSalidasAAB(agg){
 }
 
 function renderSalidasDonut(agg){
-  const order = ['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','RetGanancias','PagoTarjeta'];
+  const order = ['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','RetGanancias','SalidasBSinFactura','PagoTarjeta'];
   const entries = order.filter(k=>agg.cats[k]>0).map(k=>[k, agg.cats[k]]);
   const labels = entries.map(([k])=>SALIDAS_CAT_LABELS[k]);
   const data = entries.map(([,v])=>v);
@@ -6225,9 +6225,9 @@ const SALIDAS_CAT_ROUTE={
   Honorarios:['prov','HONORARIOS/FORMULARIOS IMPO'], MKT:['prov','VARIOS MKT'], GastosVarios:['prov','GASTOS VARIOS'],
   Alquileres:['prov','ALQUILERES'], Envios:['prov','ENVÍOS'], CajaAA:['caja',''],
   Salarios:['extra','Salarios'], Sindicatos:['extra','Sindicatos'], Impo:['extra','Impo'],
-  Impuestos:['extra','Impuestos'], CCSS:['extra','Cargas Sociales'], RetGanancias:['extra','Retención de ganancias'], PagoTarjeta:['extra','Pago tarjeta']
+  Impuestos:['extra','Impuestos'], CCSS:['extra','Cargas Sociales'], RetGanancias:['extra','Retención de ganancias'], SalidasBSinFactura:['extra','Salidas B sin factura'], PagoTarjeta:['extra','Pago tarjeta']
 };
-const SALIDAS_ORDER=['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','RetGanancias','PagoTarjeta'];
+const SALIDAS_ORDER=['Insumos','GastosVarios','Alquileres','Envios','MKT','CajaAA','MDR','GastosFabrica','Honorarios','Salarios','Sindicatos','Impo','Impuestos','CCSS','RetGanancias','SalidasBSinFactura','PagoTarjeta'];
 // Desglose por moneda de "Pago tarjeta" (la hoja no trae el detalle $/USD).
 // VALORES MANUALES: actualizar cuando cambie el período.
 const SALIDAS_PAGOTARJETA_SPLIT = { pesos: 4140000, usd: 2226 };
@@ -6427,6 +6427,8 @@ async function handleSalidasFile(file) {
     const idxDescAA = headerAA.indexOf('Descripción');
 
     const newAA = {};
+    const bAArows = []; // filas de la hoja AA marcadas "B" en la col AA/B → tarjeta "Salidas B sin factura"
+    const idxAABAA = headerAA.findIndex(h => normH(h)==='aa/b');
     for (let ri=1; ri<rowsAA.length; ri++){
       const row = rowsAA[ri];
       if(!row) continue;
@@ -6435,6 +6437,8 @@ async function handleSalidasFile(file) {
       const importe = typeof row[idxDolarAA]==='number' ? row[idxDolarAA] : parseFloat(row[idxDolarAA])||0;
       const cuentaAn = row[idxCuentaAnAA] ? String(row[idxCuentaAnAA]).trim() : '(Sin cuenta analítica)';
       const desc = row[idxDescAA] ? String(row[idxDescAA]).trim() : '(Sin descripción)';
+      const aabAA = idxAABAA>=0 ? String(row[idxAABAA]==null?'':row[idxAABAA]).trim().toUpperCase() : '';
+      if(aabAA==='B'){ bAArows.push([fecha, importe, cuentaAn]); continue; } // no cuenta como Caja AA
       if(!newAA[fecha]) newAA[fecha] = {total:0, cuenta_an:{}};
       newAA[fecha].total += importe;
       if(!newAA[fecha].cuenta_an[cuentaAn]) newAA[fecha].cuenta_an[cuentaAn] = [0, {}];
@@ -6486,6 +6490,8 @@ async function handleSalidasFile(file) {
     // Pago tarjeta (B): [Mes, Importe, Fecha]
     (function(){ const rs=sheetRowsEx('Pago tarjeta (B)'); for(let i=1;i<rs.length;i++){ const r=rs[i]; if(!r) continue;
       const imp=toNumEx(r[1]), f=excelDateToStrSalidas(r[2]); if(imp!==null&&f) extraAdd(f,'PagoTarjeta','B',imp,String(r[0])); } })();
+    // Salidas B sin factura: filas de la hoja "Salida Semanal (AA)" marcadas "B" en la col AA/B (impuestos/servicios locales sin factura). Cuentan como B, no como Caja AA.
+    bAArows.forEach(function(x){ extraAdd(x[0],'SalidasBSinFactura','B',x[1], x[2]); });
 
     setSalidasProgress(92, '<span class="spin">&#8635;</span> Actualizando...');
     await new Promise(r => setTimeout(r, 0));
