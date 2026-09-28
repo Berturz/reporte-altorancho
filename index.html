@@ -1036,6 +1036,7 @@ async function handleFile(file) {
     const newORIGEN = {};
 
     const header = rows[0]; // fila 0 = encabezado
+    if(!header){ throw new Error('La hoja "FACTURACIÓN 2026" se leyó VACÍA (rango '+(ws['!ref']||'?')+', '+rows.length+' filas). Suele pasar cuando el Excel es muy grande / tiene el rango inflado con filas o columnas vacías. Borrá las filas vacías de más (abajo del último dato) y las columnas vacías (a la derecha), Guardá el Excel, y volvé a subirlo.'); }
     // Verificar que los índices coincidan con los nombres esperados
     const expectedCols = {
       [COL.CANAL]: 'Canal',
