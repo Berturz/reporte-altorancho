@@ -957,6 +957,112 @@ function setProgress(pct, msg) {
   document.getElementById('uploadStatus').innerHTML = msg;
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Lector de hojas GIGANTES en streaming (sin librerías).
+// SheetJS descomprime cada hoja como UN string; si supera ~512 MB (límite de
+// V8) la hoja llega vacía. Acá parseamos el ZIP a mano e inflamos SOLO la hoja
+// pedida por trozos con DecompressionStream nativo, armando las filas sin
+// materializar nunca el XML completo. Devuelve array-de-arrays (como
+// sheet_to_json {header:1}).  Ver memoria: facturacion-hoja-gigante-streaming.
+function _bsUnesc(s){ return s==null?s:String(s)
+  .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"')
+  .replace(/&apos;/g,"'").replace(/&#39;/g,"'")
+  .replace(/&#(\d+);/g,function(_,d){return String.fromCharCode(+d);})
+  .replace(/&#x([0-9a-fA-F]+);/g,function(_,h){return String.fromCharCode(parseInt(h,16));})
+  .replace(/&amp;/g,'&'); }
+function _bsColIdx(c){ var n=0; for(var i=0;i<c.length;i++) n=n*26+(c.charCodeAt(i)-64); return n-1; }
+function _bsCentral(u8){
+  var n=u8.length, p=-1, lim=Math.max(0,n-65557);
+  for(var i=n-22;i>=lim;i--){ if(u8[i]===0x50&&u8[i+1]===0x4b&&u8[i+2]===0x05&&u8[i+3]===0x06){ p=i; break; } }
+  if(p<0) throw new Error('ZIP: no se encontró el fin del directorio central (EOCD).');
+  var dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  var cnt=dv.getUint16(p+10,true), cdOff=dv.getUint32(p+16,true);
+  if(cdOff===0xFFFFFFFF) throw new Error('ZIP64 no soportado.');
+  var map=new Map(), q=cdOff, td=new TextDecoder('utf-8');
+  for(var k=0;k<cnt;k++){
+    if(dv.getUint32(q,true)!==0x02014b50) break;
+    var method=dv.getUint16(q+10,true), compSize=dv.getUint32(q+20,true);
+    var nl=dv.getUint16(q+28,true), el=dv.getUint16(q+30,true), cl=dv.getUint16(q+32,true);
+    var off=dv.getUint32(q+42,true);
+    var name=td.decode(u8.subarray(q+46,q+46+nl));
+    map.set(name,{method:method,compSize:compSize,off:off});
+    q+=46+nl+el+cl;
+  }
+  return map;
+}
+function _bsEntryBytes(u8,info){
+  var o=info.off;
+  var nl=u8[o+26]|(u8[o+27]<<8), el=u8[o+28]|(u8[o+29]<<8);
+  var start=o+30+nl+el;
+  return u8.subarray(start,start+info.compSize);
+}
+async function _bsInflate(bytes,method,onChunk){
+  if(method===0){ onChunk(bytes); return; }
+  if(typeof DecompressionStream==='undefined') throw new Error('Este navegador no soporta DecompressionStream (necesario para archivos grandes). Actualizá el navegador.');
+  var rs=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  var rd=rs.getReader();
+  while(true){ var r=await rd.read(); if(r.done) break; onChunk(r.value); }
+}
+async function _bsInflateToString(u8,central,name){
+  var info=central.get(name); if(!info) return '';
+  var td=new TextDecoder('utf-8'), s='';
+  await _bsInflate(_bsEntryBytes(u8,info),info.method,function(ch){ s+=td.decode(ch,{stream:true}); });
+  s+=td.decode();
+  return s;
+}
+function _bsSharedStrings(xml){
+  var ss=[]; if(!xml) return ss;
+  var re=/<si>([\s\S]*?)<\/si>/g, m, tre=/<t[^>]*>([\s\S]*?)<\/t>/g;
+  while((m=re.exec(xml))){ var si=m[1], t='', tm; tre.lastIndex=0; while((tm=tre.exec(si))) t+=tm[1]; ss.push(_bsUnesc(t)); }
+  return ss;
+}
+async function _bsSheetPath(u8,central,sheetName){
+  var wbx=await _bsInflateToString(u8,central,'xl/workbook.xml');
+  var rels=await _bsInflateToString(u8,central,'xl/_rels/workbook.xml.rels');
+  var sre=/<sheet\b[^>]*?\/?>/g, m, rid=null;
+  while((m=sre.exec(wbx))){ var tag=m[0]; var nm=/\bname="([^"]*)"/.exec(tag); var ri=/\br:id="([^"]*)"/.exec(tag);
+    if(nm&&ri&&_bsUnesc(nm[1])===sheetName){ rid=ri[1]; break; } }
+  if(!rid) throw new Error('No encontré la hoja "'+sheetName+'" en el workbook.');
+  var rre=new RegExp('<Relationship\\b[^>]*?\\bId="'+rid+'"[^>]*?>'), tm=rre.exec(rels), tgt=null;
+  if(tm){ var t=/\bTarget="([^"]*)"/.exec(tm[0]); if(t) tgt=t[1]; }
+  if(!tgt) throw new Error('No pude resolver la ruta de la hoja (rel '+rid+').');
+  tgt=tgt.replace(/^\.\//,'').replace(/^\//,'');
+  if(tgt.indexOf('xl/')!==0) tgt='xl/'+tgt;
+  return tgt;
+}
+async function readBigSheetRows(buf, sheetName, onProgress){
+  var u8=new Uint8Array(buf);
+  var central=_bsCentral(u8);
+  var ssXml=await _bsInflateToString(u8,central,'xl/sharedStrings.xml');
+  var ss=_bsSharedStrings(ssXml); ssXml=null;
+  var path=await _bsSheetPath(u8,central,sheetName);
+  var info=central.get(path); if(!info) throw new Error('No encontré el XML de la hoja ('+path+').');
+  var td=new TextDecoder('utf-8'), rows=[], carry='', seen=0;
+  var cellRe=/<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  function pushRow(rowStr){
+    var arr=[], cm; cellRe.lastIndex=0;
+    while((cm=cellRe.exec(rowStr))){
+      var ci=_bsColIdx(cm[1]), at=cm[2]||'', body=cm[3];
+      if(body===undefined) continue;
+      var val=null, tm=/t="([^"]+)"/.exec(at), t=tm?tm[1]:'n', vm;
+      if(t==='s'){ vm=/<v>(\d+)<\/v>/.exec(body); if(vm) val=ss[+vm[1]]; }
+      else if(t==='inlineStr'){ vm=/<t[^>]*>([\s\S]*?)<\/t>/.exec(body); if(vm) val=_bsUnesc(vm[1]); }
+      else if(t==='str'){ vm=/<v>([\s\S]*?)<\/v>/.exec(body); if(vm) val=_bsUnesc(vm[1]); }
+      else if(t==='b'){ vm=/<v>([\s\S]*?)<\/v>/.exec(body); if(vm) val=(vm[1]==='1'); }
+      else { vm=/<v>([\s\S]*?)<\/v>/.exec(body); if(vm){ var num=+vm[1]; val=isNaN(num)?_bsUnesc(vm[1]):num; } }
+      arr[ci]=val;
+    }
+    rows.push(arr);
+  }
+  await _bsInflate(_bsEntryBytes(u8,info),info.method,function(ch){
+    carry+=td.decode(ch,{stream:true});
+    var parts=carry.split('</row>'); carry=parts.pop();
+    for(var j=0;j<parts.length;j++){ var rsx=parts[j].lastIndexOf('<row'); if(rsx!==-1){ pushRow(parts[j].slice(rsx)); seen++; } }
+    if(onProgress) onProgress(seen);
+  });
+  return rows;
+}
+
 async function handleFile(file) {
   if (!file) return;
   const zone = document.getElementById('uploadZone');
@@ -977,7 +1083,7 @@ async function handleFile(file) {
     setProgress(40, '<span class="spin">&#8635;</span> Procesando filas...');
 
     // Convertir a array de arrays (más rápido que to_json)
-    const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null });
+    let rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null });
 
     // Costos de Financiación: bloques WEB y LOCAL. Detecta columnas por nombre
     // (Valor / Vigencia Desde / Vigencia Hasta / FINANCIACIÓN TOTAL) → guarda vigencia por fila.
@@ -1035,8 +1141,22 @@ async function handleFile(file) {
     const newSUB  = {};
     const newORIGEN = {};
 
-    const header = rows[0]; // fila 0 = encabezado
-    if(!header){ throw new Error('La hoja "FACTURACIÓN 2026" se leyó VACÍA (rango '+(ws['!ref']||'?')+', '+rows.length+' filas). Suele pasar cuando el Excel es muy grande / tiene el rango inflado con filas o columnas vacías. Borrá las filas vacías de más (abajo del último dato) y las columnas vacías (a la derecha), Guardá el Excel, y volvé a subirlo.'); }
+    let header = rows[0]; // fila 0 = encabezado
+    if(!header){
+      // La hoja es demasiado grande para SheetJS (XML descomprimido > ~512 MB,
+      // límite de string de V8) → llegó vacía. La leemos en streaming a mano.
+      setProgress(35, '<span class="spin">&#8635;</span> Hoja grande: leyendo en streaming (puede tardar)...');
+      try {
+        rows = await readBigSheetRows(buf, sheetName, function(seen){
+          if(seen % 8000 < 60) setProgress(35+Math.min(20,seen/6000), '<span class="spin">&#8635;</span> Hoja grande: '+seen.toLocaleString('es-AR')+' filas leídas...');
+        });
+      } catch(e){
+        throw new Error('No pude leer la hoja "FACTURACIÓN 2026" en streaming: '+(e&&e.message||e)+'. Como alternativa, borrá filas/columnas vacías del Excel y volvé a subirlo.');
+      }
+      header = rows[0];
+      if(!header) throw new Error('La hoja "FACTURACIÓN 2026" se leyó vacía incluso en streaming. Revisá que la hoja tenga datos y el encabezado en la primera fila.');
+      setProgress(56, '<span class="spin">&#8635;</span> Hoja grande leída ('+rows.length.toLocaleString('es-AR')+' filas). Procesando...');
+    }
     // Verificar que los índices coincidan con los nombres esperados
     const expectedCols = {
       [COL.CANAL]: 'Canal',
