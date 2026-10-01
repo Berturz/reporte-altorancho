@@ -2300,6 +2300,15 @@ function renderOrig(){
 
 // ── REFRESH ──
 var YTD_2025 = {};
+// Total facturación 2025 de un mes para el hero: usa YTD_2025 (objeto congelado en
+// Supabase) y, si ese mes no está cargado, lo DERIVA de RP2025_CANAL (que sí carga
+// todos los meses de 2025). Evita que un mes recién cerrado aparezca como "Nuevo"/0.
+function _ytd25(i, mm){
+  if(YTD_2025 && YTD_2025[i]) return YTD_2025[i];
+  var t=0, c=(typeof RP2025_CANAL!=='undefined' && RP2025_CANAL && RP2025_CANAL[mm])||{};
+  for(var ck in c){ var cats=c[ck]; for(var cat in cats){ t+=cats[cat].tv||0; } }
+  return t;
+}
 let ytdChart=null;
 function renderYTD(){
   if(typeof DATA_D==='undefined') return;
@@ -2309,10 +2318,10 @@ function renderYTD(){
   for(const d in DATA_D){if(d.slice(0,4)!=='2026')continue;const mm=d.slice(5,7);nd[mm]=(nd[mm]||0)+1;let t=0;const dw=DATA_D[d];for(const r in dw){const rw=dw[r];for(const c in rw)t+=rw[c].tv||0;}m26[mm]=(m26[mm]||0)+t;}
   const _now=new Date(), _curYM=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
   const av=['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>nd[mm]>=1 && ('2026-'+mm)!==_curYM);
-  const rows=av.map(mm=>{const i=parseInt(mm);const v25=YTD_2025[i]||0;return{mm,i,mn:MN[i-1],v25,v25a:v25*ipcFactor(mm),v26:m26[mm]||0};});
+  const rows=av.map(mm=>{const i=parseInt(mm);const v25=_ytd25(i,mm);return{mm,i,mn:MN[i-1],v25,v25a:v25*ipcFactor(mm),v26:m26[mm]||0};});
   let s25=0,s25a=0,s26=0,per;
   if(cmpSel==='YTD'){rows.forEach(r=>{s25+=r.v25;s25a+=r.v25a;s26+=r.v26;});per='YTD '+(rows.length?(rows[0].mn+'–'+rows[rows.length-1].mn):'');}
-  else{const i=parseInt(cmpSel),mm=cmpSel;s25=YTD_2025[i]||0;s25a=s25*ipcFactor(mm);s26=m26[mm]||0;per=MN[i-1];}
+  else{const i=parseInt(cmpSel),mm=cmpSel;s25=_ytd25(i,mm);s25a=s25*ipcFactor(mm);s26=m26[mm]||0;per=MN[i-1];}
   const dif=s26-s25a,gr=s25a?((s26-s25a)/s25a*100):0;
   const ipcPct=s25?((s25a/s25-1)*100):0;const estimIPC=(cmpSel==='YTD'?rows.some(r=>ipcEstim(r.mm)):ipcEstim(cmpSel));
   renderCmpChips();
