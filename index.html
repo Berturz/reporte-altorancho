@@ -2688,14 +2688,18 @@ async function handleFeriaFile(file){
       var row=rows[r]; if(!row) continue;
       if(row[cols.tv]==null || row[cols.tv]==='') continue;
       var tv=n(row[cols.tv]); if(!isFinite(tv)) continue;
-      var rubroRaw=row[cols.rubro]; if(rubroRaw!=null && String(rubroRaw).trim()==='Rubro') continue; // encabezado
+      var rubro=row[cols.rubro]!=null?String(row[cols.rubro]).trim().toUpperCase():'';
+      if(rubro==='RUBRO') continue; // encabezado
+      var sku=(cols.sku>=0&&row[cols.sku]!=null)?String(row[cols.sku]).trim().toUpperCase():'';
+      var ds=(cols.fecha>=0)?excelDateToStr(row[cols.fecha]):null;
+      // FILA DE TOTALES de la tabla de Excel (totalsRow): trae el Total S/IVA sin fecha, rubro ni SKU →
+      // excluir, si no DUPLICA el importe (pasó con la tabla FERIANOV 2025, que tiene totalsRowCount=1).
+      if(!ds && !rubro && !sku) continue;
       var qty=Math.round(n(row[cols.qty]));
       var cmv=n(row[cols.cmv]);
-      var sku=row[cols.sku]!=null?String(row[cols.sku]).trim().toUpperCase():'';
-      var rubro=rubroRaw!=null?String(rubroRaw).trim().toUpperCase():'';
       var origen=(cols.origen>=0&&row[cols.origen]!=null)?String(row[cols.origen]).trim():'';
       var prov=(cols.prov>=0&&row[cols.prov]!=null)?String(row[cols.prov]).trim():'';
-      if(cols.fecha>=0){ var ds=excelDateToStr(row[cols.fecha]); if(ds){ var yy=ds.slice(0,4); yearCount[yy]=(yearCount[yy]||0)+1; mesCount[yy+'-'+ds.slice(5,7)]=(mesCount[yy+'-'+ds.slice(5,7)]||0)+1; } }
+      if(ds){ var yy=ds.slice(0,4); yearCount[yy]=(yearCount[yy]||0)+1; mesCount[yy+'-'+ds.slice(5,7)]=(mesCount[yy+'-'+ds.slice(5,7)]||0)+1; }
       totQ+=qty; totTV+=tv; nF++;
       var hasCost=cmv>0;
       if(sku==='ARTVARIOS'){ artv.qty+=qty; artv.tv+=tv; continue; }
