@@ -866,6 +866,8 @@ var CLIENTE_TIPO = {};   // { clienteUpper: tipo }  ← del Excel de etiquetas (
 // Eventos/Ferias: totales por feria (equipo de ventas) y edición. { Presentes:{ '2025':{fac,cn,facIpc}, '2026-mar':{...}, '2026-ago':{...} }, Hotelga:{...} }
 // fac = Σ Total S/IVA · cn = Σ (TotalSIVA / MargenNeto) (para el coeficiente de margen ponderado = fac/cn) · facIpc = Σ TotalSIVA×IPC (solo 2025)
 var EVENTOS_D = {Presentes:{}, Hotelga:{}};
+// Ferias AR (archivos propios, no salen del reporte madre). { '2025':{year,mes,cats:{cat:{qty,tv,fac,cn}}, na:{qty,tv}, artv:{qty,tv}, otros:{qty,tv,fac,cn}, tot:{qty,tv}, mgFac, mgCn}, '2026':{...} }
+var FERIA_AR = {};
 function evFeria(equipo){ var s=String(equipo||'').toLowerCase(); if(s.indexOf('presente')>=0) return 'Presentes'; if(s.indexOf('hotelga')>=0) return 'Hotelga'; return null; }
 function evAdd(feria, ed, tv, mg, facIpc, vend, rubroCat, cant){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0,byV:{},byR:{}}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; if(!E.byV)E.byV={}; var vn=(vend&&String(vend).trim())||'(s/vend)'; var V=E.byV[vn]||(E.byV[vn]={fac:0,facIpc:0}); V.fac+=tv||0; if(facIpc)V.facIpc+=facIpc; if(!E.byR)E.byR={}; if(rubroCat){ var R=E.byR[rubroCat]||(E.byR[rubroCat]={cant:0,fac:0}); R.fac+=tv||0; R.cant+=cant||0; } }
 // Clasificación única de ventas por rubro/proveedor (misma en parser 2026, 2025 y captura de eventos). Sillas Importadas = Wendy + Urun + Zhaolu Thomas · Reposeras Importadas = Topmax.
@@ -2646,6 +2648,133 @@ async function handleFact2025File(file){
     setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>2025 cargado ('+_meses.length+' meses)</b> · '+nFilas.toLocaleString('es-AR')+' filas · '+tq.toLocaleString('es-AR')+' u · $'+Math.round(ttv).toLocaleString('es-AR')+' s/IVA. <b>Ahora tocá "Guardar en Supabase"</b> para que quede publicado.');
   }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
 }
+// ── FERIAS AR ──────────────────────────────────────────────────────────────
+// Detecta los índices de columna de la hoja "Feria" leyendo los nombres de campo
+// del pivotCache (el orden de cacheField = orden de columnas del detalle). Así
+// soporta layouts distintos entre el archivo 2025 y el 2026.
+async function _feriaCols(u8){
+  var central=_bsCentral(u8);
+  for(var i=1;i<=40;i++){
+    var name='xl/pivotCache/pivotCacheDefinition'+i+'.xml';
+    if(!central.get(name)) continue;
+    var xml; try{ xml=await _bsInflateToString(u8,central,name); }catch(e){ continue; }
+    var fs=[], re=/<cacheField\b[^>]*\bname="([^"]*)"/g, m;
+    while((m=re.exec(xml))) fs.push(_bsUnesc(m[1]));
+    var idx=function(nm){ return fs.indexOf(nm); };
+    if(idx('Rubro')>=0 && idx('Total S/IVA')>=0 && idx('Cantidad')>=0){
+      return { rubro:idx('Rubro'), origen:idx('Clasificación Origen'), prov:idx('Proveedor'),
+        sku:idx('Producto/Referencia interna'), qty:idx('Cantidad'), cmv:idx('Total CMV'),
+        tv:idx('Total S/IVA'), fecha:idx('Fecha') };
+    }
+  }
+  return null;
+}
+async function handleFeriaFile(file){
+  if(!file) return;
+  var setS=function(m){ var els=document.querySelectorAll('.feria-status'); for(var i=0;i<els.length;i++) els[i].innerHTML=m; };
+  setS('<span class="spin">&#8635;</span> Leyendo feria...');
+  try{
+    var buf=await file.arrayBuffer();
+    var u8=new Uint8Array(buf);
+    var cols=await _feriaCols(u8);
+    if(!cols || cols.rubro<0 || cols.tv<0 || cols.qty<0) throw new Error('No pude detectar las columnas (falta el pivotCache con "Rubro"/"Total S/IVA"/"Cantidad"). ¿Es el archivo de Feria correcto?');
+    await new Promise(function(r){setTimeout(r,0);});
+    var wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true,sheets:['Feria'],bookVBA:false});
+    if(!wb.SheetNames.includes('Feria')) throw new Error('No encontré la hoja "Feria". Hojas: '+wb.SheetNames.join(', '));
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets['Feria'],{header:1,raw:true,defval:null});
+    var cats={}, na={qty:0,tv:0}, artv={qty:0,tv:0}, otros={qty:0,tv:0,fac:0,cn:0};
+    var totQ=0, totTV=0, mgFac=0, mgCn=0, nF=0, yearCount={}, mesCount={};
+    for(var r=0;r<rows.length;r++){
+      var row=rows[r]; if(!row) continue;
+      if(row[cols.tv]==null || row[cols.tv]==='') continue;
+      var tv=n(row[cols.tv]); if(!isFinite(tv)) continue;
+      var rubroRaw=row[cols.rubro]; if(rubroRaw!=null && String(rubroRaw).trim()==='Rubro') continue; // encabezado
+      var qty=Math.round(n(row[cols.qty]));
+      var cmv=n(row[cols.cmv]);
+      var sku=row[cols.sku]!=null?String(row[cols.sku]).trim().toUpperCase():'';
+      var rubro=rubroRaw!=null?String(rubroRaw).trim().toUpperCase():'';
+      var origen=(cols.origen>=0&&row[cols.origen]!=null)?String(row[cols.origen]).trim():'';
+      var prov=(cols.prov>=0&&row[cols.prov]!=null)?String(row[cols.prov]).trim():'';
+      if(cols.fecha>=0){ var ds=excelDateToStr(row[cols.fecha]); if(ds){ var yy=ds.slice(0,4); yearCount[yy]=(yearCount[yy]||0)+1; mesCount[yy+'-'+ds.slice(5,7)]=(mesCount[yy+'-'+ds.slice(5,7)]||0)+1; } }
+      totQ+=qty; totTV+=tv; nF++;
+      var hasCost=cmv>0;
+      if(sku==='ARTVARIOS'){ artv.qty+=qty; artv.tv+=tv; continue; }
+      if(!rubro || rubro.indexOf('#N/A')>=0 || (origen && origen.indexOf('#N/A')>=0)){ na.qty+=qty; na.tv+=tv; continue; }
+      var cat=rpClasificar(rubro, prov, origen, sku);
+      var bk; if(!cat){ bk=otros; } else { if(!cats[cat]) cats[cat]={qty:0,tv:0,fac:0,cn:0}; bk=cats[cat]; }
+      bk.qty+=qty; bk.tv+=tv;
+      if(hasCost){ bk.fac+=tv; bk.cn+=cmv; mgFac+=tv; mgCn+=cmv; }
+    }
+    if(!nF) throw new Error('No se encontraron filas de datos en la hoja "Feria".');
+    var year='', best=0; for(var y in yearCount){ if(yearCount[y]>best){ best=yearCount[y]; year=y; } }
+    if(!year) throw new Error('No pude detectar el año (columna Fecha vacía).');
+    var mesDom='', bmm=0; for(var mk in mesCount){ if(mk.slice(0,4)===year && mesCount[mk]>bmm){ bmm=mesCount[mk]; mesDom=mk.slice(5,7); } }
+    FERIA_AR[year]={ year:year, mes:mesDom, cats:cats, na:na, artv:artv, otros:otros, tot:{qty:totQ,tv:totTV}, mgFac:mgFac, mgCn:mgCn, nF:nF, ts:Date.now() };
+    evSel='FeriaAR';
+    try{ renderEventos(); }catch(e){ console.error(e); }
+    window._feriaDirty=true;
+    setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>Feria '+year+' cargada</b> (mes '+(mesDom||'?')+') · '+nF.toLocaleString('es-AR')+' filas · '+totQ.toLocaleString('es-AR')+' u · $'+Math.round(totTV).toLocaleString('es-AR')+' s/IVA. <b>Guardá en Supabase</b> para publicar.');
+  }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
+}
+// Render de las dos tablas de Ferias AR (cuadro comparativo + rubro/proveedor). Devuelve HTML.
+function renderFeriaARBody(){
+  var fmt=function(v){return (v&&Math.abs(v)>0.5)?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
+  var F25=FERIA_AR['2025'], F26=FERIA_AR['2026'];
+  if(!F25 && !F26){
+    return '<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-tent" style="font-size:26px;color:#1f7a8c"></i><div style="margin-top:8px">Subí los archivos de <b>Feria</b> (2025 y 2026) con el botón <b>“Cargar Feria AR”</b> y Guardá para ver el comparativo.</div></div>';
+  }
+  var coef=function(F){ return (F&&F.mgCn>0&&F.mgFac>0)?(F.mgFac/F.mgCn):null; };
+  var cf=function(c){ return c==null?'—':c.toFixed(2).replace('.',','); };
+  var tv25=F25?F25.tot.tv:0, tv26=F26?F26.tot.tv:0;
+  var aj25=F25?(F25.tot.tv*ipcFactor(F25.mes||'11')):0;
+  var crec=(aj25>0&&tv26>0)?((tv26/aj25-1)*100):null;
+  var lbl25='Feria '+(F25?(F25.year):'2025')+(F25&&F25.mes?' ('+_mesAbbr(F25.mes)+')':'');
+  var lbl26='Feria '+(F26?(F26.year):'2026')+(F26&&F26.mes?' ('+_mesAbbr(F26.mes)+')':'');
+  // ── Cuadro 1 ──
+  var c1='<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-tent"></i>Feria AR · resumen <span class="sec-sub">· Total s/IVA · margen (coef.) · ajuste IPC</span></div>'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:680px"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+   +'<thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:7px 12px"></th><th style="text-align:right;padding:7px 12px">Total s/IVA</th><th style="text-align:right;padding:7px 12px">Margen <span style="font-weight:400;font-size:10px">coef.</span></th><th style="text-align:right;padding:7px 12px">Ajustado IPC</th></tr></thead><tbody>'
+   +'<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:7px 12px;font-weight:700">'+lbl25+'</td><td style="text-align:right;padding:7px 12px;font-weight:700;color:#565b64">'+fmt(tv25)+'</td><td style="text-align:right;padding:7px 12px;font-weight:700;color:#1f7a44">'+cf(coef(F25))+'</td><td style="text-align:right;padding:7px 12px;color:#8a5a2b;font-weight:700">'+fmt(aj25)+'</td></tr>'
+   +'<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:7px 12px;font-weight:700">'+lbl26+'</td><td style="text-align:right;padding:7px 12px;font-weight:800;color:#b0468f">'+fmt(tv26)+'</td><td style="text-align:right;padding:7px 12px;font-weight:800;color:#1f7a44">'+cf(coef(F26))+'</td><td style="text-align:right;padding:7px 12px;color:var(--txt2)">—</td></tr>'
+   +'<tr style="border-top:2px solid var(--brd2);background:var(--bg2)"><td style="text-align:left;padding:7px 12px;font-weight:700">Crecimiento real <span style="font-weight:400;color:var(--txt2);font-size:11px">· 2026 vs 2025 aj.IPC</span></td><td style="text-align:right;padding:7px 12px;font-weight:800;color:'+(crec==null?'var(--txt2)':(crec<0?'#a32d2d':'#1a7a3a'))+'">'+(crec==null?'—':(crec>=0?'+':'')+crec.toFixed(1)+'%')+'</td><td colspan="2" style="text-align:right;padding:7px 12px;color:var(--txt2);font-size:11px">IPC interanual '+(F25?_mesNom(F25.mes):'nov')+(ipcEstim(F25?F25.mes:'11')?' (estim.)':'')+'</td></tr>'
+   +'</tbody></table></div>'
+   +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:680px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coeficiente neto (precio/costo) ponderado por facturación, igual que el resto del reporte. Ferias de liquidación → coef. bajo.</div>';
+  // ── Cuadro 2 ──
+  var getc=function(F,cat){ if(!F)return null; if(cat==='__NA')return F.na; if(cat==='__ARTV')return F.artv; if(cat==='__OTROS')return F.otros; return F.cats&&F.cats[cat]; };
+  var hasCat=function(cat){ var a=getc(F25,cat),b=getc(F26,cat); return (a&&(a.tv||a.qty))||(b&&(b.tv||b.qty)); };
+  var ordered=RP_ORDER.filter(hasCat);
+  var rowsHtml=ordered.map(function(cat){ return _feriaRow(cat, RP_PROVDESC[cat]||'', getc(F25,cat), getc(F26,cat), fmt, false); }).join('');
+  var specialHtml='';
+  if(hasCat('__NA')) specialHtml+=_feriaRow('#N/A', 'sin margen · costo no identificado', getc(F25,'__NA'), getc(F26,'__NA'), fmt, true);
+  if(hasCat('__ARTV')) specialHtml+=_feriaRow('ARTVARIOS', 'sin margen · costo no identificado', getc(F25,'__ARTV'), getc(F26,'__ARTV'), fmt, true);
+  if(hasCat('__OTROS')) specialHtml+=_feriaRow('OTROS / a reclasificar', '', getc(F25,'__OTROS'), getc(F26,'__OTROS'), fmt, true);
+  var totRow='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:7px 10px">TOTAL FERIA</td>'
+    +'<td style="text-align:right;padding:7px 10px;background:#eef6f2">'+(F25?F25.tot.qty.toLocaleString('es-AR'):'—')+'</td><td style="text-align:right;padding:7px 10px;background:#eef6f2">'+(F26?F26.tot.qty.toLocaleString('es-AR'):'—')+'</td>'
+    +'<td style="text-align:right;padding:7px 10px;background:#faf1e6;color:#8a5a2b">'+fmt(tv25)+'</td><td style="text-align:right;padding:7px 10px;background:#faf1e6;color:#8a5a2b">'+fmt(tv26)+'</td></tr>';
+  var c2='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-table"></i>Feria AR · por Rubro / Proveedor <span class="sec-sub">· cantidad e importe · 2025 vs 2026</span></div>'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+   +'<thead><tr style="color:#274d80"><th rowspan="2" style="text-align:left;padding:6px 10px;vertical-align:bottom">Rubro / Proveedor</th><th colspan="2" style="text-align:center;padding:5px 10px;background:#e2efe9;color:#1f6b52">Cantidad</th><th colspan="2" style="text-align:center;padding:5px 10px;background:#f5e9da;color:#8a5a2b">Facturación s/IVA</th></tr>'
+   +'<tr style="color:#274d80"><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2025</th><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2026</th></tr></thead>'
+   +'<tbody>'+rowsHtml+specialHtml+totRow+'</tbody></table></div>';
+  return c1+c2;
+}
+function _feriaRow(label, sub, a, b, fmt, special){
+  var q25=a?a.qty:0, q26=b?b.qty:0, t25=a?a.tv:0, t26=b?b.tv:0;
+  var lblCol=special?'#b4322a':'var(--txt)';
+  return '<tr style="border-top:'+(special?'1.5px dashed var(--brd)':'.5px solid var(--brd)')+'">'
+   +'<td style="text-align:left;padding:6px 10px;font-weight:700;color:'+lblCol+'">'+label+(sub?'<div style="font-size:9px;font-weight:600;color:#8a8880">'+sub+'</div>':'')+'</td>'
+   +'<td style="text-align:right;padding:6px 10px;color:#8a8880">'+(q25?q25.toLocaleString('es-AR'):'—')+'</td>'
+   +'<td style="text-align:right;padding:6px 10px;font-weight:700">'+(q26?q26.toLocaleString('es-AR'):'—')+'</td>'
+   +'<td style="text-align:right;padding:6px 10px;color:#8a5a2b">'+fmt(t25)+'</td>'
+   +'<td style="text-align:right;padding:6px 10px;color:#8a5a2b;font-weight:700">'+fmt(t26)+'</td></tr>';
+}
+function _mesAbbr(mm){ var a=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; var i=parseInt(mm,10)-1; return (i>=0&&i<12)?a[i]:''; }
+function _mesNom(mm){ var a=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; var i=parseInt(mm,10)-1; return (i>=0&&i<12)?a[i]:'noviembre'; }
+function _feriaUploadBar(){
+  return '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
+   +'<label style="cursor:pointer;background:#1f7a8c;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px"><i class="ti ti-upload" style="vertical-align:-2px;margin-right:5px"></i>Cargar Feria AR (2025 o 2026)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFeriaFile(this.files[0])"></label>'
+   +'<span class="feria-status" style="font-size:11.5px;color:var(--txt2)"></span></div>';
+}
 // Importa el Excel de etiquetas de clientes → mapa CLIENTE(mayúsc) → tipo (etiqueta "Tipo de cliente / …"). El resto queda N/A.
 async function handleEtiquetasFile(file){
   if(!file) return;
@@ -3999,14 +4128,20 @@ function renderEventos(){
   var fmt=function(v){return (v&&Math.abs(v)>0.5)?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
   var coefOf=function(e){ return (e&&e.cn>0&&e.fac>0)?(e.fac/e.cn):null; };
   var cf=function(c){ return c==null?'—':c.toFixed(2).replace('.',','); };
-  var FER=[['Presentes','#D4537E','ti-building-store','2 ediciones/año'],['Hotelga','#4a86b8','ti-building-pavilion','feria gastronómica/hotelera']];
-  var any=false; for(var f in EVENTOS_D){ if(Object.keys(EVENTOS_D[f]||{}).length){ any=true; break; } }
-  if(!any){ wrap.innerHTML='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-confetti" style="font-size:26px;color:#D4537E"></i><div style="margin-top:8px">Subí <b>Reporte 2025</b> y <b>Reporte 2026</b> (con la columna Equipo de ventas) y Guardá para ver el análisis de ferias.</div></div>'; return; }
-  if(!EVENTOS_D[evSel]||!Object.keys(EVENTOS_D[evSel]).length){ for(var ff in EVENTOS_D){ if(Object.keys(EVENTOS_D[ff]||{}).length){ evSel=ff; break; } } }
-  var totFer=function(f2){ var F2=EVENTOS_D[f2]||{}; var t=0; for(var e in F2) t+=F2[e].fac||0; return t; };
-  var cards=FER.map(function(x){ var on=evSel===x[0]; var t=totFer(x[0]);
-    return '<div onclick="setEvSel(\''+x[0]+'\')" style="cursor:pointer;border:1.5px solid '+(on?x[1]:'var(--brd)')+';border-radius:12px;padding:10px 14px;background:'+(on?x[1]+'14':'var(--bg)')+';box-shadow:'+(on?'0 0 0 2px '+x[1]+'40':'none')+'"><div style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:'+x[1]+'"><i class="ti '+x[2]+'" style="font-size:16px"></i>'+x[0]+(on?' <i class="ti ti-eye" style="font-size:11px"></i>':'')+'</div><div style="font-size:16px;font-weight:800;color:'+x[1]+';margin-top:2px">'+fmt(t)+'</div><div style="font-size:10.5px;color:var(--txt2)">'+x[3]+'</div></div>';
+  var FER=[['Presentes','#D4537E','ti-building-store','2 ediciones/año','Presentes'],['Hotelga','#4a86b8','ti-building-pavilion','feria gastronómica/hotelera','Hotelga'],['FeriaAR','#1f7a8c','ti-tent','liquidación AR · propio','Ferias AR']];
+  var feriaAny=!!(FERIA_AR['2025']||FERIA_AR['2026']);
+  var any=feriaAny; for(var f in EVENTOS_D){ if(Object.keys(EVENTOS_D[f]||{}).length){ any=true; break; } }
+  if(!any){ wrap.innerHTML='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-confetti" style="font-size:26px;color:#D4537E"></i><div style="margin-top:8px">Subí <b>Reporte 2025</b> y <b>Reporte 2026</b> (con la columna Equipo de ventas) y Guardá para ver el análisis de ferias. Para <b>Ferias AR</b> usá el botón “Cargar Feria AR”.</div></div>'; return; }
+  if(evSel==='FeriaAR'){ if(!feriaAny){ for(var ff0 in EVENTOS_D){ if(Object.keys(EVENTOS_D[ff0]||{}).length){ evSel=ff0; break; } } } }
+  else if(!EVENTOS_D[evSel]||!Object.keys(EVENTOS_D[evSel]).length){ var pk=''; for(var ff in EVENTOS_D){ if(Object.keys(EVENTOS_D[ff]||{}).length){ pk=ff; break; } } if(pk) evSel=pk; else if(feriaAny) evSel='FeriaAR'; }
+  var totFer=function(f2){ if(f2==='FeriaAR'){ var tt=0; if(FERIA_AR['2025'])tt+=FERIA_AR['2025'].tot.tv; if(FERIA_AR['2026'])tt+=FERIA_AR['2026'].tot.tv; return tt; } var F2=EVENTOS_D[f2]||{}; var t=0; for(var e in F2) t+=F2[e].fac||0; return t; };
+  var cards=FER.map(function(x){ var on=evSel===x[0]; var t=totFer(x[0]); var dn=x[4]||x[0];
+    return '<div onclick="setEvSel(\''+x[0]+'\')" style="cursor:pointer;border:1.5px solid '+(on?x[1]:'var(--brd)')+';border-radius:12px;padding:10px 14px;background:'+(on?x[1]+'14':'var(--bg)')+';box-shadow:'+(on?'0 0 0 2px '+x[1]+'40':'none')+'"><div style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:'+x[1]+'"><i class="ti '+x[2]+'" style="font-size:16px"></i>'+dn+(on?' <i class="ti ti-eye" style="font-size:11px"></i>':'')+'</div><div style="font-size:16px;font-weight:800;color:'+x[1]+';margin-top:2px">'+fmt(t)+'</div><div style="font-size:10.5px;color:var(--txt2)">'+x[3]+'</div></div>';
   }).join('');
+  if(evSel==='FeriaAR'){
+    wrap.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;max-width:620px">'+cards+'</div>'+_feriaUploadBar()+renderFeriaARBody();
+    return;
+  }
   var F=EVENTOS_D[evSel]||{};
   var refIpc=(F['2025']&&F['2025'].facIpc)||0;
   var EDS=(evSel==='Presentes')
@@ -4171,7 +4306,7 @@ function renderEventos(){
      +'<tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:5px 9px">Rubro</th><th style="text-align:left;padding:5px 9px">Proveedor</th>'+subH+subH+'</tr></thead>'
      +'<tbody>'+rows+'<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:6px 9px">Total</td><td></td>'+totCc+totFc+'</tr></tbody></table></div></div>';
   })();
-  wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;max-width:520px">'+cards+'</div>'
+  wrap.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;max-width:620px">'+cards+'</div>'
    +'<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">'
    +'<div><div class="sec-hdr" style="margin-top:4px"><i class="ti ti-calendar-event"></i>'+evSel+' <span class="sec-sub">· por edición · facturación S/IVA, margen (coef.) y ajuste IPC</span></div>'
    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Edición</th><th style="text-align:right;padding:6px 10px">Facturación S/IVA</th><th style="text-align:right;padding:6px 10px">Fact. aj.IPC</th><th style="text-align:right;padding:6px 10px">Margen (coef.)</th><th style="text-align:right;padding:6px 10px">Var. vs 2025</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'
@@ -6724,7 +6859,7 @@ function persistFact(name){ try{ idbSet('fact',{ts:Date.now(),name:name||'',DATA
 function persistSalidas(){ try{ idbSet('salidas',{ts:Date.now(),SALIDAS_B_D:SALIDAS_B_D,SALIDAS_AA_D:SALIDAS_AA_D,SALIDAS_EXTRA_D:SALIDAS_EXTRA_D}); }catch(e){console.warn(e);} }
 function persistIMPO(){ try{ idbSet('impo',{ts:Date.now(),IMPO_D:IMPO_D}); }catch(e){console.warn(e);} }
 function applyFactState(f){
-  DATA_D=f.DATA_D;VENTAS_D=f.VENTAS_D||{};FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;COSTFIN_D=f.COSTFIN_D||{web:[],local:[]};EVENTOS_D=f.EVENTOS_D||{Presentes:{},Hotelga:{}};
+  DATA_D=f.DATA_D;VENTAS_D=f.VENTAS_D||{};FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;COSTFIN_D=f.COSTFIN_D||{web:[],local:[]};EVENTOS_D=f.EVENTOS_D||{Presentes:{},Hotelga:{}};FERIA_AR=f.FERIA_AR||{};
   try{ var meses=Array.from(new Set(Object.keys(FIN_D).map(function(d){return d.slice(0,7);}))).sort(); buildMonthChips(meses); }catch(e){}
   sS=null;sE=null;picking=false;finMes='all';
   var ad=Object.keys(DATA_D).sort(); if(ad.length){cy=parseInt(ad[0].slice(0,4));cm=parseInt(ad[0].slice(5,7))-1;}
@@ -6740,7 +6875,7 @@ function rsemBuildPlano(){
   var pad=function(n){return n<10?'0'+n:''+n;};var d=new Date();var fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   var snap={
-    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D')},
+    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
@@ -6828,7 +6963,7 @@ async function rsemUnpackCol(d){ if(d&&d.__gz){ return JSON.parse(await rsemGunz
 function rsemSnapObj(){
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   return {
-    fact:{DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D')},
+    fact:{DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
