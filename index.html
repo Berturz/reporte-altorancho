@@ -2829,9 +2829,9 @@ function renderEvol(){
     var cellsFac=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(o?fmt(o.tv):'—')+'</td>'; }).join('');
     var cellsMg=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; var mg=(o&&o.cmv>0)?(o.tv/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
     var cellsCf=meses.map(function(mm){ var v=(cfin[ck]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(v?fmt(v):(cfinHasData?'—':'·'))+'</td>'; }).join('');
-    return '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+name+'<td style="padding:6px 10px;color:var(--txt2);font-weight:600">fact s/IVA</td>'+cellsFac+'</tr>'
-      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:var(--txt2);font-weight:600">Mg</td>'+cellsMg+'</tr>'
-      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:'+col+';font-weight:700">Costo fin</td>'+cellsCf+'</tr>';
+    return '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+name+'<td style="padding:6px 10px;color:var(--txt2);font-weight:600">FC</td>'+cellsFac+'</tr>'
+      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:var(--txt2);font-weight:600">Mg.</td>'+cellsMg+'</tr>'
+      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:'+col+';font-weight:700">Cfinanciero</td>'+cellsCf+'</tr>';
   }).join('');
   var note=cfinHasData?'':'<div style="font-size:11.5px;color:#b4322a;margin-bottom:8px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> El costo de financiación por canal aparece al <b>re-subir la facturación 2026</b> y Guardar (es un dato nuevo del parser).</div>';
   el.innerHTML=note
