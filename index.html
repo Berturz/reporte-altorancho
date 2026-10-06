@@ -1443,9 +1443,13 @@ async function handleFile(file) {
         if (mdpName) newSUB[dia].lc.mr[mdpName] = (newSUB[dia].lc.mr[mdpName]||0) + tv;
       }
 
-      // ── CFIN_D: costo de financiación por canal (cada local separado, igual que la Web) ──
+      // ── CFIN_D: costo de financiación por canal (cada local separado, igual que la Web).
+      //    % = (medio de pago + cuotas) / lista · misma fórmula que la sección Financiación
+      //    (AR: mdpw+cdp_ar sobre lista · Lett: chq+cdp_lt sobre lista). Guardo base (lista) y cost. ──
       { const _cfk={Web:'web',LSI:'lsi',LBE:'lbe',ALC:'alc',LND:'lnd',Lett:'lett'}[canal];
-        if(_cfk){ if(!newCFIN[dia]) newCFIN[dia]={}; newCFIN[dia][_cfk]=(newCFIN[dia][_cfk]||0)+(canal==='Lett'?cdp_lt:cdp_ar); } }
+        if(_cfk){ if(!newCFIN[dia]) newCFIN[dia]={}; if(!newCFIN[dia][_cfk]) newCFIN[dia][_cfk]={base:0,cost:0};
+          newCFIN[dia][_cfk].base += lista;
+          newCFIN[dia][_cfk].cost += (canal==='Lett' ? (chq+cdp_lt) : (mdpw+cdp_ar)); } }
 
       // ENVIOS excluidos de todos los módulos excepto FIN (donde sí entran al denominador)
       if (rubro === 'ENVIOS') continue;
@@ -2818,17 +2822,17 @@ function renderEvol(){
   for(var d1 in DATA_D){ if(d1.slice(0,4)!=='2026') continue; var mm=d1.slice(5,7); var dw=DATA_D[d1];
     for(var rub in dw){ var rw=dw[rub]; for(var cn in rw){ var o=rw[cn]; if(!agg[cn])agg[cn]={}; if(!agg[cn][mm])agg[cn][mm]={tv:0,cmv:0,fc:0}; agg[cn][mm].tv+=o.tv||0; agg[cn][mm].cmv+=o.cmv||0; agg[cn][mm].fc+=o.fc||0; } } }
   var CF=(typeof CFIN_D!=='undefined'&&CFIN_D)?CFIN_D:{};
-  for(var d2 in CF){ if(d2.slice(0,4)!=='2026') continue; var mm2=d2.slice(5,7); var cw=CF[d2]; for(var k in cw){ if(!cfin[k])cfin[k]={}; cfin[k][mm2]=(cfin[k][mm2]||0)+(cw[k]||0); } }
+  for(var d2 in CF){ if(d2.slice(0,4)!=='2026') continue; var mm2=d2.slice(5,7); var cw=CF[d2]; for(var k in cw){ var o2=cw[k]; if(o2==null||typeof o2!=='object') continue; if(!cfin[k])cfin[k]={}; if(!cfin[k][mm2])cfin[k][mm2]={base:0,cost:0}; cfin[k][mm2].base+=o2.base||0; cfin[k][mm2].cost+=o2.cost||0; } }
   // canales: [label, claveDATA_D, claveCFIN, color]
   var CH=[['Web','Web','web','#7B6BC8'],['Local San Isidro','LSI','lsi','#C86487'],['Local Belgrano','LBE','lbe','#3E9E6E'],['Local Alcorta','ALC','alc','#5486C6'],['Mayorista','Lett','lett','#D07C34']];
   var tintOf=function(hex,a){ var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return 'rgba('+r+','+g+','+b+','+a+')'; };
-  var cfinHasData=Object.keys(cfin).length>0;
+  var cfinHasData=false; for(var _ck in cfin){ for(var _mk in cfin[_ck]){ if(cfin[_ck][_mk].base>0){ cfinHasData=true; break; } } if(cfinHasData) break; }
   var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+MN[parseInt(mm,10)-1]+'</th>';}).join('')+'</tr>';
   var rowsH=CH.map(function(ch){ var lbl=ch[0], dk=ch[1], ck=ch[2], col=ch[3];
     var tint=tintOf(col,0.09), name='<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+'</td>';
     var cellsFac=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(o?fmt(o.tv):'—')+'</td>'; }).join('');
     var cellsMg=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; var mg=(o&&o.cmv!==0)?(o.fc/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
-    var cellsCf=meses.map(function(mm){ var v=(cfin[ck]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(v?fmt(v):(cfinHasData?'—':'·'))+'</td>'; }).join('');
+    var cellsCf=meses.map(function(mm){ var v=(cfin[ck]||{})[mm]; var pct=(v&&v.base>0)?(v.cost/v.base*100):null; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(pct!=null?pct.toFixed(2).replace('.',',')+'%':(cfinHasData?'—':'·'))+'</td>'; }).join('');
     return '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+name+'<td style="padding:6px 10px;color:var(--txt2);font-weight:600">FC</td>'+cellsFac+'</tr>'
       +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:var(--txt2);font-weight:600">Mg.</td>'+cellsMg+'</tr>'
       +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:'+col+';font-weight:700">Cfinanciero</td>'+cellsCf+'</tr>';
@@ -2836,7 +2840,7 @@ function renderEvol(){
   var note=cfinHasData?'':'<div style="font-size:11.5px;color:#b4322a;margin-bottom:8px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> El costo de financiación por canal aparece al <b>re-subir la facturación 2026</b> y Guardar (es un dato nuevo del parser).</div>';
   el.innerHTML=note
     +'<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;background:var(--bg)"><table style="border-collapse:collapse;font-size:12px;width:100%;min-width:'+(200+meses.length*72)+'px"><thead style="background:#eef2f6">'+head+'</thead><tbody>'+rowsH+'</tbody></table></div>'
-    +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Fact s/IVA y Mg (coef. precio/costo) por canal, mes a mes de 2026. Costo fin = costo de financiación (columna CDP) sumado por canal — cada local separado igual que la Web. Alcorta aparece desde que abrió (junio 2026).</div>';
+    +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> FC (fact s/IVA) y Mg (coef. precio/costo = fc/cmv) por canal, mes a mes de 2026. Cfinanciero = costo de financiación en <b>%</b> = (medio de pago + cuotas) / lista, misma fórmula que la sección Financiación — cada local separado igual que la Web. Alcorta aparece desde que abrió (junio 2026).</div>';
 }
 // Importa el Excel de etiquetas de clientes → mapa CLIENTE(mayúsc) → tipo (etiqueta "Tipo de cliente / …"). El resto queda N/A.
 async function handleEtiquetasFile(file){
