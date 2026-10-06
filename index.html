@@ -2816,7 +2816,7 @@ function renderEvol(){
   // fact/cmv por canal (DATA_D) y costo fin por canal (CFIN_D)
   var agg={}, cfin={};
   for(var d1 in DATA_D){ if(d1.slice(0,4)!=='2026') continue; var mm=d1.slice(5,7); var dw=DATA_D[d1];
-    for(var rub in dw){ var rw=dw[rub]; for(var cn in rw){ var o=rw[cn]; if(!agg[cn])agg[cn]={}; if(!agg[cn][mm])agg[cn][mm]={tv:0,cmv:0}; agg[cn][mm].tv+=o.tv||0; agg[cn][mm].cmv+=o.cmv||0; } } }
+    for(var rub in dw){ var rw=dw[rub]; for(var cn in rw){ var o=rw[cn]; if(!agg[cn])agg[cn]={}; if(!agg[cn][mm])agg[cn][mm]={tv:0,cmv:0,fc:0}; agg[cn][mm].tv+=o.tv||0; agg[cn][mm].cmv+=o.cmv||0; agg[cn][mm].fc+=o.fc||0; } } }
   var CF=(typeof CFIN_D!=='undefined'&&CFIN_D)?CFIN_D:{};
   for(var d2 in CF){ if(d2.slice(0,4)!=='2026') continue; var mm2=d2.slice(5,7); var cw=CF[d2]; for(var k in cw){ if(!cfin[k])cfin[k]={}; cfin[k][mm2]=(cfin[k][mm2]||0)+(cw[k]||0); } }
   // canales: [label, claveDATA_D, claveCFIN, color]
@@ -2827,7 +2827,7 @@ function renderEvol(){
   var rowsH=CH.map(function(ch){ var lbl=ch[0], dk=ch[1], ck=ch[2], col=ch[3];
     var tint=tintOf(col,0.09), name='<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+'</td>';
     var cellsFac=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(o?fmt(o.tv):'—')+'</td>'; }).join('');
-    var cellsMg=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; var mg=(o&&o.cmv>0)?(o.tv/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
+    var cellsMg=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; var mg=(o&&o.cmv!==0)?(o.fc/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
     var cellsCf=meses.map(function(mm){ var v=(cfin[ck]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(v?fmt(v):(cfinHasData?'—':'·'))+'</td>'; }).join('');
     return '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+name+'<td style="padding:6px 10px;color:var(--txt2);font-weight:600">FC</td>'+cellsFac+'</tr>'
       +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:var(--txt2);font-weight:600">Mg.</td>'+cellsMg+'</tr>'
