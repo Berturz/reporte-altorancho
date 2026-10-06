@@ -2813,8 +2813,9 @@ function renderEvol(){
   }
   var MN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var fmt=function(v){return (v&&Math.abs(v)>0.5)?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
-  // meses 2026 con datos
-  var mset={}; for(var d in DATA_D){ if(d.slice(0,4)==='2026') mset[d.slice(5,7)]=1; }
+  // meses 2026 con datos, excluyendo el mes calendario en curso (como el YTD)
+  var _now=new Date(), _curYM=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
+  var mset={}; for(var d in DATA_D){ if(d.slice(0,4)==='2026' && d.slice(0,7)!==_curYM) mset[d.slice(5,7)]=1; }
   var meses=Object.keys(mset).sort();
   if(!meses.length){ el.innerHTML='<div style="color:var(--txt2);padding:1rem;font-size:13px">Sin datos de 2026.</div>'; return; }
   // fact/cmv por canal (DATA_D) y costo fin por canal (CFIN_D)
