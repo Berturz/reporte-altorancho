@@ -542,6 +542,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <nav id="topnav">
   <button onclick="showTab('comp',this)" class="tabnav-btn act" style="--tc:#1C7C8C">Comparativa YTD</button>
   <button onclick="showTab('fact',this)" class="tabnav-btn" style="--tc:#4472c4">Facturación</button>
+  <button onclick="showTab('evol',this)" class="tabnav-btn" style="--tc:#3f5f8f">Evolución FC/Mg/C.fin</button>
   <button onclick="showTab('eventos',this)" class="tabnav-btn" style="--tc:#D4537E">Eventos/Ferias</button>
   <button onclick="showTab('fin',this)" class="tabnav-btn" style="--tc:#7F77DD">Financiación</button>
   <button onclick="showTab('origen',this)" class="tabnav-btn" style="--tc:#8B4630">Origen</button>
@@ -641,6 +642,17 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
     <div class="leg" id="fLeg" style="justify-content:center"></div>
     <div style="position:relative;width:100%;height:300px"><canvas id="cFC"></canvas></div>
   </div>
+</div>
+
+<!-- SECCIÓN: EVOLUCIÓN FC / Mg / C.FINANCIACIÓN -->
+<div class="sec" id="secEvol" style="border-top:3px solid #4472c4">
+  <div class="page-hdr" style="border-bottom:.5px solid var(--brd);margin-bottom:.9rem;padding-top:0">
+    <div class="page-hdr-left">
+      <h1><i class="ti ti-chart-dots-2" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:#4472c4"></i>Evolución de FC / Mg / C.financiación</h1>
+      <p>2026 · por canal · facturación s/IVA, margen (coef.) y costo de financiación, mes a mes</p>
+    </div>
+  </div>
+  <div id="evolWrap"></div>
 </div>
 
 <!-- SECCIÓN: EVENTOS / FERIAS -->
@@ -850,6 +862,8 @@ var DATA_D = {};
 var VENTAS_D = {}; // [dia][canal] = {v:cantidad de comprobantes, q:unidades} — para ticket promedio diario
 var FIN_D = {};
 var FIN_SUB = {};
+// Costo de financiación por canal por día: CFIN_D[dia][canal] = Σ CDP (costo financiero). Canales: web/lsi/lbe/alc/lnd/lett. Se separa cada local igual que la Web.
+var CFIN_D = {};
 var ORIG_D = {};
 var PROD_D = {};
 var TOPFC_D = {};
@@ -1141,6 +1155,7 @@ async function handleFile(file) {
     const newVEND = {};
     const newFIN  = {};
     const newSUB  = {};
+    const newCFIN = {};
     const newORIGEN = {};
 
     let header = rows[0]; // fila 0 = encabezado
@@ -1428,6 +1443,10 @@ async function handleFile(file) {
         if (mdpName) newSUB[dia].lc.mr[mdpName] = (newSUB[dia].lc.mr[mdpName]||0) + tv;
       }
 
+      // ── CFIN_D: costo de financiación por canal (cada local separado, igual que la Web) ──
+      { const _cfk={Web:'web',LSI:'lsi',LBE:'lbe',ALC:'alc',LND:'lnd',Lett:'lett'}[canal];
+        if(_cfk){ if(!newCFIN[dia]) newCFIN[dia]={}; newCFIN[dia][_cfk]=(newCFIN[dia][_cfk]||0)+(canal==='Lett'?cdp_lt:cdp_ar); } }
+
       // ENVIOS excluidos de todos los módulos excepto FIN (donde sí entran al denominador)
       if (rubro === 'ENVIOS') continue;
 
@@ -1462,6 +1481,7 @@ async function handleFile(file) {
     VENTAS_D = finalVENTAS;
     FIN_D  = newFIN;
     FIN_SUB= newSUB;
+    CFIN_D = newCFIN;
     ORIG_D = newORIG;
     PROD_D = newPROD;
     // Convertir ventasSet a número y array [ventas, fc, qty]
@@ -1526,6 +1546,7 @@ async function handleFile(file) {
     renderCobr();
     renderVend();
     try{ renderCostFin(); }catch(e){}
+    try{ renderEvol(); }catch(e){}
     try{ renderEventos(); }catch(e){}
     try{ persistFact(file.name); }catch(e){}
 
@@ -2778,6 +2799,44 @@ function _feriaUploadBar(){
   return '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
    +'<label style="cursor:pointer;background:#1f7a8c;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px"><i class="ti ti-upload" style="vertical-align:-2px;margin-right:5px"></i>Cargar Feria AR (2025 o 2026)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFeriaFile(this.files[0])"></label>'
    +'<span class="feria-status" style="font-size:11.5px;color:var(--txt2)"></span></div>';
+}
+// ── EVOLUCIÓN FC / Mg / C.financiación · 2026 · por canal (un bloque por canal, meses en columnas) ──
+function renderEvol(){
+  var el=document.getElementById('evolWrap'); if(!el) return;
+  if(typeof DATA_D==='undefined' || !DATA_D || !Object.keys(DATA_D).length){
+    el.innerHTML='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-chart-dots-2" style="font-size:26px;color:#4472c4"></i><div style="margin-top:8px">Subí la <b>facturación 2026</b> y Guardá para ver la evolución por canal.</div></div>';
+    return;
+  }
+  var MN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var fmt=function(v){return (v&&Math.abs(v)>0.5)?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
+  // meses 2026 con datos
+  var mset={}; for(var d in DATA_D){ if(d.slice(0,4)==='2026') mset[d.slice(5,7)]=1; }
+  var meses=Object.keys(mset).sort();
+  if(!meses.length){ el.innerHTML='<div style="color:var(--txt2);padding:1rem;font-size:13px">Sin datos de 2026.</div>'; return; }
+  // fact/cmv por canal (DATA_D) y costo fin por canal (CFIN_D)
+  var agg={}, cfin={};
+  for(var d1 in DATA_D){ if(d1.slice(0,4)!=='2026') continue; var mm=d1.slice(5,7); var dw=DATA_D[d1];
+    for(var rub in dw){ var rw=dw[rub]; for(var cn in rw){ var o=rw[cn]; if(!agg[cn])agg[cn]={}; if(!agg[cn][mm])agg[cn][mm]={tv:0,cmv:0}; agg[cn][mm].tv+=o.tv||0; agg[cn][mm].cmv+=o.cmv||0; } } }
+  var CF=(typeof CFIN_D!=='undefined'&&CFIN_D)?CFIN_D:{};
+  for(var d2 in CF){ if(d2.slice(0,4)!=='2026') continue; var mm2=d2.slice(5,7); var cw=CF[d2]; for(var k in cw){ if(!cfin[k])cfin[k]={}; cfin[k][mm2]=(cfin[k][mm2]||0)+(cw[k]||0); } }
+  // canales: [label, claveDATA_D, claveCFIN, color]
+  var CH=[['Web','Web','web','#7B6BC8'],['Local San Isidro','LSI','lsi','#C86487'],['Local Belgrano','LBE','lbe','#3E9E6E'],['Local Alcorta','ALC','alc','#5486C6'],['Mayorista','Lett','lett','#D07C34']];
+  var tintOf=function(hex,a){ var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return 'rgba('+r+','+g+','+b+','+a+')'; };
+  var cfinHasData=Object.keys(cfin).length>0;
+  var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+MN[parseInt(mm,10)-1]+'</th>';}).join('')+'</tr>';
+  var rowsH=CH.map(function(ch){ var lbl=ch[0], dk=ch[1], ck=ch[2], col=ch[3];
+    var tint=tintOf(col,0.09), name='<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+'</td>';
+    var cellsFac=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(o?fmt(o.tv):'—')+'</td>'; }).join('');
+    var cellsMg=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; var mg=(o&&o.cmv>0)?(o.tv/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
+    var cellsCf=meses.map(function(mm){ var v=(cfin[ck]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(v?fmt(v):(cfinHasData?'—':'·'))+'</td>'; }).join('');
+    return '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+name+'<td style="padding:6px 10px;color:var(--txt2);font-weight:600">fact s/IVA</td>'+cellsFac+'</tr>'
+      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:var(--txt2);font-weight:600">Mg</td>'+cellsMg+'</tr>'
+      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:'+col+';font-weight:700">Costo fin</td>'+cellsCf+'</tr>';
+  }).join('');
+  var note=cfinHasData?'':'<div style="font-size:11.5px;color:#b4322a;margin-bottom:8px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> El costo de financiación por canal aparece al <b>re-subir la facturación 2026</b> y Guardar (es un dato nuevo del parser).</div>';
+  el.innerHTML=note
+    +'<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;background:var(--bg)"><table style="border-collapse:collapse;font-size:12px;width:100%;min-width:'+(200+meses.length*72)+'px"><thead style="background:#eef2f6">'+head+'</thead><tbody>'+rowsH+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Fact s/IVA y Mg (coef. precio/costo) por canal, mes a mes de 2026. Costo fin = costo de financiación (columna CDP) sumado por canal — cada local separado igual que la Web. Alcorta aparece desde que abrió (junio 2026).</div>';
 }
 // Importa el Excel de etiquetas de clientes → mapa CLIENTE(mayúsc) → tipo (etiqueta "Tipo de cliente / …"). El resto queda N/A.
 async function handleEtiquetasFile(file){
@@ -4334,7 +4393,7 @@ function renderEventos(){
   // Construir chips de meses desde datos embebidos
   const meses=[...new Set(Object.keys(FIN_D).map(d=>d.slice(0,7)))].sort();
   buildMonthChips(meses);
-  buildRubros();buildFactMonthChips();buildCal();updDR();refreshAll();renderYTD();renderRPCompare();try{renderEventos();}catch(e){}
+  buildRubros();buildFactMonthChips();buildCal();updDR();refreshAll();renderYTD();renderRPCompare();try{renderEvol();}catch(e){}try{renderEventos();}catch(e){}
   buildRPMonthChips();renderRP();
 })();
 </script>
@@ -6809,7 +6868,7 @@ salidasZone.addEventListener('drop', e=>{ e.preventDefault(); salidasZone.classL
 </script>
 
 <script>
-var TAB_MARKERS={secYTD:'comp',secRPComp:'comp',ctrlStrip:'fact',secFact:'fact',secEventos:'eventos',secFin:'fin',secOrig:'origen',secProd:'prod',secTopFC:'prod',secProv:'prov',secRubroProv:'prod',secCobr:'cobr',secVend:'vend',secCajas:'cajas',secSalidas:'salidas',secStock:'stock',secLogistica:'logistica',secIMPO:'impo'};
+var TAB_MARKERS={secYTD:'comp',secRPComp:'comp',ctrlStrip:'fact',secFact:'fact',secEvol:'evol',secEventos:'eventos',secFin:'fin',secOrig:'origen',secProd:'prod',secTopFC:'prod',secProv:'prov',secRubroProv:'prod',secCobr:'cobr',secVend:'vend',secCajas:'cajas',secSalidas:'salidas',secStock:'stock',secLogistica:'logistica',secIMPO:'impo'};
 var _pagesReady=false;
 function assignPages(){var cur=null;var ch=document.body.children;for(var i=0;i<ch.length;i++){var el=ch[i];
   if(el.id==='topnav'||el.classList.contains('page-hdr')){continue;}
@@ -6847,7 +6906,7 @@ function showTab(page,btn){if(!_pagesReady)assignPages();
   var els=document.querySelectorAll('[data-page]');
   for(var i=0;i<els.length;i++){els[i].style.display=(els[i].getAttribute('data-page')===page)?'':'none';}
   var bs=document.querySelectorAll('.tabnav-btn');for(var j=0;j<bs.length;j++)bs[j].classList.remove('act');
-  if(btn)btn.classList.add('act'); else {var m={comp:0,fact:1,eventos:2,fin:3,origen:4,prod:5,prov:6,cobr:7,vend:8,salidas:9,cajas:10,impo:11,stock:12,logistica:13};if(bs[m[page]])bs[m[page]].classList.add('act');}
+  if(btn)btn.classList.add('act'); else {var m={comp:0,fact:1,evol:2,eventos:3,fin:4,origen:5,prod:6,prov:7,cobr:8,vend:9,salidas:10,cajas:11,impo:12,stock:13,logistica:14};if(bs[m[page]])bs[m[page]].classList.add('act');}
   try{window.scrollTo({top:0,behavior:'auto'});}catch(e){}
   setTimeout(function(){var cvs=document.querySelectorAll('canvas');for(var k=0;k<cvs.length;k++){try{var c=Chart.getChart(cvs[k]);if(c&&cvs[k].offsetParent!==null)c.resize();}catch(e){}}},50);}
 /* auto-render deshabilitado: el render ocurre tras el login de Supabase (ver rsemBoot) */
@@ -6858,17 +6917,17 @@ function idbOpen(){return new Promise(function(res,rej){try{var q=indexedDB.open
 function idbSet(k,v){return idbOpen().then(function(db){return new Promise(function(res,rej){var t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=function(){res(true);};t.onerror=function(){rej(t.error);};});}).catch(function(e){console.warn('idbSet',e);return false;});}
 function idbGet(k){return idbOpen().then(function(db){return new Promise(function(res){var t=db.transaction('kv','readonly');var r=t.objectStore('kv').get(k);r.onsuccess=function(){res(r.result||null);};r.onerror=function(){res(null);};});}).catch(function(){return null;});}
 function idbDel(k){return idbOpen().then(function(db){return new Promise(function(res){var t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=function(){res(true);};t.onerror=function(){res(false);};});}).catch(function(){return false;});}
-function persistFact(name){ try{ idbSet('fact',{ts:Date.now(),name:name||'',DATA_D:DATA_D,VENTAS_D:VENTAS_D,FIN_D:FIN_D,FIN_SUB:FIN_SUB,ORIG_D:ORIG_D,PROD_D:PROD_D,TOPFC_D:TOPFC_D,PROV_D:PROV_D,RUBROPROV_D:RUBROPROV_D,COBR_D:COBR_D,VEND_D:VEND_D,ORIGEN_D:ORIGEN_D,COSTFIN_D:COSTFIN_D,EVENTOS_D:EVENTOS_D}); }catch(e){console.warn(e);} }
+function persistFact(name){ try{ idbSet('fact',{ts:Date.now(),name:name||'',DATA_D:DATA_D,VENTAS_D:VENTAS_D,FIN_D:FIN_D,FIN_SUB:FIN_SUB,ORIG_D:ORIG_D,PROD_D:PROD_D,TOPFC_D:TOPFC_D,PROV_D:PROV_D,RUBROPROV_D:RUBROPROV_D,COBR_D:COBR_D,VEND_D:VEND_D,ORIGEN_D:ORIGEN_D,COSTFIN_D:COSTFIN_D,EVENTOS_D:EVENTOS_D,CFIN_D:CFIN_D}); }catch(e){console.warn(e);} }
 function persistSalidas(){ try{ idbSet('salidas',{ts:Date.now(),SALIDAS_B_D:SALIDAS_B_D,SALIDAS_AA_D:SALIDAS_AA_D,SALIDAS_EXTRA_D:SALIDAS_EXTRA_D}); }catch(e){console.warn(e);} }
 function persistIMPO(){ try{ idbSet('impo',{ts:Date.now(),IMPO_D:IMPO_D}); }catch(e){console.warn(e);} }
 function applyFactState(f){
-  DATA_D=f.DATA_D;VENTAS_D=f.VENTAS_D||{};FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;COSTFIN_D=f.COSTFIN_D||{web:[],local:[]};EVENTOS_D=f.EVENTOS_D||{Presentes:{},Hotelga:{}};FERIA_AR=f.FERIA_AR||{};
+  DATA_D=f.DATA_D;VENTAS_D=f.VENTAS_D||{};FIN_D=f.FIN_D;FIN_SUB=f.FIN_SUB;ORIG_D=f.ORIG_D;PROD_D=f.PROD_D;TOPFC_D=f.TOPFC_D;PROV_D=f.PROV_D;RUBROPROV_D=f.RUBROPROV_D;COBR_D=f.COBR_D;VEND_D=f.VEND_D;ORIGEN_D=f.ORIGEN_D;COSTFIN_D=f.COSTFIN_D||{web:[],local:[]};EVENTOS_D=f.EVENTOS_D||{Presentes:{},Hotelga:{}};FERIA_AR=f.FERIA_AR||{};CFIN_D=f.CFIN_D||{};
   try{ var meses=Array.from(new Set(Object.keys(FIN_D).map(function(d){return d.slice(0,7);}))).sort(); buildMonthChips(meses); }catch(e){}
   sS=null;sE=null;picking=false;finMes='all';
   var ad=Object.keys(DATA_D).sort(); if(ad.length){cy=parseInt(ad[0].slice(0,4));cm=parseInt(ad[0].slice(5,7))-1;}
   try{buildCal();updDR();}catch(e){}
   try{ var rng=ad.length?(ad[0]+' \u2192 '+ad[ad.length-1]):''; var di=document.getElementById('dataInfo'); if(di) di.innerHTML='Tu \u00faltima actualizaci\u00f3n'+(f.name?(': <strong>'+f.name+'</strong>'):'')+' \u00b7 '+rng+' \u00b7 '+ad.length+' d\u00edas \u00b7 <a href="#" onclick="resetFactState();return false;" style="color:#1C7C8C">usar datos del archivo</a>'; var bd=document.getElementById('dataBadge'); if(bd){bd.className='ok-badge';bd.innerHTML='<i class="ti ti-device-floppy" style="font-size:10px"></i> Restaurado';} }catch(e){}
-  refreshAll();renderYTD();renderRPCompare();buildFactMonthChips();buildRPMonthChips();renderRP();renderCobr();renderVend();try{renderCostFin();}catch(e){}try{renderEventos();}catch(e){}
+  refreshAll();renderYTD();renderRPCompare();buildFactMonthChips();buildRPMonthChips();renderRP();renderCobr();renderVend();try{renderCostFin();}catch(e){}try{renderEvol();}catch(e){}try{renderEventos();}catch(e){}
 }
 function applySalidasState(s){ SALIDAS_B_D=s.SALIDAS_B_D;SALIDAS_AA_D=s.SALIDAS_AA_D;SALIDAS_EXTRA_D=s.SALIDAS_EXTRA_D; salidasSS=null;salidasSE=null;salidasPicking=false; var ad=getSalidasDKEYS(); if(ad.length){var f=ad[ad.length-1];salidasCy=parseInt(f.slice(0,4));salidasCm=parseInt(f.slice(5,7))-1;} buildSalidasCal();updSalidasDRI();renderSalidas(); }
 function applyIMPOState(im){ IMPO_D=im.IMPO_D; renderIMPO(); }
@@ -6878,7 +6937,7 @@ function rsemBuildPlano(){
   var pad=function(n){return n<10?'0'+n:''+n;};var d=new Date();var fecha=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   var snap={
-    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR')},
+    fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR'),CFIN_D:g('CFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
@@ -6966,7 +7025,7 @@ async function rsemUnpackCol(d){ if(d&&d.__gz){ return JSON.parse(await rsemGunz
 function rsemSnapObj(){
   var g=function(n){return (typeof window[n]!=='undefined')?window[n]:null;};
   return {
-    fact:{DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR')},
+    fact:{DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR'),CFIN_D:g('CFIN_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
