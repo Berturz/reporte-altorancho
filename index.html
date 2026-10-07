@@ -5642,20 +5642,22 @@ function stkBuildV1(estado, mes){
       +'<td>'+stkNum(sN.cant||0)+'</td><td>'+stkUSD(sN.val||0)+'</td>'
       +'<td style="color:'+(d<-0.5?'#b4322a':(d>0.5?'#1f7a44':'var(--txt2)'))+'">'+(d<-0.5?'−':(d>0.5?'+':''))+stkUSD(Math.abs(d))+'</td>'
       +'<td>'+stkNum(vaN.cant||0)+'</td><td>'+stkNum(vbN.cant||0)+'</td><td>'+stkUSD(vaN.val||0)+'</td><td>'+stkUSD(vbN.val||0)+'</td>'; };
+  var TH=function(bg,txt){ return '<th style="background:'+bg+';color:#fff;text-align:right">'+txt+'</th>'; };
+  var cPrev='#8591b8', cAct='#3f5f8f', cDelta='#8f447a', cVt='#2f7d74', cFC='#b07a2a';
   var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead>'
     +'<tr><th rowspan="2">Origen / Rubro / Estilo / Modelo</th>'
-    +'<th colspan="5" style="background:#4B5CC4;text-align:center">Stock valorizado al costo</th>'
-    +'<th colspan="4" style="background:#33323A;text-align:center">Ventas valorizado al costo</th></tr>'
+    +'<th colspan="5" style="background:'+cAct+';color:#fff;text-align:center;font-size:11px;letter-spacing:.3px">STOCK valorizado al costo (USD)</th>'
+    +'<th colspan="4" style="background:'+cVt+';color:#fff;text-align:center;font-size:11px;letter-spacing:.3px">VENTAS valorizado al costo (USD)</th></tr>'
     +'<tr>'
-    +'<th style="background:#4B5CC4">St.cant '+prevLbl+'</th>'
-    +'<th style="background:#8f5aa8">Val. '+prevLbl+'</th>'
-    +'<th style="background:#4B5CC4">St.cant '+actLbl+'</th>'
-    +'<th style="background:#4B5CC4">Val. '+actLbl+'</th>'
-    +'<th style="background:#7A3E8F">Δ baja</th>'
-    +'<th style="background:#33323A">Vt.u '+lblA+'</th>'
-    +'<th style="background:#33323A">Vt.u '+lblB+'</th>'
-    +'<th style="background:#BA7517">FC '+lblA+'</th>'
-    +'<th style="background:#BA7517">FC '+lblB+'</th>'
+    +TH(cPrev,'St.cant '+prevLbl)
+    +TH(cPrev,'Val. '+prevLbl)
+    +TH(cAct,'St.cant '+actLbl)
+    +TH(cAct,'Val. '+actLbl)
+    +TH(cDelta,'Δ baja')
+    +TH(cVt,'Vt.u '+lblA)
+    +TH(cVt,'Vt.u '+lblB)
+    +TH(cFC,'FC '+lblA)
+    +TH(cFC,'FC '+lblB)
     +'</tr></thead><tbody>';
   var oris=stkOrderKeys(uk([s.tree,sPrev.tree,vA.tree,vB.tree]), STOCK_D.origenes||[]);
   oris.forEach(function(ori,oi){
