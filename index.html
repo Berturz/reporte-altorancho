@@ -2708,7 +2708,7 @@ async function handleFeriaFile(file){
     if(!wb.SheetNames.includes('Feria')) throw new Error('No encontré la hoja "Feria". Hojas: '+wb.SheetNames.join(', '));
     var rows=XLSX.utils.sheet_to_json(wb.Sheets['Feria'],{header:1,raw:true,defval:null});
     var cats={}, na={qty:0,tv:0}, artv={qty:0,tv:0}, otros={qty:0,tv:0,fac:0,cn:0};
-    var totQ=0, totTV=0, mgFac=0, mgCn=0, nF=0, yearCount={}, mesCount={};
+    var totQ=0, totTV=0, mgFac=0, mgCn=0, nF=0, yearCount={}, mesCount={}, byDayMap={};
     for(var r=0;r<rows.length;r++){
       var row=rows[r]; if(!row) continue;
       if(row[cols.tv]==null || row[cols.tv]==='') continue;
@@ -2724,7 +2724,7 @@ async function handleFeriaFile(file){
       var cmv=n(row[cols.cmv]);
       var origen=(cols.origen>=0&&row[cols.origen]!=null)?String(row[cols.origen]).trim():'';
       var prov=(cols.prov>=0&&row[cols.prov]!=null)?String(row[cols.prov]).trim():'';
-      if(ds){ var yy=ds.slice(0,4); yearCount[yy]=(yearCount[yy]||0)+1; mesCount[yy+'-'+ds.slice(5,7)]=(mesCount[yy+'-'+ds.slice(5,7)]||0)+1; }
+      if(ds){ var yy=ds.slice(0,4); yearCount[yy]=(yearCount[yy]||0)+1; mesCount[yy+'-'+ds.slice(5,7)]=(mesCount[yy+'-'+ds.slice(5,7)]||0)+1; byDayMap[ds]=(byDayMap[ds]||0)+tv; }
       totQ+=qty; totTV+=tv; nF++;
       var hasCost=cmv>0;
       if(sku==='ARTVARIOS'){ artv.qty+=qty; artv.tv+=tv; continue; }
@@ -2738,7 +2738,8 @@ async function handleFeriaFile(file){
     var year='', best=0; for(var y in yearCount){ if(yearCount[y]>best){ best=yearCount[y]; year=y; } }
     if(!year) throw new Error('No pude detectar el año (columna Fecha vacía).');
     var mesDom='', bmm=0; for(var mk in mesCount){ if(mk.slice(0,4)===year && mesCount[mk]>bmm){ bmm=mesCount[mk]; mesDom=mk.slice(5,7); } }
-    FERIA_AR[year]={ year:year, mes:mesDom, cats:cats, na:na, artv:artv, otros:otros, tot:{qty:totQ,tv:totTV}, mgFac:mgFac, mgCn:mgCn, nF:nF, ts:Date.now() };
+    var byDay=Object.keys(byDayMap).sort().map(function(dd){ return {d:dd, tv:byDayMap[dd]}; });
+    FERIA_AR[year]={ year:year, mes:mesDom, cats:cats, na:na, artv:artv, otros:otros, tot:{qty:totQ,tv:totTV}, mgFac:mgFac, mgCn:mgCn, byDay:byDay, nF:nF, ts:Date.now() };
     evSel='FeriaAR';
     try{ renderEventos(); }catch(e){ console.error(e); }
     window._feriaDirty=true;
@@ -2761,13 +2762,30 @@ function renderFeriaARBody(){
   var lbl26='Feria '+(F26?(F26.year):'2026')+(F26&&F26.mes?' ('+_mesAbbr(F26.mes)+')':'');
   // ── Cuadro 1 ──
   var c1='<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-tent"></i>Feria AR · resumen <span class="sec-sub">· Total s/IVA · margen (coef.) · ajuste IPC</span></div>'
-   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:680px"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:470px"><table style="width:100%;border-collapse:collapse;font-size:13px">'
    +'<thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:7px 12px"></th><th style="text-align:right;padding:7px 12px">Total s/IVA</th><th style="text-align:right;padding:7px 12px">Margen <span style="font-weight:400;font-size:10px">coef.</span></th><th style="text-align:right;padding:7px 12px">Ajustado IPC</th></tr></thead><tbody>'
    +'<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:7px 12px;font-weight:700">'+lbl25+'</td><td style="text-align:right;padding:7px 12px;font-weight:700;color:#565b64">'+fmt(tv25)+'</td><td style="text-align:right;padding:7px 12px;font-weight:700;color:#1f7a44">'+cf(coef(F25))+'</td><td style="text-align:right;padding:7px 12px;color:#8a5a2b;font-weight:700">'+fmt(aj25)+'</td></tr>'
    +'<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:7px 12px;font-weight:700">'+lbl26+'</td><td style="text-align:right;padding:7px 12px;font-weight:800;color:#b0468f">'+fmt(tv26)+'</td><td style="text-align:right;padding:7px 12px;font-weight:800;color:#1f7a44">'+cf(coef(F26))+'</td><td style="text-align:right;padding:7px 12px;color:var(--txt2)">—</td></tr>'
    +'<tr style="border-top:2px solid var(--brd2);background:var(--bg2)"><td style="text-align:left;padding:7px 12px;font-weight:700">Crecimiento real <span style="font-weight:400;color:var(--txt2);font-size:11px">· 2026 vs 2025 aj.IPC</span></td><td style="text-align:right;padding:7px 12px;font-weight:800;color:'+(crec==null?'var(--txt2)':(crec<0?'#a32d2d':'#1a7a3a'))+'">'+(crec==null?'—':(crec>=0?'+':'')+crec.toFixed(1)+'%')+'</td><td colspan="2" style="text-align:right;padding:7px 12px;color:var(--txt2);font-size:11px">IPC interanual '+(F25?_mesNom(F25.mes):'nov')+(ipcEstim(F25?F25.mes:'11')?' (estim.)':'')+'</td></tr>'
    +'</tbody></table></div>'
-   +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:680px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coeficiente neto (precio/costo) ponderado por facturación, igual que el resto del reporte. Ferias de liquidación → coef. bajo.</div>';
+   +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:470px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coeficiente neto (precio/costo) ponderado por facturación, igual que el resto del reporte. Ferias de liquidación → coef. bajo.</div>';
+  // ── Cuadro ventas por día (al lado del resumen) ──
+  var bd25=(F25&&F25.byDay)||[], bd26=(F26&&F26.byDay)||[];
+  var _ddmm=function(iso){ var p=String(iso).split('-'); return p.length===3?(p[2]+'/'+p[1]):iso; };
+  var _sumD=function(arr){ var s=0; arr.forEach(function(x){ s+=x.tv||0; }); return s; };
+  var dayTable='';
+  if(bd25.length||bd26.length){
+    var _nd=Math.max(bd25.length,bd26.length), _rd='';
+    for(var _i=0;_i<_nd;_i++){ var _a=bd25[_i], _b=bd26[_i];
+      _rd+='<tr style="border-top:.5px solid var(--brd)"><td style="padding:5px 9px;font-weight:700;color:var(--txt2)">Día '+(_i+1)+'</td>'
+        +'<td style="padding:5px 9px;text-align:right">'+(_a?('<span style="font-weight:700;color:#565b64">'+fmt(_a.tv)+'</span> <span style="font-size:9px;color:var(--txt2)">'+_ddmm(_a.d)+'</span>'):'—')+'</td>'
+        +'<td style="padding:5px 9px;text-align:right">'+(_b?('<span style="font-weight:800;color:#b0468f">'+fmt(_b.tv)+'</span> <span style="font-size:9px;color:var(--txt2)">'+_ddmm(_b.d)+'</span>'):'—')+'</td></tr>';
+    }
+    dayTable='<div style="flex:0 0 auto"><div class="sec-hdr" style="margin-top:4px"><i class="ti ti-calendar-week"></i>Ventas por día <span class="sec-sub">· por día de feria · s/IVA</span></div>'
+      +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><table style="border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 9px">Día</th><th style="text-align:right;padding:6px 9px">2025</th><th style="text-align:right;padding:6px 9px">2026</th></tr></thead><tbody>'+_rd
+      +'<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="padding:6px 9px">Total</td><td style="text-align:right;padding:6px 9px;color:#565b64">'+fmt(_sumD(bd25))+'</td><td style="text-align:right;padding:6px 9px;color:#b0468f">'+fmt(_sumD(bd26))+'</td></tr>'
+      +'</tbody></table></div></div>';
+  }
   // ── Cuadro 2 ──
   var getc=function(F,cat){ if(!F)return null; if(cat==='__NA')return F.na; if(cat==='__ARTV')return F.artv; if(cat==='__OTROS')return F.otros; return F.cats&&F.cats[cat]; };
   var hasCat=function(cat){ var a=getc(F25,cat),b=getc(F26,cat); return (a&&(a.tv||a.qty))||(b&&(b.tv||b.qty)); };
@@ -2785,7 +2803,7 @@ function renderFeriaARBody(){
    +'<thead><tr style="color:#274d80"><th rowspan="2" style="text-align:left;padding:6px 10px;vertical-align:bottom">Rubro / Proveedor</th><th colspan="2" style="text-align:center;padding:5px 10px;background:#e2efe9;color:#1f6b52">Cantidad</th><th colspan="2" style="text-align:center;padding:5px 10px;background:#f5e9da;color:#8a5a2b">Facturación s/IVA</th></tr>'
    +'<tr style="color:#274d80"><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2025</th><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2026</th></tr></thead>'
    +'<tbody>'+rowsHtml+specialHtml+totRow+'</tbody></table></div>';
-  return c1+c2;
+  return '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">'+'<div style="flex:0 1 auto">'+c1+'</div>'+dayTable+'</div>'+c2;
 }
 function _feriaRow(label, sub, a, b, fmt, special){
   var q25=a?a.qty:0, q26=b?b.qty:0, t25=a?a.tv:0, t26=b?b.tv:0;
