@@ -5638,13 +5638,18 @@ function stkBuildV1(estado, mes){
   var lblA=mA?stockMesLabel(mA):'—', lblB=mB?stockMesLabel(mB):'—';
   var prevLbl=prevKey?stkPerLabel(prevKey):'cierre ant.', actLbl=stockPeriodo?stkPerLabel(stockPeriodo):'actual';
   var cells=function(sN,spN,vaN,vbN){ sN=sN||Z;spN=spN||Z;vaN=vaN||Z;vbN=vbN||Z; var d=(sN.val||0)-(spN.val||0);
-    return '<td>'+stkNum(sN.cant||0)+'</td><td>'+stkUSD(spN.val||0)+'</td><td>'+stkUSD(sN.val||0)+'</td>'
+    return '<td>'+stkNum(spN.cant||0)+'</td><td>'+stkUSD(spN.val||0)+'</td>'
+      +'<td>'+stkNum(sN.cant||0)+'</td><td>'+stkUSD(sN.val||0)+'</td>'
       +'<td style="color:'+(d<-0.5?'#b4322a':(d>0.5?'#1f7a44':'var(--txt2)'))+'">'+(d<-0.5?'−':(d>0.5?'+':''))+stkUSD(Math.abs(d))+'</td>'
       +'<td>'+stkNum(vaN.cant||0)+'</td><td>'+stkNum(vbN.cant||0)+'</td><td>'+stkUSD(vaN.val||0)+'</td><td>'+stkUSD(vbN.val||0)+'</td>'; };
-  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr>'
-    +'<th>Origen / Rubro / Estilo / Modelo</th>'
-    +'<th style="background:#4B5CC4">St.cant</th>'
+  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead>'
+    +'<tr><th rowspan="2">Origen / Rubro / Estilo / Modelo</th>'
+    +'<th colspan="5" style="background:#4B5CC4;text-align:center">Stock valorizado al costo</th>'
+    +'<th colspan="4" style="background:#33323A;text-align:center">Ventas valorizado al costo</th></tr>'
+    +'<tr>'
+    +'<th style="background:#4B5CC4">St.cant '+prevLbl+'</th>'
     +'<th style="background:#8f5aa8">Val. '+prevLbl+'</th>'
+    +'<th style="background:#4B5CC4">St.cant '+actLbl+'</th>'
     +'<th style="background:#4B5CC4">Val. '+actLbl+'</th>'
     +'<th style="background:#7A3E8F">Δ baja</th>'
     +'<th style="background:#33323A">Vt.u '+lblA+'</th>'
