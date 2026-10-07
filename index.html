@@ -7103,6 +7103,29 @@ async function rsemCargarClientes(){
     if(d.CLIENTE_2026)CLIENTE_2026=d.CLIENTE_2026; if(d.CLIENTE_2025)CLIENTE_2025=d.CLIENTE_2025; if(d.CLIENTE_TIPO)CLIENTE_TIPO=d.CLIENTE_TIPO;
   }catch(e){ console.warn('cargar clientes',e); }
 }
+// Historial completo de cierres de stock en FILA SEPARADA ('stock_hist') — así el snapshot principal
+// sigue liviano (solo el último cierre) pero se conservan los cierres anteriores. Tope: últimos 12.
+async function rsemGuardarStockHist(){
+  if(!RSEM_TOKEN && !(await rsemRefresh())) return {ok:false,msg:'sin sesión'};
+  var H0=(typeof STOCK_HIST!=='undefined'&&STOCK_HIST)?STOCK_HIST:{};
+  var ks=Object.keys(H0).sort(); var H={}; ks.slice(-12).forEach(function(k){ H[k]=H0[k]; });
+  if(!ks.length) return {ok:true,mb:'0.00',vacio:true};
+  var data={STOCK_HIST:H, stockPeriodo:(typeof stockPeriodo!=='undefined'?stockPeriodo:null)};
+  var col=await rsemPackCol(data);
+  var body=JSON.stringify([{id:'stock_hist',data:col}]);
+  var doPost=function(){ return fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data',{method:'POST',headers:Object.assign(rsemHeaders(true),{'Prefer':'resolution=merge-duplicates,return=minimal'}),body:body}); };
+  try{ var r=await doPost(); if((r.status===401||r.status===403)&&await rsemRefresh()) r=await doPost(); if(!r.ok){var t=await r.text(); return {ok:false,msg:r.status+' '+(t||'').slice(0,160)};} return {ok:true,mb:(body.length/1048576).toFixed(2),n:Object.keys(H).length}; }catch(e){ return {ok:false,msg:(e&&e.message)||(''+e)}; }
+}
+async function rsemCargarStockHist(){
+  try{ var r=await fetch(RSEM_SUPA_URL+'/rest/v1/reporte_data?id=eq.stock_hist&select=data',{headers:rsemHeaders(false)}); if(!r.ok) return; var j=await r.json(); var d=(j&&j.length)?j[0].data:null; if(!d) return; d=await rsemUnpackCol(d);
+    if(d.STOCK_HIST && Object.keys(d.STOCK_HIST).length){
+      // fusiono el historial con lo que haya traído el snapshot principal (último cierre)
+      for(var k in d.STOCK_HIST){ if(!STOCK_HIST[k]) STOCK_HIST[k]=d.STOCK_HIST[k]; }
+      var keep=(stockPeriodo&&STOCK_HIST[stockPeriodo])?stockPeriodo:((d.stockPeriodo&&STOCK_HIST[d.stockPeriodo])?d.stockPeriodo:Object.keys(STOCK_HIST).sort().pop());
+      stockPeriodo=keep; if(STOCK_HIST[stockPeriodo]) STOCK_D=STOCK_HIST[stockPeriodo];
+    }
+  }catch(e){ console.warn('cargar stock hist',e); }
+}
 async function guardarEnSupabase(btn){
   if(!RSEM_TOKEN && !(await rsemRefresh())){alert('Iniciá sesión primero.');return;}
   var old=btn?btn.innerHTML:null; if(btn){btn.disabled=true;btn.innerHTML='Guardando…';}
@@ -7119,7 +7142,8 @@ async function guardarEnSupabase(btn){
     if((r.status===401||r.status===403) && await rsemRefresh()){ r=await doSave(); } // token vencido → renovar y reintentar
     if(!r.ok){var tx=await r.text();throw new Error(r.status+' '+tx);}
     var _cr=await rsemGuardarClientes(); // clientes en fila aparte (no afecta el guardado principal)
-    alert('✔ Guardado en Supabase. El reporte publicado ya muestra estos datos.'+(_cr.ok?('\n(Análisis de clientes: '+_cr.mb+' MB ✓)'):('\n⚠ Análisis de clientes no se guardó: '+_cr.msg)));
+    var _sh=await rsemGuardarStockHist(); // historial de stock en fila aparte
+    alert('✔ Guardado en Supabase. El reporte publicado ya muestra estos datos.'+(_cr.ok?('\n(Análisis de clientes: '+_cr.mb+' MB ✓)'):('\n⚠ Análisis de clientes no se guardó: '+_cr.msg))+(_sh.ok?(_sh.vacio?'':('\n(Historial de stock: '+_sh.n+' cierres · '+_sh.mb+' MB ✓)')):('\n⚠ Historial de stock no se guardó: '+_sh.msg)));
   }catch(e){ alert('Error al guardar: '+(e&&e.message?e.message:e)); }
   finally{ if(btn){btn.disabled=false;btn.innerHTML=old;} }
 }
@@ -7129,6 +7153,7 @@ async function rsemEnter(){
   catch(e){ if(e&&e.auth){ if(await rsemRefresh()){ try{ data=await rsemLoadData(); }catch(e2){ if(e2&&e2.auth) return false; } } else return false; } else console.warn('rsemEnter load',e); }
   rsemApplySnap(data);
   try{ await rsemCargarClientes(); if(typeof renderClientes==='function') renderClientes(); }catch(e){}
+  try{ await rsemCargarStockHist(); if(typeof renderStock==='function') renderStock(); }catch(e){}
   if(typeof showTab==='function') showTab('comp');
   var ov=document.getElementById('rsemLogin'); if(ov) ov.style.display='none'; document.documentElement.style.overflow='';
   return true;
