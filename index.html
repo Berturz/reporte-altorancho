@@ -5625,23 +5625,50 @@ function stkTreeMargin(estado, pricing, dolar){
   return {tree:tree,tot:tot};
 }
 function stkBuildV1(estado, mes){
+  var Z={cant:0,val:0,rubros:{},estilos:{},modelos:{}};
+  var uk=function(objs){ var o={}; objs.forEach(function(x){ if(x) for(var k in x) o[k]=1; }); return Object.keys(o); };
+  // cierre anterior (valorizado a su propio costo/dólar) + 2 meses de ventas más recientes
+  var pers=Object.keys(STOCK_HIST).sort(); var idx=pers.indexOf(stockPeriodo); var prevKey=idx>0?pers[idx-1]:null;
   var s=stkTreeCosto(STOCK_D.stockRows||[], false, null, estado);
-  var v=stkTreeCosto(STOCK_D.ventasRows||[], true, mes, estado);
-  var oris=stkOrderKeys(stkUnion(s.tree,v.tree), STOCK_D.origenes||[]);
-  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr><th>Origen / Rubro / Estilo / Modelo</th><th style="background:#4B5CC4">St.cant</th><th style="background:#4B5CC4">St.USD</th><th style="background:#33323A">Vt.cant</th><th style="background:#33323A">Vt.USD</th></tr></thead><tbody>';
+  var sPrev={tree:{},tot:{cant:0,val:0}};
+  if(prevKey && STOCK_HIST[prevKey]){ var _cur=STOCK_D; STOCK_D=STOCK_HIST[prevKey]; sPrev=stkTreeCosto((STOCK_D.stockRows)||[], false, null, estado); STOCK_D=_cur; }
+  var ms=STOCK_D.ventasMeses||[]; var mB=ms.length?ms[ms.length-1]:null; var mA=ms.length>1?ms[ms.length-2]:null;
+  var vA=mA?stkTreeCosto(STOCK_D.ventasRows||[], true, mA, estado):{tree:{},tot:{cant:0,val:0}};
+  var vB=mB?stkTreeCosto(STOCK_D.ventasRows||[], true, mB, estado):{tree:{},tot:{cant:0,val:0}};
+  var lblA=mA?stockMesLabel(mA):'—', lblB=mB?stockMesLabel(mB):'—';
+  var prevLbl=prevKey?stkPerLabel(prevKey):'cierre ant.', actLbl=stockPeriodo?stkPerLabel(stockPeriodo):'actual';
+  var cells=function(sN,spN,vaN,vbN){ sN=sN||Z;spN=spN||Z;vaN=vaN||Z;vbN=vbN||Z; var d=(sN.val||0)-(spN.val||0);
+    return '<td>'+stkNum(sN.cant||0)+'</td><td>'+stkUSD(spN.val||0)+'</td><td>'+stkUSD(sN.val||0)+'</td>'
+      +'<td style="color:'+(d<-0.5?'#b4322a':(d>0.5?'#1f7a44':'var(--txt2)'))+'">'+(d<-0.5?'−':(d>0.5?'+':''))+stkUSD(Math.abs(d))+'</td>'
+      +'<td>'+stkNum(vaN.cant||0)+'</td><td>'+stkNum(vbN.cant||0)+'</td><td>'+stkUSD(vaN.val||0)+'</td><td>'+stkUSD(vbN.val||0)+'</td>'; };
+  var h='<div class="prov-table-wrap" style="overflow-x:auto"><table class="k-tbl"><thead><tr>'
+    +'<th>Origen / Rubro / Estilo / Modelo</th>'
+    +'<th style="background:#4B5CC4">St.cant</th>'
+    +'<th style="background:#8f5aa8">Val. '+prevLbl+'</th>'
+    +'<th style="background:#4B5CC4">Val. '+actLbl+'</th>'
+    +'<th style="background:#7A3E8F">Δ baja</th>'
+    +'<th style="background:#33323A">Vt.u '+lblA+'</th>'
+    +'<th style="background:#33323A">Vt.u '+lblB+'</th>'
+    +'<th style="background:#BA7517">FC '+lblA+'</th>'
+    +'<th style="background:#BA7517">FC '+lblB+'</th>'
+    +'</tr></thead><tbody>';
+  var oris=stkOrderKeys(uk([s.tree,sPrev.tree,vA.tree,vB.tree]), STOCK_D.origenes||[]);
   oris.forEach(function(ori,oi){
-    var so=s.tree[ori]||{cant:0,val:0,rubros:{}}, vo=v.tree[ori]||{cant:0,val:0,rubros:{}}; var oc=STOCK_ORI_COL[ori]||'#7a7a85';
-    h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td><td>'+stkNum(so.cant)+'</td><td>'+stkUSD(so.val)+'</td><td>'+stkNum(vo.cant)+'</td><td>'+stkUSD(vo.val)+'</td></tr>';
-    stkRubOrder(so.rubros, vo.rubros).forEach(function(rub,ri){ var sr=so.rubros[rub]||{cant:0,val:0,estilos:{}}, vr=vo.rubros[rub]||{cant:0,val:0,estilos:{}}; var rid='v1_'+oi+'_'+ri;
-      h+='<tr class="k-rub" data-r="'+rid+'"><td><span class="cv">▶</span> '+rub+'</td><td>'+stkNum(sr.cant)+'</td><td>'+stkUSD(sr.val)+'</td><td>'+stkNum(vr.cant)+'</td><td>'+stkUSD(vr.val)+'</td></tr>';
-      stkUnion(sr.estilos, vr.estilos).sort().forEach(function(es,ei){ var se=sr.estilos[es]||{cant:0,val:0,modelos:{}}, ve=vr.estilos[es]||{cant:0,val:0,modelos:{}}; var eid=rid+'_'+ei;
-        h+='<tr class="k-est-row c-'+rid+'" data-e="'+eid+'" style="display:none"><td><span class="cv">▶</span> '+es+'</td><td>'+stkNum(se.cant)+'</td><td>'+stkUSD(se.val)+'</td><td>'+stkNum(ve.cant)+'</td><td>'+stkUSD(ve.val)+'</td></tr>';
-        stkUnion(se.modelos, ve.modelos).sort().forEach(function(mo){ var sm=se.modelos[mo]||{cant:0,val:0}, vm=ve.modelos[mo]||{cant:0,val:0};
-          h+='<tr class="k-mod-row cm-'+rid+' m-'+eid+'" style="display:none"><td>'+mo+'</td><td>'+stkNum(sm.cant)+'</td><td>'+stkUSD(sm.val)+'</td><td>'+stkNum(vm.cant)+'</td><td>'+stkUSD(vm.val)+'</td></tr>'; });
+    var so=s.tree[ori]||Z, spo=sPrev.tree[ori]||Z, vao=vA.tree[ori]||Z, vbo=vB.tree[ori]||Z; var oc=STOCK_ORI_COL[ori]||'#7a7a85';
+    h+='<tr class="k-ori" style="background:'+chTint(oc,0.86)+'"><td style="border-left:4px solid '+oc+';color:'+oc+'">'+ori+'</td>'+cells(so,spo,vao,vbo)+'</tr>';
+    uk([so.rubros,spo.rubros,vao.rubros,vbo.rubros]).sort().forEach(function(rub,ri){
+      var sr=(so.rubros||{})[rub]||Z, spr=(spo.rubros||{})[rub]||Z, vra=(vao.rubros||{})[rub]||Z, vrb=(vbo.rubros||{})[rub]||Z; var rid='v1_'+oi+'_'+ri;
+      h+='<tr class="k-rub" data-r="'+rid+'"><td><span class="cv">▶</span> '+rub+'</td>'+cells(sr,spr,vra,vrb)+'</tr>';
+      uk([sr.estilos,spr.estilos,vra.estilos,vrb.estilos]).sort().forEach(function(es,ei){
+        var se=(sr.estilos||{})[es]||Z, spe=(spr.estilos||{})[es]||Z, vea=(vra.estilos||{})[es]||Z, veb=(vrb.estilos||{})[es]||Z; var eid=rid+'_'+ei;
+        h+='<tr class="k-est-row c-'+rid+'" data-e="'+eid+'" style="display:none"><td><span class="cv">▶</span> '+es+'</td>'+cells(se,spe,vea,veb)+'</tr>';
+        uk([se.modelos,spe.modelos,vea.modelos,veb.modelos]).sort().forEach(function(mo){
+          var sm=(se.modelos||{})[mo]||Z, spm=(spe.modelos||{})[mo]||Z, vma=(vea.modelos||{})[mo]||Z, vmb=(veb.modelos||{})[mo]||Z;
+          h+='<tr class="k-mod-row cm-'+rid+' m-'+eid+'" style="display:none"><td>'+mo+'</td>'+cells(sm,spm,vma,vmb)+'</tr>'; });
       });
     });
   });
-  h+='<tr class="k-tot"><td>Total '+stkEstLbl(estado)+'</td><td>'+stkNum(s.tot.cant)+'</td><td>'+stkUSD(s.tot.val)+'</td><td>'+stkNum(v.tot.cant)+'</td><td>'+stkUSD(v.tot.val)+'</td></tr>';
+  h+='<tr class="k-tot"><td>Total '+stkEstLbl(estado)+'</td>'+cells(s.tot,sPrev.tot,vA.tot,vB.tot)+'</tr>';
   return h+'</tbody></table></div>';
 }
 function stkBuildV2(estado, pricing, dolar){
