@@ -6113,7 +6113,7 @@ function impoConcPaid(r,key){ return impoFill(r,key)==='g'; }
 function impoFobPend(r){ return !impoConcPaid(r,'fob'); }
 function impoPendList(r){ var out=[]; if(!impoConcPaid(r,'fob')) out.push('FOB'); IMPO_PEND_OTROS.forEach(function(c){ if(!impoConcPaid(r,c[0])) out.push(c[1]); }); return out; }
 function impoIsPend(r){ return !impoConcPaid(r,'fob') || IMPO_PEND_OTROS.some(function(c){return !impoConcPaid(r,c[0]);}); }
-function impoArrKey(r){ var a=r.arribo; if(a instanceof Date) return a.getTime(); if(typeof a==='number') return a; if(typeof a==='string'){ var m=a.match(/(\d{1,2})\D(\d{1,2})\D(\d{2,4})/); if(m){var y=m[3].length===2?'20'+m[3]:m[3]; return new Date(+y,+m[2]-1,+m[1]).getTime();} } return Infinity; }
+function impoArrKey(r){ var a=r.arribo; if(a instanceof Date) return a.getTime(); if(typeof a==='number') return a; if(typeof a==='string'){ var iso=a.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(iso) return new Date(+iso[1],+iso[2]-1,+iso[3]).getTime(); var m=a.match(/(\d{1,2})\D(\d{1,2})\D(\d{2,4})/); if(m){var y=m[3].length===2?'20'+m[3]:m[3]; return new Date(+y,+m[2]-1,+m[1]).getTime();} } return Infinity; }
 function impoTblGeneral(){
   var USDh='background:#5a9ca8;color:#fff', ARSh='background:#c8ab6f;color:#2c2c2a';
   var tot={unid:0,fob:0,trib:0,fleteint:0,desp:0,nac:0,fleten:0};
