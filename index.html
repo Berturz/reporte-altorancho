@@ -6149,7 +6149,7 @@ function impoTblNoLlego(){
   return '<table class="imt"><thead><tr><th style="text-align:left">PROVEEDOR</th><th>EMB.</th><th style="text-align:left">TIPO PRODUCTO</th><th style="text-align:right">UNID.</th><th style="text-align:right">FOB (USD)</th><th>ETD</th><th>Arribo</th><th style="text-align:left">Estado</th></tr></thead><tbody>'+body+totrow+'</tbody></table>';
 }
 function impoTblPend(){
-  var rows=IMPO_D.filter(impoIsPend);
+  var rows=IMPO_D.filter(impoIsPend).sort(function(a,b){ return impoArrKey(a)-impoArrKey(b); });
   if(!rows.length) return '<div class="prov-empty" style="padding:1rem">Sin pendientes de pago.</div>';
   // Verde = pagado. Amarillo o violeta (estimado/no confirmado) o sin color = pendiente.
   var pill=function(v,f,cur){ if(!(v>0)) return '';
