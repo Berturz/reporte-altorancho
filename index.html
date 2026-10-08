@@ -2449,6 +2449,9 @@ function ipcFactor(mm){var a=IPC_IDX["2025-"+mm],b=IPC_IDX["2026-"+mm]; if(a&&b)
 function ipcEstim(mm){ return !!IPC_ESTIM["2026-"+mm] || !IPC_IDX["2026-"+mm]; }
 var RP2025_CANAL = {};
 var RP2025M = {};
+// Evolución 2025 por canal/mes para la pestaña Evolución FC/Mg/C.fin: { mm: { canalKey: {tv,fc,cmv,cfBase,cfCost} } }
+// tv/fc/cmv solo RUBROS_VALID (como DATA_D); cfBase/cfCost todas las filas (como CFIN_D). Mg=fc/cmv, Cfin%=cfCost/cfBase.
+var EVOL_2025 = {};
 let cmpSel='YTD';
 const RP_PROVDESC={'ILUMINACION IMPORTADA':'Ancient + Bright + Advanced + Syl Home','ILUMINACION NACIONAL':'Mix + Hierros','ILUMINACION INALAMBRICA':'Lux Lighting + Syl Home','SILLAS IMPORTADAS':'Wendy + Urun + Zhaolu Thomas + Putai','REPOSERAS IMPORTADAS':'Topmax','MUEBLES NACIONALES':'Carpin + Mix + Hierros (Muebles y Sillas)','PROVEEDOR NACIONAL':'(Todos)','DECO/NAVIDAD/BAZAR IMPORTADO':'(Todos)','DECO/BAZAR FABRICA':'(Todos)'};
 const RP_ORDER=['ILUMINACION IMPORTADA','ILUMINACION NACIONAL','ILUMINACION INALAMBRICA','SILLAS IMPORTADAS','REPOSERAS IMPORTADAS','MUEBLES NACIONALES','PROVEEDOR NACIONAL','DECO/NAVIDAD/BAZAR IMPORTADO','DECO/BAZAR FABRICA'];
@@ -2621,7 +2624,7 @@ async function handleFact2025File(file){
       throw new Error('Las columnas no coinciden con el formato esperado. Encontrado: col'+COL.CANAL+'="'+hdr[COL.CANAL]+'", col'+COL.RUBRO+'="'+hdr[COL.RUBRO]+'", col'+COL.TV+'="'+hdr[COL.TV]+'". Avisá para ajustar el mapeo.');
     }
     var CANAL_MAP2={Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
-    var acc={}, nFilas=0, cliAcc={};
+    var acc={}, nFilas=0, cliAcc={}, evol2025={};
     evReset(['2025']); // ferias 2025 se reconstruyen en cada carga del reporte 2025
     for(var ri=1;ri<rows.length;ri++){
       var row=rows[ri]; if(!row) continue;
@@ -2645,6 +2648,12 @@ async function handleFact2025File(file){
       }
       if(dia.slice(0,4)!=='2025') continue; // (RP2025_CANAL) todos los meses de 2025
       var canalKey2=CANAL_MAP2[canal]; if(!canalKey2) continue;
+      // ── EVOL_2025: fc/cmv (FC+Mg, solo RUBROS_VALID como DATA_D) + financiación (cfBase/cfCost, todas las filas como CFIN_D) ──
+      { var _mmE=dia.slice(5,7); if(!evol2025[_mmE]) evol2025[_mmE]={}; if(!evol2025[_mmE][canalKey2]) evol2025[_mmE][canalKey2]={tv:0,fc:0,cmv:0,cfBase:0,cfCost:0};
+        var _ev=evol2025[_mmE][canalKey2];
+        _ev.cfBase += n(row[COL.LISTA]);
+        _ev.cfCost += (canal==='Lett' ? (n(row[COL.CHQ])+n(row[COL.CDP_LT])) : (n(row[COL.MDPW])+n(row[COL.CDP_AR])));
+        if(RUBROS_VALID.has(rubro)){ _ev.tv += n(row[COL.TV]); _ev.fc += n(row[COL.FC]); _ev.cmv += n(row[COL.CMV]); } }
       var provNombre2=row[COL.PROV]?String(row[COL.PROV]).trim():'';
       var origVal2=row[COL.ORIG]?String(row[COL.ORIG]).trim():'';
       var cat=rpClasificar(rubro, provNombre2, origVal2, (row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''));
@@ -2662,6 +2671,7 @@ async function handleFact2025File(file){
     if(!nFilas) throw new Error('No se encontraron filas de 2025 en la hoja "FACTURACIÓN 2025".');
     if(typeof RP2025_CANAL==='undefined'||!RP2025_CANAL) window.RP2025_CANAL={};
     for(var _mmC in acc){ RP2025_CANAL[_mmC]=acc[_mmC]; }
+    EVOL_2025 = evol2025;
     // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
     var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb,comps:Object.keys(dc.comps)}; } }
     CLIENTE_2025=finalCli25;
@@ -2831,35 +2841,61 @@ function renderEvol(){
   }
   var MN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var fmt=function(v){return (v&&Math.abs(v)>0.5)?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
-  // meses 2026 con datos, excluyendo el mes calendario en curso (como el YTD)
-  var _now=new Date(), _curYM=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
-  var mset={}; for(var d in DATA_D){ if(d.slice(0,4)==='2026' && d.slice(0,7)!==_curYM) mset[d.slice(5,7)]=1; }
-  var meses=Object.keys(mset).sort();
-  if(!meses.length){ el.innerHTML='<div style="color:var(--txt2);padding:1rem;font-size:13px">Sin datos de 2026.</div>'; return; }
-  // fact/cmv por canal (DATA_D) y costo fin por canal (CFIN_D)
-  var agg={}, cfin={};
-  for(var d1 in DATA_D){ if(d1.slice(0,4)!=='2026') continue; var mm=d1.slice(5,7); var dw=DATA_D[d1];
-    for(var rub in dw){ var rw=dw[rub]; for(var cn in rw){ var o=rw[cn]; if(!agg[cn])agg[cn]={}; if(!agg[cn][mm])agg[cn][mm]={tv:0,cmv:0,fc:0}; agg[cn][mm].tv+=o.tv||0; agg[cn][mm].cmv+=o.cmv||0; agg[cn][mm].fc+=o.fc||0; } } }
-  var CF=(typeof CFIN_D!=='undefined'&&CFIN_D)?CFIN_D:{};
-  for(var d2 in CF){ if(d2.slice(0,4)!=='2026') continue; var mm2=d2.slice(5,7); var cw=CF[d2]; for(var k in cw){ var o2=cw[k]; if(o2==null||typeof o2!=='object') continue; if(!cfin[k])cfin[k]={}; if(!cfin[k][mm2])cfin[k][mm2]={base:0,cost:0}; cfin[k][mm2].base+=o2.base||0; cfin[k][mm2].cost+=o2.cost||0; } }
-  // canales: [label, claveDATA_D, claveCFIN, color]
-  var CH=[['Web','Web','web','#7B6BC8'],['Local San Isidro','LSI','lsi','#C86487'],['Local Belgrano','LBE','lbe','#3E9E6E'],['Local Alcorta','ALC','alc','#5486C6'],['Mayorista','Lett','lett','#D07C34']];
   var tintOf=function(hex,a){ var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return 'rgba('+r+','+g+','+b+','+a+')'; };
-  var cfinHasData=false; for(var _ck in cfin){ for(var _mk in cfin[_ck]){ if(cfin[_ck][_mk].base>0){ cfinHasData=true; break; } } if(cfinHasData) break; }
-  var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+MN[parseInt(mm,10)-1]+'</th>';}).join('')+'</tr>';
-  var rowsH=CH.map(function(ch){ var lbl=ch[0], dk=ch[1], ck=ch[2], col=ch[3];
-    var tint=tintOf(col,0.09), name='<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+'</td>';
-    var cellsFac=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(o?fmt(o.tv):'—')+'</td>'; }).join('');
-    var cellsMg=meses.map(function(mm){ var o=(agg[dk]||{})[mm]; var mg=(o&&o.cmv!==0)?(o.fc/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
-    var cellsCf=meses.map(function(mm){ var v=(cfin[ck]||{})[mm]; var pct=(v&&v.base>0)?(v.cost/v.base*100):null; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(pct!=null?pct.toFixed(2).replace('.',',')+'%':(cfinHasData?'—':'·'))+'</td>'; }).join('');
-    return '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+name+'<td style="padding:6px 10px;color:var(--txt2);font-weight:600">FC</td>'+cellsFac+'</tr>'
-      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:var(--txt2);font-weight:600">Mg.</td>'+cellsMg+'</tr>'
-      +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:'+col+';font-weight:700">Cfinanciero</td>'+cellsCf+'</tr>';
+  var _now=new Date(), _curYM=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
+  var CH=[['web','Web','#7B6BC8'],['lsi','Local San Isidro','#C86487'],['lbe','Local Belgrano','#3E9E6E'],['alc','Local Alcorta','#5486C6'],['lett','Mayorista','#D07C34']];
+  var DMAP={Web:'web',LSI:'lsi',LBE:'lbe',ALC:'alc',Lett:'lett',LND:'lnd'};
+  // ── Unificado 2026: mm → canalKey → {tv,fc,cmv,cfBase,cfCost} (DATA_D excl mes en curso + CFIN_D) ──
+  var u26={};
+  for(var d1 in DATA_D){ if(d1.slice(0,4)!=='2026'||d1.slice(0,7)===_curYM) continue; var mm=d1.slice(5,7); var dw=DATA_D[d1];
+    for(var rub in dw){ var rw=dw[rub]; for(var cn in rw){ var ck=DMAP[cn]; if(!ck)continue; var o=rw[cn]; if(!u26[mm])u26[mm]={}; if(!u26[mm][ck])u26[mm][ck]={tv:0,fc:0,cmv:0,cfBase:0,cfCost:0}; u26[mm][ck].tv+=o.tv||0; u26[mm][ck].cmv+=o.cmv||0; u26[mm][ck].fc+=o.fc||0; } } }
+  var CF=(typeof CFIN_D!=='undefined'&&CFIN_D)?CFIN_D:{};
+  for(var d2 in CF){ if(d2.slice(0,4)!=='2026'||d2.slice(0,7)===_curYM) continue; var mm2=d2.slice(5,7); var cw=CF[d2]; for(var k in cw){ var o2=cw[k]; if(!o2||typeof o2!=='object')continue; if(!u26[mm2])u26[mm2]={}; if(!u26[mm2][k])u26[mm2][k]={tv:0,fc:0,cmv:0,cfBase:0,cfCost:0}; u26[mm2][k].cfBase+=o2.base||0; u26[mm2][k].cfCost+=o2.cost||0; } }
+  var meses26=Object.keys(u26).sort();
+  if(!meses26.length){ el.innerHTML='<div style="color:var(--txt2);padding:1rem;font-size:13px">Sin datos de 2026.</div>'; return; }
+  var u25=(typeof EVOL_2025!=='undefined'&&EVOL_2025)?EVOL_2025:{};
+  var meses25=Object.keys(u25).sort(), has25=meses25.length>0;
+  var cfinHas=function(U){ for(var m in U){ for(var c in U[m]){ if(U[m][c].cfBase>0) return true; } } return false; };
+  var cf26Has=cfinHas(u26);
+  // ── builder de tabla por canal ──
+  function evolTable(U, meses){
+    var cfHas=cfinHas(U);
+    var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+MN[parseInt(mm,10)-1]+'</th>';}).join('')+'</tr>';
+    var body=CH.map(function(ch){ var ck=ch[0],lbl=ch[1],col=ch[2]; var tint=tintOf(col,0.09);
+      var name='<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+'</td>';
+      var cFC=meses.map(function(mm){ var o=(U[mm]||{})[ck]; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(o&&o.tv?fmt(o.tv):'—')+'</td>'; }).join('');
+      var cMg=meses.map(function(mm){ var o=(U[mm]||{})[ck]; var mg=(o&&o.cmv!==0)?(o.fc/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
+      var cCf=meses.map(function(mm){ var o=(U[mm]||{})[ck]; var pct=(o&&o.cfBase>0)?(o.cfCost/o.cfBase*100):null; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(pct!=null?pct.toFixed(2).replace('.',',')+'%':(cfHas?'—':'·'))+'</td>'; }).join('');
+      return '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+name+'<td style="padding:6px 10px;color:var(--txt2);font-weight:600">FC</td>'+cFC+'</tr>'
+        +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:var(--txt2);font-weight:600">Mg.</td>'+cMg+'</tr>'
+        +'<tr style="background:'+tint+'"><td style="padding:6px 10px;color:'+col+';font-weight:700">Cfinanciero</td>'+cCf+'</tr>';
+    }).join('');
+    return '<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;background:var(--bg)"><table style="border-collapse:collapse;font-size:12px;width:100%;min-width:'+(200+meses.length*72)+'px"><thead style="background:#eef2f6">'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+  }
+  // ── Comparativa 2025→2026 (YTD like-for-like: solo los meses de 2026; FC aj.IPC) ──
+  function aggY(U,ck){ var a={tv:0,fc:0,cmv:0,cfBase:0,cfCost:0,tvAj:0}; meses26.forEach(function(mm){ var o=(U[mm]||{})[ck]; if(!o)return; a.tv+=o.tv||0;a.fc+=o.fc||0;a.cmv+=o.cmv||0;a.cfBase+=o.cfBase||0;a.cfCost+=o.cfCost||0;a.tvAj+=(o.tv||0)*ipcFactor(mm); }); return a; }
+  var dCell=function(v){ if(v==null) return '<td style="text-align:right;padding:6px 12px;color:var(--txt2)">—</td>'; var cc=v>0.05?'#c0392b':(v<-0.05?'#2a6b53':'var(--txt2)'); return '<td style="text-align:right;padding:6px 12px;font-weight:700;color:'+cc+'">'+(v>0?'+':'')+v.toFixed(1).replace('.',',')+'%</td>'; };
+  var cmpRows=CH.map(function(ch){ var ck=ch[0],lbl=ch[1],col=ch[2]; var g25=aggY(u25,ck), g26=aggY(u26,ck);
+    var dFC=(g25.tvAj>0&&g26.tv>0)?(g26.tv/g25.tvAj-1)*100:null;
+    var mg25=g25.cmv!==0?g25.fc/g25.cmv:null, mg26=g26.cmv!==0?g26.fc/g26.cmv:null; var dMg=(mg25&&mg26)?(mg26/mg25-1)*100:null;
+    var cf25=g25.cfBase>0?g25.cfCost/g25.cfBase:null, cf26=g26.cfBase>0?g26.cfCost/g26.cfBase:null; var dCf=(cf25&&cf26)?(cf26/cf25-1)*100:null;
+    return '<tr style="border-top:.5px solid var(--brd)"><td style="text-align:left;padding:6px 12px;font-weight:800;color:'+col+'">'+lbl+'</td>'+dCell(dFC)+dCell(dMg)+dCell(dCf)+'</tr>';
   }).join('');
-  var note=cfinHasData?'':'<div style="font-size:11.5px;color:#b4322a;margin-bottom:8px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> El costo de financiación por canal aparece al <b>re-subir la facturación 2026</b> y Guardar (es un dato nuevo del parser).</div>';
-  el.innerHTML=note
-    +'<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;background:var(--bg)"><table style="border-collapse:collapse;font-size:12px;width:100%;min-width:'+(200+meses.length*72)+'px"><thead style="background:#eef2f6">'+head+'</thead><tbody>'+rowsH+'</tbody></table></div>'
-    +'<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> FC (fact s/IVA) y Mg (coef. precio/costo = fc/cmv) por canal, mes a mes de 2026. Cfinanciero = costo de financiación en <b>%</b> = (medio de pago + cuotas) / lista, misma fórmula que la sección Financiación — cada local separado igual que la Web. Alcorta aparece desde que abrió (junio 2026).</div>';
+  var INFO='<div style="font-size:11px;color:var(--txt2);margin-top:8px;max-width:820px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> FC (fact s/IVA) · Mg (coef. precio/costo = fc/cmv) · Cfinanciero (% = (medio de pago + cuotas)/lista, igual que Financiación). Cada local separado igual que la Web. Alcorta desde junio 2026.</div>';
+  var note26=cf26Has?'':'<div style="font-size:11.5px;color:#b4322a;margin-bottom:8px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> El Cfinanciero por canal aparece al <b>re-subir la facturación 2026</b> y Guardar.</div>';
+  var tbl2025 = has25
+    ? '<div class="sec-hdr" style="margin-top:22px"><i class="ti ti-calendar"></i>Evolución 2025 <span class="sec-sub">· por canal · mismo formato</span></div>'+evolTable(u25,meses25)
+    : '<div class="sec-hdr" style="margin-top:22px"><i class="ti ti-calendar"></i>Evolución 2025</div><div style="font-size:11.5px;color:#b4322a;padding:4px 2px;max-width:820px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> El 2025 (Mg y Cfinanciero por canal) aparece al <b>re-subir el "Reporte 2025 USAR.xlsx"</b> y Guardar (dato nuevo del importador).</div>';
+  var cmpTable = has25
+    ? '<div class="sec-hdr" style="margin-top:22px"><i class="ti ti-arrows-diff"></i>Comparativa 2025 → 2026 <span class="sec-sub">· variación % por canal · <span style="color:#c0392b">rojo subió</span> · <span style="color:#2a6b53">verde bajó</span></span></div>'
+      +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:560px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:7px 12px">Canal</th><th style="text-align:right;padding:7px 12px">FC Δ% <span style="font-weight:400;font-size:9px">aj.IPC</span></th><th style="text-align:right;padding:7px 12px">Mg. Δ%</th><th style="text-align:right;padding:7px 12px">Cfinanciero Δ%</th></tr></thead><tbody>'+cmpRows+'</tbody></table></div>'
+      +'<div style="font-size:10.5px;color:var(--txt2);margin-top:5px;max-width:560px">Δ% = variación relativa 2026 vs 2025. FC ajustado por IPC (YTD, mismos meses). Mg y Cfinanciero son ratios (sin IPC).</div>'
+    : '';
+  el.innerHTML=note26
+    +'<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-calendar"></i>Evolución 2026 <span class="sec-sub">· por canal · FC · Mg · Cfinanciero</span></div>'
+    +evolTable(u26,meses26)+INFO
+    +tbl2025
+    +cmpTable;
 }
 // Importa el Excel de etiquetas de clientes → mapa CLIENTE(mayúsc) → tipo (etiqueta "Tipo de cliente / …"). El resto queda N/A.
 async function handleEtiquetasFile(file){
@@ -7088,7 +7124,7 @@ function rsemSnapObj(){
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
     stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo'),LLEGADAS_D:g('LLEGADAS_D')},
     logistica:{LOG_D:g('LOG_D')},
-    hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M')},
+    hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M'),EVOL_2025:g('EVOL_2025')},
     biblia:{BIBLIA_INAL:g('BIBLIA_INAL')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
@@ -7097,7 +7133,7 @@ function rsemSnapObj(){
 function rsemApplySnap(s){
   if(!s) return false;
   try{if(s.notas){if(s.notas.arMayoristaNotas)localStorage.setItem('arMayoristaNotas',s.notas.arMayoristaNotas);if(s.notas.cajasNotas)localStorage.setItem('cajasNotas',s.notas.cajasNotas);}}catch(e){}
-  try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;}}catch(e){}
+  try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;if(s.hist.EVOL_2025)EVOL_2025=s.hist.EVOL_2025;}}catch(e){}
   try{if(s.biblia&&s.biblia.BIBLIA_INAL)BIBLIA_INAL=s.biblia.BIBLIA_INAL;}catch(e){}
   try{if(s.cajas&&s.cajas.CAJAS_D)CAJAS_D=s.cajas.CAJAS_D;}catch(e){}
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
