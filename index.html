@@ -2356,9 +2356,18 @@ function renderYTD(){
   const CH_DEF=[['lett','AR Mayorista'],['web','Web'],['lbe','Belgrano'],['lsi','San Isidro'],['alc','Alcorta'],['lnd','Nordelta']];
   const CH_NOTE={lbe:'abrió el 25 de julio de 2025', alc:'abrió el 5 de junio de 2026', lnd:'cerró el 28 de marzo de 2026'};
   const chMonths=(cmpSel==='YTD')?av:[cmpSel];
+  // Por canal INCLUYENDO GIFTCARD (y todo RUBROS_VALID), igual que el hero y la Evolución: 2026 desde DATA_D,
+  // 2025 desde EVOL_2025 (fallback RP2025_CANAL sin giftcard hasta re-subir el 2025). RUBROPROV_D/RP2025_CANAL
+  // excluyen la giftcard porque rpClasificar no la clasifica.
+  const _D26MAP={Web:'web',LSI:'lsi',LBE:'lbe',ALC:'alc',Lett:'lett',LND:'lnd'};
+  const _canal26={}; for(const dd in DATA_D){ if(dd.slice(0,4)!=='2026') continue; const _mx=dd.slice(5,7); const _dw=DATA_D[dd]; for(const rb in _dw){ const _rw=_dw[rb]; for(const cnx in _rw){ const _ckx=_D26MAP[cnx]; if(!_ckx) continue; if(!_canal26[_mx])_canal26[_mx]={}; _canal26[_mx][_ckx]=(_canal26[_mx][_ckx]||0)+(_rw[cnx].tv||0); } } }
+  const _hasEv25=(typeof EVOL_2025!=='undefined' && EVOL_2025 && Object.keys(EVOL_2025).length>0);
   const chData=CH_DEF.map(([ck,lbl])=>{let v25=0,v25a=0,v26=0;chMonths.forEach(mm=>{const f=ipcFactor(mm);
-    const c25=((typeof RP2025_CANAL!=='undefined'&&RP2025_CANAL[mm])||{})[ck]||{};for(const cat in c25){const tv=c25[cat].tv||0;v25+=tv;v25a+=tv*f;}
-    const c26=((typeof RUBROPROV_D!=='undefined'&&RUBROPROV_D['2026-'+mm])||{})[ck]||{};for(const cat in c26){v26+=c26[cat][1]||0;}});
+    let tv25=0;
+    if(_hasEv25 && EVOL_2025[mm] && EVOL_2025[mm][ck]) tv25=EVOL_2025[mm][ck].tv||0;
+    else { const c25=((typeof RP2025_CANAL!=='undefined'&&RP2025_CANAL[mm])||{})[ck]||{}; for(const cat in c25){ tv25+=c25[cat].tv||0; } }
+    v25+=tv25; v25a+=tv25*f;
+    v26 += (_canal26[mm]&&_canal26[mm][ck])?_canal26[mm][ck]:0; });
     return {ck,lbl,v25,v25a,v26,col:(CH_LIGHT[COBR_CMAP[ck]]||'#4472c4')};});
   const chHtml='<div style="font-size:11.5px;font-weight:700;color:var(--txt2);margin:14px 0 6px"><i class="ti ti-building-store" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Por canal · '+per+' · nominal 2025 · aj. IPC · 2026 · crec. real</div>'
     +'<div style="display:grid;grid-template-columns:repeat('+CH_DEF.length+',minmax(0,1fr));gap:8px">'+chData.map(function(d){
