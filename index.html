@@ -2879,7 +2879,7 @@ function renderEvol(){
   var _cCell=function(txt,s){ if(txt==null) return '<td style="text-align:right;padding:6px 10px;color:var(--txt2)">—</td>'; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:'+_col(s)+'">'+txt+'</td>'; };
   var cellFC=function(v){ return (v==null)?_cCell(null):_cCell((v>0?'+':'')+v.toFixed(1).replace('.',',')+'%', v>0.05?1:(v<-0.05?-1:0)); };
   var cellMg=function(v){ return (v==null)?_cCell(null):_cCell((v>0?'+':'')+v.toFixed(2).replace('.',','), v>0.005?1:(v<-0.005?-1:0)); };
-  var cellCf=function(v){ return (v==null)?_cCell(null):_cCell((v>0?'+':'')+v.toFixed(1).replace('.',',')+' pp', v<-0.05?1:(v>0.05?-1:0)); };
+  var cellCf=function(v){ return (v==null)?_cCell(null):_cCell((v>0?'+':'')+v.toFixed(1).replace('.',',')+'%', v<-0.05?1:(v>0.05?-1:0)); };
   function cmpTableBuild(meses, chList){
     var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+MN[parseInt(mm,10)-1]+'</th>';}).join('')+'</tr>';
     var body=(chList||CH).map(function(ch){ var ck=ch[0],lbl=ch[1],col=ch[2]; var tint=tintOf(col,0.09);
@@ -2903,7 +2903,6 @@ function renderEvol(){
   var cmpTable = has25
     ? '<div class="sec-hdr" style="margin-top:22px"><i class="ti ti-arrows-diff"></i>Comparativa 2025 → 2026 <span class="sec-sub">· mes a mes · <span style="color:#2a6b53">verde a favor</span> · <span style="color:#c0392b">rojo en contra</span></span></div>'
       +cmpTableBuild(meses26,CH25)
-      +'<div style="font-size:10.5px;color:var(--txt2);margin-top:5px;max-width:820px"><b>FC Δ%</b> = variación % (FC 2026 vs 2025 aj.IPC) · verde si facturó más. <b>Mg. dif</b> = diferencia del coeficiente de margen (2026 − 2025) · verde si subió. <b>Cfin. dif</b> = diferencia en puntos % del costo de financiación (2026 − 2025) · verde si bajó. Hasta el último mes cerrado de 2026.</div>'
     : '';
   el.innerHTML=note26
     +'<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-calendar"></i>Evolución 2026 <span class="sec-sub">· por canal · FC · Mg · Cfinanciero</span></div>'
