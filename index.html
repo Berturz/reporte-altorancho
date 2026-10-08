@@ -4418,7 +4418,7 @@ function renderEventos(){
     var det2H='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:660px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Pedido 2026</th><th style="text-align:right;padding:6px 10px">Facturado</th><th style="text-align:right;padding:6px 10px">Pendiente</th><th style="text-align:right;padding:6px 10px">% Fact.</th></tr></thead><tbody>'+body2H+tot2H+'</tbody></table></div>';
     var cuadro2H='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-file-invoice"></i>Hotelga 2026 · Pedido vs. Facturado <span class="sec-sub">· cuánto del pedido falta facturar</span></div>'+boxesH+barH+det2H
      +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:660px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Pedido = total de la dinámica neto de NC (incluye días post-feria: 07 al 28-sep). Facturado = facturación Hotelga 2026 del archivo madre. Pendiente = suma de pendientes por vendedor; puede no coincidir con pedido − facturado porque hay vendedores sobre-facturados (NC del pedido que pegan sobre facturas ya contabilizadas en el madre).</div>';
-    evExtra=cuadro1H+cuadro2H;
+    evExtra=cuadro1H; // Hotelga 2026 ya 100% facturado → se saca el cuadro Pedido vs. Facturado (cuadro2H)
   }
   // ── Cuadro NUEVO: facturado por rubro y edición (cantidades juntas + facturación S/IVA juntas), al lado del cuadro de ediciones ──
   var rubroBox='';
