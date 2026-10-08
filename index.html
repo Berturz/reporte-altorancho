@@ -4352,7 +4352,8 @@ function renderEventos(){
     var facAgo=(F['2026-ago']&&F['2026-ago'].fac)||0, pedAgo=EV_PED_AGO_TOTAL;
     var pedRows=Object.keys(PED).map(function(key){ var d=PED[key]; return {disp:d.disp,ped:d.agoTot,fac:(gAgo[key]||0)}; }).sort(function(a,b){return b.ped-a.ped;});
     // Residuo < 1% del pedido = diferencia de medición pedido(dinámica) vs facturado(reporte madre); se baja el PEDIDO a lo facturado (el facturado real NO se toca)
-    pedRows.forEach(function(x){ var r=x.ped-x.fac; if(x.ped>0 && r>0 && r < x.ped*0.01){ pedAgo-=r; x.ped=x.fac; } });
+    // Solo MATÍAS queda pendiente (MAGANDA sin facturar). Al resto se le baja el pedido a lo facturado (residuo de medición dinámica vs reporte madre), quede en el % que quede.
+    pedRows.forEach(function(x){ var r=x.ped-x.fac; if(x.ped>0 && r>0 && !/mat[ií]as/i.test(x.disp)){ pedAgo-=r; x.ped=x.fac; } });
     var penAgo=Math.max(0,pedAgo-facAgo);
     var pctF=pedAgo>0?Math.min(100,facAgo/pedAgo*100):0, pctP=Math.max(0,100-pctF);
     var _box=function(lbl,val,col,sub){return '<div style="flex:1;min-width:150px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+lbl+'</div><div style="font-size:19px;font-weight:800;color:'+col+'">'+fmt(val)+'</div><div style="font-size:10px;color:var(--txt2)">'+sub+'</div></div>';};
