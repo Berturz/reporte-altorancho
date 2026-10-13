@@ -569,6 +569,7 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
       <div class="st" style="font-size:18px"><i class="ti ti-chart-bar"></i>Facturación por mes · 2025 ajustado IPC vs 2026</div>
       <div class="leg" style="justify-content:center;margin:2px 0 10px 0;font-size:13.5px"><span class="li"><span class="ld" style="background:#cfd4da"></span>2025 aj. IPC</span><span class="li"><span class="ld" style="background:#7BA7DE"></span>2026</span><span class="li"><span class="ldn" style="background:#3e9e6e"></span>Crec. real %</span></div>
       <div style="display:flex;align-items:stretch"><div id="cYTDaxis" style="position:relative;flex:0 0 68px;height:320px"></div><div style="overflow-x:auto;overflow-y:hidden;padding-bottom:4px;flex:1 1 auto;min-width:0"><div id="cYTDbox" style="position:relative;height:320px;width:100%"><canvas id="cYTD"></canvas></div></div></div>
+      <div style="text-align:center;font-size:12px;color:#5b6472;margin-top:2px">Bajo cada mes: <span style="color:#c0392b;font-weight:700">rojo</span> = cuánto falta para igualar el 2025 ajustado · <span style="color:#2a8c5a;font-weight:700">verde</span> = excedente facturado.</div>
     </div>
     <div class="prov-table-wrap" id="ytdTableWrap"></div>
   </div>
@@ -2450,11 +2451,19 @@ function renderYTD(){
       if(b0&&v0){chip(b0.x,y0,fmt(v0),'#f0f1f3','#565b64','700 11px Calibri,"Segoe UI",sans-serif','#d8dade');tops.push(y0-CH);bots.push(y0);}
       if(pt&&vp!=null){let pb=pt.y-8;if(tops.length){const st=Math.min.apply(null,tops),sb=Math.max.apply(null,bots);if((pb-CH<=sb)&&(pb>=st))pb=st-4;}chip(pt.x,pb,(vp>=0?'+':'')+vp+'%','#3e9e6e','#ffffff','800 12px Calibri,"Segoe UI",sans-serif',null);}
     });cx.restore();}};
+  // Faltante bajo cada mes: cuánto falta para igualar el 2025 aj.IPC (rojo) o excedente (verde). Meses estimados sin 2026 → '—'.
+  const _abbr=v=>{const s=v<0?'-':'';v=Math.abs(v);if(v>=1e9)return s+'$'+(v/1e9).toFixed(1).replace('.',',')+'B';if(v>=1e6)return s+'$'+Math.round(v/1e6)+'M';if(v>=1e3)return s+'$'+Math.round(v/1e3)+'K';return s+'$'+Math.round(v);};
+  const ytdFaltante={id:'ytdFaltante',afterDraw(ch){const xs=ch.scales.x;if(!xs)return;const cx=ch.ctx;cx.save();const yT=ch.height-12;cx.textAlign='center';cx.textBaseline='middle';
+    ch.data.labels.forEach((_,i)=>{const r=rowsExt[i];if(!r)return;const px=xs.getPixelForValue(i);
+      if(r.est||r.v26==null){cx.fillStyle='#9aa0a6';cx.font='600 10px Calibri,"Segoe UI",sans-serif';cx.fillText('—',px,yT);return;}
+      const gap=r.v26-r.v25a,pos=gap>=0;cx.fillStyle=pos?'#2a8c5a':'#c0392b';cx.font='700 10.5px Calibri,"Segoe UI",sans-serif';
+      cx.fillText((pos?'+':'−')+_abbr(Math.abs(gap)),px,yT);});
+    cx.restore();}};
   ytdChart=new Chart(document.getElementById('cYTD').getContext('2d'),{type:'bar',data:{labels,datasets:[
     {type:'bar',label:'2025 aj. IPC',data:d25a,backgroundColor:d25aCols,borderRadius:3,order:2,yAxisID:'yL',categoryPercentage:0.86,barPercentage:0.98,maxBarThickness:200},
     {type:'bar',label:'2026',data:d26,backgroundColor:'#7BA7DE',borderRadius:3,order:3,yAxisID:'yL',categoryPercentage:0.86,barPercentage:0.98,maxBarThickness:200},
     {type:'line',label:'Crec. real %',data:dg,borderColor:'#3e9e6e',backgroundColor:'#3e9e6e',pointBackgroundColor:'#3e9e6e',pointRadius:4,tension:0.3,borderWidth:2.5,order:1,yAxisID:'yG'}
-  ]},plugins:[ytdBarVals],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:24}},plugins:{legend:{display:false},tooltip:{callbacks:{label(c){return c.dataset.type==='line'?` Crec.: ${c.raw>=0?'+':''}${c.raw}%`:` ${c.dataset.label}: ${fmt(c.raw)}`;}}}},
+  ]},plugins:[ytdBarVals,ytdFaltante],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:24,bottom:28}},plugins:{legend:{display:false},tooltip:{callbacks:{label(c){return c.dataset.type==='line'?` Crec.: ${c.raw>=0?'+':''}${c.raw}%`:` ${c.dataset.label}: ${fmt(c.raw)}`;}}}},
     scales:{yL:{position:'left',ticks:{display:false},border:{display:false},grid:{color:'rgba(30,42,56,.07)'}},yG:{position:'right',display:false},x:{ticks:{font:{size:13,weight:'700'},color:'#333'},grid:{display:false}}}}});
   if(_cb&&_cb.parentElement){const _o=_cb.parentElement;requestAnimationFrame(()=>{_o.scrollLeft=_o.scrollWidth;const axCol=document.getElementById('cYTDaxis');if(axCol&&ytdChart.scales.yL){const sc=ytdChart.scales.yL;axCol.innerHTML='';sc.ticks.forEach(t=>{const y=sc.getPixelForValue(t.value);const el=document.createElement('div');el.textContent=fmt(t.value);el.style.cssText='position:absolute;right:5px;top:'+y+'px;transform:translateY(-50%);font-size:9px;color:var(--txt2);white-space:nowrap';axCol.appendChild(el);});}});}
 }
