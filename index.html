@@ -2369,6 +2369,11 @@ function renderYTD(){
   const _now=new Date(), _curYM=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
   const av=['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>nd[mm]>=1 && ('2026-'+mm)!==_curYM);
   const rows=av.map(mm=>{const i=parseInt(mm);const v25=_ytd25(i,mm);return{mm,i,mn:MN[i-1],v25,v25a:v25*ipcFactor(mm),v26:m26[mm]||0};});
+  // ── Extensión hasta diciembre (solo tarjetas y gráfico): meses PRÓXIMOS (sin 2026 cerrado) con el 2025 aj. ESTIMADO (rosa). El % de crecimiento sigue solo sobre meses cerrados; se recalcula al entrar oct/nov/dic 2026. ──
+  const _closed=new Set(av), _lastC=av.length?av[av.length-1]:'00';
+  const _futuros=(cmpSel==='YTD')?['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>mm>_lastC && !_closed.has(mm) && _ytd25(parseInt(mm,10),mm)>0):[];
+  const avExt=av.concat(_futuros);
+  const rowsExt=avExt.map(mm=>{const i=parseInt(mm,10);const v25=_ytd25(i,mm);const esF=!_closed.has(mm);return{mm,i,mn:MN[i-1],v25,v25a:v25*ipcFactor(mm),v26:esF?null:(m26[mm]||0),est:esF};});
   let s25=0,s25a=0,s26=0,per;
   if(cmpSel==='YTD'){rows.forEach(r=>{s25+=r.v25;s25a+=r.v25a;s26+=r.v26;});per='YTD '+(rows.length?(rows[0].mn+'–'+rows[rows.length-1].mn):'');}
   else{const i=parseInt(cmpSel),mm=cmpSel;s25=_ytd25(i,mm);s25a=s25*ipcFactor(mm);s26=m26[mm]||0;per=MN[i-1];}
@@ -2378,32 +2383,32 @@ function renderYTD(){
   // ── Desglose por canal (para el período seleccionado) ──
   const CH_DEF=[['lett','AR Mayorista'],['web','Web'],['lbe','Belgrano'],['lsi','San Isidro'],['alc','Alcorta'],['lnd','Nordelta']];
   const CH_NOTE={lbe:'abrió el 25 de julio de 2025', alc:'abrió el 5 de junio de 2026', lnd:'cerró el 28 de marzo de 2026'};
-  const chMonths=(cmpSel==='YTD')?av:[cmpSel];
+  const chMonths=(cmpSel==='YTD')?av:[cmpSel];       // meses cerrados (2026 y crecimiento)
+  const chMonthsF=(cmpSel==='YTD')?avExt:[cmpSel];   // meses incl. estimados (2025 aj. año completo)
   // Por canal INCLUYENDO GIFTCARD (y todo RUBROS_VALID), igual que el hero y la Evolución: 2026 desde DATA_D,
   // 2025 desde EVOL_2025 (fallback RP2025_CANAL sin giftcard hasta re-subir el 2025). RUBROPROV_D/RP2025_CANAL
   // excluyen la giftcard porque rpClasificar no la clasifica.
   const _D26MAP={Web:'web',LSI:'lsi',LBE:'lbe',ALC:'alc',Lett:'lett',LND:'lnd'};
   const _canal26={}; for(const dd in DATA_D){ if(dd.slice(0,4)!=='2026') continue; const _mx=dd.slice(5,7); const _dw=DATA_D[dd]; for(const rb in _dw){ const _rw=_dw[rb]; for(const cnx in _rw){ const _ckx=_D26MAP[cnx]; if(!_ckx) continue; if(!_canal26[_mx])_canal26[_mx]={}; _canal26[_mx][_ckx]=(_canal26[_mx][_ckx]||0)+(_rw[cnx].tv||0); } } }
   const _hasEv25=(typeof EVOL_2025!=='undefined' && EVOL_2025 && Object.keys(EVOL_2025).length>0);
-  const chData=CH_DEF.map(([ck,lbl])=>{let v25=0,v25a=0,v26=0;chMonths.forEach(mm=>{const f=ipcFactor(mm);
-    let tv25=0;
-    if(_hasEv25 && EVOL_2025[mm] && EVOL_2025[mm][ck]) tv25=EVOL_2025[mm][ck].tv||0;
-    else { const c25=((typeof RP2025_CANAL!=='undefined'&&RP2025_CANAL[mm])||{})[ck]||{}; for(const cat in c25){ tv25+=c25[cat].tv||0; } }
-    v25+=tv25; v25a+=tv25*f;
-    v26 += (_canal26[mm]&&_canal26[mm][ck])?_canal26[mm][ck]:0; });
-    return {ck,lbl,v25,v25a,v26,col:(CH_LIGHT[COBR_CMAP[ck]]||'#4472c4')};});
+  const _tv25c=(mm,ck)=>{ if(_hasEv25 && EVOL_2025[mm] && EVOL_2025[mm][ck]) return EVOL_2025[mm][ck].tv||0; let t=0; const c25=((typeof RP2025_CANAL!=='undefined'&&RP2025_CANAL[mm])||{})[ck]||{}; for(const cat in c25){ t+=c25[cat].tv||0; } return t; };
+  const chData=CH_DEF.map(([ck,lbl])=>{let v25=0,v25a=0,v25aC=0,v26=0;
+    chMonthsF.forEach(mm=>{const f=ipcFactor(mm); const tv=_tv25c(mm,ck); v25+=tv; v25a+=tv*f; if(_closed.has(mm)) v25aC+=tv*f;});
+    chMonths.forEach(mm=>{ v26 += (_canal26[mm]&&_canal26[mm][ck])?_canal26[mm][ck]:0; });
+    return {ck,lbl,v25,v25a,v25aC,v26,fut:(chMonthsF.length>chMonths.length),col:(CH_LIGHT[COBR_CMAP[ck]]||'#4472c4')};});
   const chHtml='<div style="font-size:11.5px;font-weight:700;color:var(--txt2);margin:14px 0 6px"><i class="ti ti-building-store" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Por canal · '+per+' · nominal 2025 · aj. IPC · 2026 · crec. real</div>'
     +'<div style="display:grid;grid-template-columns:repeat('+CH_DEF.length+',minmax(0,1fr));gap:8px">'+chData.map(function(d){
-      var has=d.v25a>0; var g=has?((d.v26-d.v25a)/d.v25a*100):0;
+      var has=d.v25aC>0; var g=has?((d.v26-d.v25aC)/d.v25aC*100):0;
       var badge=has?((g>=0?'+':'')+g.toFixed(1)+'%'):(d.v26>0?'Nuevo':'—');
       var bcol=(!has||g>=0)?'#2a6b53':'#c0392b'; var bbg=(!has||g>=0)?'#e9f7f0':'#fdecec';
+      var ajLbl=d.fut?'2025 aj.IPC <span style="color:#c0609a;font-weight:800">· año (oct-dic est.)</span>':'2025 aj.IPC';
       return '<div style="background:var(--bg);border:1px solid '+chTint(d.col,0.55)+';border-top:4px solid '+d.col+';border-radius:10px;padding:8px 10px">'
         +'<div style="font-size:12.5px;font-weight:800;color:'+d.col+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.lbl+'</div>'
         +'<div style="font-size:9px;font-weight:600;color:#c0392b;line-height:1.2;min-height:22px;margin-bottom:4px">'+(CH_NOTE[d.ck]||'')+'</div>'
-        +'<div style="font-size:10px;color:var(--txt2)">2025 nom.</div><div style="font-size:11.5px;color:#565b64;font-weight:700;margin-bottom:3px">'+(d.v25>0?fmt(d.v25):'—')+'</div>'
-        +'<div style="font-size:10px;color:var(--txt2)">2025 aj.IPC</div><div style="font-size:11.5px;color:#565b64;font-weight:700;margin-bottom:3px">'+(d.v25a>0?fmt(d.v25a):'—')+'</div>'
-        +'<div style="font-size:10px;color:var(--txt2)">2026</div><div style="font-size:12.5px;color:'+d.col+';font-weight:800">'+fmt(d.v26)+'</div>'
-        +'<div style="margin-top:5px"><span style="background:'+bbg+';color:'+bcol+';font-size:11.5px;font-weight:800;border-radius:6px;padding:2px 7px">'+badge+'</span></div>'
+        +'<div style="font-size:10px;color:var(--txt2)">2025 nom.'+(d.fut?' (año)':'')+'</div><div style="font-size:11.5px;color:#565b64;font-weight:700;margin-bottom:3px">'+(d.v25>0?fmt(d.v25):'—')+'</div>'
+        +'<div style="font-size:10px;color:var(--txt2)">'+ajLbl+'</div><div style="font-size:11.5px;color:'+(d.fut?'#c0609a':'#565b64')+';font-weight:700;margin-bottom:3px">'+(d.v25a>0?fmt(d.v25a):'—')+'</div>'
+        +'<div style="font-size:10px;color:var(--txt2)">2026'+(d.fut?' <span style="color:var(--txt2)">· YTD</span>':'')+'</div><div style="font-size:12.5px;color:'+d.col+';font-weight:800">'+fmt(d.v26)+'</div>'
+        +'<div style="margin-top:5px"><span style="background:'+bbg+';color:'+bcol+';font-size:11.5px;font-weight:800;border-radius:6px;padding:2px 7px">'+badge+'</span>'+(d.fut?'<span style="font-size:8px;color:var(--txt2);margin-left:4px">crec. YTD</span>':'')+'</div>'
       +'</div>';
     }).join('')+'</div>';
   const _yk=document.getElementById('ytdKpis');_yk.style.display='block';
@@ -2424,9 +2429,10 @@ function renderYTD(){
     <div style="overflow-x:auto"><table class="prov-table"><thead><tr><th style="text-align:center">Mes</th><th style="text-align:center">2025 nominal</th><th style="text-align:center">2025 Aj. IPC</th><th style="text-align:center">2026</th><th style="text-align:center">Var $ real</th><th style="text-align:center">Crec. real</th></tr></thead>
     <tbody>${body}<tr class="cobr-total-row" style="background:#d3d7dd;font-weight:800;font-size:15.5px"><td style="text-align:center">YTD</td><td style="text-align:center;color:#a0a6ae">${fmt(t25)}</td><td style="text-align:center;color:#565b64">${fmt(t25a)}</td><td style="text-align:center;color:#b0468f">${fmt(t26)}</td><td style="text-align:center;color:${(t26-t25a)>=0?'#3e9e6e':'#d85a30'}">${(t26-t25a)>=0?'+':''}${fmt(t26-t25a)}</td><td style="text-align:center;color:${tg>=0?'#3e9e6e':'#d85a30'}">${tg>=0?'+':''}${tg.toFixed(1)}%</td></tr></tbody></table></div>
     <div style="font-size:12.5px;color:var(--txt2);margin-top:.4rem;padding:0 14px">2025 ajustado por IPC interanual INDEC (por mes). Var. y crecimiento calculados sobre el 2025 ajustado.</div>`;
-  const labels=rows.map(r=>MNF[r.i-1]),d25a=rows.map(r=>Math.round(r.v25a)),d26=rows.map(r=>Math.round(r.v26)),dg=rows.map(r=>r.v25a?+(((r.v26-r.v25a)/r.v25a*100).toFixed(1)):0);
+  const labels=rowsExt.map(r=>MNF[r.i-1]),d25a=rowsExt.map(r=>Math.round(r.v25a)),d26=rowsExt.map(r=>r.est?null:Math.round(r.v26)),dg=rowsExt.map(r=>r.est?null:(r.v25a?+(((r.v26-r.v25a)/r.v25a*100).toFixed(1)):0));
+  const d25aCols=rowsExt.map(r=>r.est?'#E6A9C7':'#cfd4da'); // rosa = 2025 aj. estimado (oct-dic)
   if(ytdChart)ytdChart.destroy();
-  const _cb=document.getElementById('cYTDbox');if(_cb)_cb.style.minWidth=(rows.length>8?(rows.length*150)+'px':'100%');
+  const _cb=document.getElementById('cYTDbox');if(_cb)_cb.style.minWidth=(rowsExt.length>8?(rowsExt.length*150)+'px':'100%');
   const ytdBarVals={id:'ytdBarVals',afterDatasetsDraw(ch){const cx=ch.ctx;cx.save();
     const rr=(x,y,w,h,r)=>{cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();};
     const chip=(x,by,txt,bg,fg,font,bd)=>{cx.font=font;const w=cx.measureText(txt).width;const ph=parseInt((font.match(/(\d+)px/)||[0,11])[1],10);const px=5,py=3,rw=w+px*2,rh=ph+py*2,rx=x-rw/2,ry=by-rh;cx.fillStyle=bg;rr(rx,ry,rw,rh,5);cx.fill();if(bd){cx.strokeStyle=bd;cx.lineWidth=1;rr(rx+0.5,ry+0.5,rw-1,rh-1,5);cx.stroke();}cx.fillStyle=fg;cx.textAlign='center';cx.textBaseline='middle';cx.fillText(txt,x,ry+rh/2+0.5);};
@@ -2441,7 +2447,7 @@ function renderYTD(){
       if(pt&&vp!=null){let pb=pt.y-8;if(tops.length){const st=Math.min.apply(null,tops),sb=Math.max.apply(null,bots);if((pb-CH<=sb)&&(pb>=st))pb=st-4;}chip(pt.x,pb,(vp>=0?'+':'')+vp+'%','#3e9e6e','#ffffff','800 12px Calibri,"Segoe UI",sans-serif',null);}
     });cx.restore();}};
   ytdChart=new Chart(document.getElementById('cYTD').getContext('2d'),{type:'bar',data:{labels,datasets:[
-    {type:'bar',label:'2025 aj. IPC',data:d25a,backgroundColor:'#cfd4da',borderRadius:3,order:2,yAxisID:'yL',categoryPercentage:0.86,barPercentage:0.98,maxBarThickness:200},
+    {type:'bar',label:'2025 aj. IPC',data:d25a,backgroundColor:d25aCols,borderRadius:3,order:2,yAxisID:'yL',categoryPercentage:0.86,barPercentage:0.98,maxBarThickness:200},
     {type:'bar',label:'2026',data:d26,backgroundColor:'#7BA7DE',borderRadius:3,order:3,yAxisID:'yL',categoryPercentage:0.86,barPercentage:0.98,maxBarThickness:200},
     {type:'line',label:'Crec. real %',data:dg,borderColor:'#3e9e6e',backgroundColor:'#3e9e6e',pointBackgroundColor:'#3e9e6e',pointRadius:4,tension:0.3,borderWidth:2.5,order:1,yAxisID:'yG'}
   ]},plugins:[ytdBarVals],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:24}},plugins:{legend:{display:false},tooltip:{callbacks:{label(c){return c.dataset.type==='line'?` Crec.: ${c.raw>=0?'+':''}${c.raw}%`:` ${c.dataset.label}: ${fmt(c.raw)}`;}}}},
