@@ -2444,11 +2444,14 @@ function renderYTD(){
     const m0=ch.getDatasetMeta(0),m1=ch.getDatasetMeta(1),lm=ch.getDatasetMeta(2);const CH=20;
     ch.data.labels.forEach((_,i)=>{const b0=m0&&m0.data[i],b1=m1&&m1.data[i],pt=lm&&lm.data[i];
       const v0=ch.data.datasets[0].data[i],v1=ch.data.datasets[1].data[i],vp=lm?ch.data.datasets[2].data[i]:null;
-      let y0=b0?b0.y-2:0,y1=b1?b1.y-2:0;
-      if(b0&&b1&&v0&&v1&&Math.abs(y0-y1)<CH+3){const base=Math.min(y0,y1);y1=base;y0=base-CH-2;}
+      const has0=b0&&v0,has1=b1&&v1;
+      // Centrar ambos chips en el centro del mes y apilarlos SIEMPRE (2025 arriba, 2026 abajo) por encima de la barra más alta → no se pisan entre sí ni con los meses vecinos, manteniendo el importe completo.
+      const mx=(b0&&b1)?(b0.x+b1.x)/2:(b1?b1.x:(b0?b0.x:0));
+      const topY=Math.min(b0?b0.y:1e9,b1?b1.y:1e9)-2;
+      let yb1=topY,yb0=topY; if(has0&&has1){yb0=topY-CH-2;}
       const tops=[],bots=[];
-      if(b1&&v1){chip(b1.x,y1,fmt(v1),'#eaf1fb','#1f4f8f','800 12px Calibri,"Segoe UI",sans-serif','#bcd4f2');tops.push(y1-CH);bots.push(y1);}
-      if(b0&&v0){chip(b0.x,y0,fmt(v0),'#f0f1f3','#565b64','700 11px Calibri,"Segoe UI",sans-serif','#d8dade');tops.push(y0-CH);bots.push(y0);}
+      if(has1){chip(mx,yb1,fmt(v1),'#eaf1fb','#1f4f8f','800 11px Calibri,"Segoe UI",sans-serif','#bcd4f2');tops.push(yb1-CH);bots.push(yb1);}
+      if(has0){chip(mx,yb0,fmt(v0),'#f0f1f3','#565b64','700 10px Calibri,"Segoe UI",sans-serif','#d8dade');tops.push(yb0-CH);bots.push(yb0);}
       if(pt&&vp!=null){let pb=pt.y-8;if(tops.length){const st=Math.min.apply(null,tops),sb=Math.max.apply(null,bots);if((pb-CH<=sb)&&(pb>=st))pb=st-4;}chip(pt.x,pb,(vp>=0?'+':'')+vp+'%','#3e9e6e','#ffffff','800 12px Calibri,"Segoe UI",sans-serif',null);}
     });cx.restore();}};
   // Faltante bajo cada mes: cuánto falta para igualar el 2025 aj.IPC (rojo) o excedente (verde). Meses estimados sin 2026 → '—'.
