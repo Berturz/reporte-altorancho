@@ -39,6 +39,7 @@
 .cmp-chips{display:flex;flex-wrap:wrap;gap:6px;margin:.2rem 0 .8rem;position:relative;z-index:1}
 .cmp-chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#DCEBEB;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:all .12s}
 .cmp-chip:hover{background:rgba(255,255,255,.20)}
+.cmp-chip.fut{color:#F3C6DD;border-color:rgba(243,198,221,.45)}
 .cmp-chip.act{background:#F0C05A;border-color:#F0C05A;color:#0E3B43}
 
 
@@ -470,6 +471,7 @@ h1,.sec-hdr,.st,.ct,.mv,.fin-pct,.dm,.fin-title,.dc .dm{font-family:Calibri,"Seg
 /* chips comparativa */
 .cmp-chip{background:var(--bg2)!important;border:1px solid var(--brd)!important;color:var(--txt2)!important}
 .cmp-chip:hover{background:var(--info-bg)!important;color:var(--blue-navy)!important}
+.cmp-chip.fut{color:#b0468f!important;border-color:#e3a9cd!important}
 .cmp-chip.act{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important}
 #secRPComp .sec-hdr{color:var(--txt)!important}
 #secRPComp{overflow:visible}
@@ -2368,6 +2370,7 @@ function renderYTD(){
   for(const d in DATA_D){if(d.slice(0,4)!=='2026')continue;const mm=d.slice(5,7);nd[mm]=(nd[mm]||0)+1;let t=0;const dw=DATA_D[d];for(const r in dw){const rw=dw[r];for(const c in rw)t+=rw[c].tv||0;}m26[mm]=(m26[mm]||0)+t;}
   const _now=new Date(), _curYM=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
   const av=['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>nd[mm]>=1 && ('2026-'+mm)!==_curYM);
+  const _selFut=(cmpSel!=='YTD') && !av.includes(cmpSel); // mes próximo seleccionado (sin 2026): solo 2025 nom + aj.IPC
   const rows=av.map(mm=>{const i=parseInt(mm);const v25=_ytd25(i,mm);return{mm,i,mn:MN[i-1],v25,v25a:v25*ipcFactor(mm),v26:m26[mm]||0};});
   // ── Extensión hasta diciembre (solo tarjetas y gráfico): meses PRÓXIMOS (sin 2026 cerrado) con el 2025 aj. ESTIMADO (rosa). El % de crecimiento sigue solo sobre meses cerrados; se recalcula al entrar oct/nov/dic 2026. ──
   const _closed=new Set(av), _lastC=av.length?av[av.length-1]:'00';
@@ -2396,19 +2399,20 @@ function renderYTD(){
     chMonthsF.forEach(mm=>{const f=ipcFactor(mm); const tv=_tv25c(mm,ck); v25+=tv; v25a+=tv*f; if(_closed.has(mm)) v25aC+=tv*f;});
     chMonths.forEach(mm=>{ v26 += (_canal26[mm]&&_canal26[mm][ck])?_canal26[mm][ck]:0; });
     return {ck,lbl,v25,v25a,v25aC,v26,fut:(chMonthsF.length>chMonths.length),col:(CH_LIGHT[COBR_CMAP[ck]]||'#4472c4')};});
-  const chHtml='<div style="font-size:11.5px;font-weight:700;color:var(--txt2);margin:14px 0 6px"><i class="ti ti-building-store" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Por canal · '+per+' · nominal 2025 · aj. IPC · 2026 · crec. real</div>'
+  const chHtml='<div style="font-size:11.5px;font-weight:700;color:var(--txt2);margin:14px 0 6px"><i class="ti ti-building-store" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Por canal · '+per+(_selFut?' · nominal 2025 · aj. IPC estimado':' · nominal 2025 · aj. IPC · 2026 · crec. real')+'</div>'
     +'<div style="display:grid;grid-template-columns:repeat('+CH_DEF.length+',minmax(0,1fr));gap:8px">'+chData.map(function(d){
       var has=d.v25aC>0; var g=has?((d.v26-d.v25aC)/d.v25aC*100):0;
       var badge=has?((g>=0?'+':'')+g.toFixed(1)+'%'):(d.v26>0?'Nuevo':'—');
       var bcol=(!has||g>=0)?'#2a6b53':'#c0392b'; var bbg=(!has||g>=0)?'#e9f7f0':'#fdecec';
-      var ajLbl=d.fut?'2025 aj.IPC <span style="color:#c0609a;font-weight:800">· año (oct-dic est.)</span>':'2025 aj.IPC';
+      var isEst=d.fut||_selFut;
+      var ajLbl=d.fut?'2025 aj.IPC <span style="color:#c0609a;font-weight:800">· año (oct-dic est.)</span>':(_selFut?'2025 aj.IPC <span style="color:#c0609a;font-weight:800">· estimado</span>':'2025 aj.IPC');
       return '<div style="background:var(--bg);border:1px solid '+chTint(d.col,0.55)+';border-top:4px solid '+d.col+';border-radius:10px;padding:8px 10px">'
         +'<div style="font-size:12.5px;font-weight:800;color:'+d.col+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.lbl+'</div>'
         +'<div style="font-size:9px;font-weight:600;color:#c0392b;line-height:1.2;min-height:22px;margin-bottom:4px">'+(CH_NOTE[d.ck]||'')+'</div>'
         +'<div style="font-size:10px;color:var(--txt2)">2025 nom.'+(d.fut?' (año)':'')+'</div><div style="font-size:11.5px;color:#565b64;font-weight:700;margin-bottom:3px">'+(d.v25>0?fmt(d.v25):'—')+'</div>'
-        +'<div style="font-size:10px;color:var(--txt2)">'+ajLbl+'</div><div style="font-size:11.5px;color:'+(d.fut?'#c0609a':'#565b64')+';font-weight:700;margin-bottom:3px">'+(d.v25a>0?fmt(d.v25a):'—')+'</div>'
-        +'<div style="font-size:10px;color:var(--txt2)">2026'+(d.fut?' <span style="color:var(--txt2)">· YTD</span>':'')+'</div><div style="font-size:12.5px;color:'+d.col+';font-weight:800">'+fmt(d.v26)+'</div>'
-        +'<div style="margin-top:5px"><span style="background:'+bbg+';color:'+bcol+';font-size:11.5px;font-weight:800;border-radius:6px;padding:2px 7px">'+badge+'</span>'+(d.fut?'<span style="font-size:8px;color:var(--txt2);margin-left:4px">crec. YTD</span>':'')+'</div>'
+        +'<div style="font-size:10px;color:var(--txt2)">'+ajLbl+'</div><div style="font-size:11.5px;color:'+(isEst?'#c0609a':'#565b64')+';font-weight:700;margin-bottom:3px">'+(d.v25a>0?fmt(d.v25a):'—')+'</div>'
+        +(_selFut?'':('<div style="font-size:10px;color:var(--txt2)">2026'+(d.fut?' <span style="color:var(--txt2)">· YTD</span>':'')+'</div><div style="font-size:12.5px;color:'+d.col+';font-weight:800">'+fmt(d.v26)+'</div>'
+          +'<div style="margin-top:5px"><span style="background:'+bbg+';color:'+bcol+';font-size:11.5px;font-weight:800;border-radius:6px;padding:2px 7px">'+badge+'</span>'+(d.fut?'<span style="font-size:8px;color:var(--txt2);margin-left:4px">crec. YTD</span>':'')+'</div>'))
       +'</div>';
     }).join('')+'</div>';
   const _yk=document.getElementById('ytdKpis');_yk.style.display='block';
@@ -2416,11 +2420,11 @@ function renderYTD(){
     <div style="display:flex;gap:.7rem;align-items:stretch;flex-wrap:wrap">
       <div class="mc" style="flex:.8;min-width:150px;display:flex;flex-direction:column;justify-content:center;background:#f7e9d7!important;border:1px solid #d08a3c!important"><div class="ml2" style="color:#c8873c">IPC acum. aplicado · ${per}</div><div class="mv" style="color:#c8873c!important;font-size:26px!important">+${ipcPct.toFixed(1)}%</div><div class="ms">interanual INDEC${estimIPC?' · estim.':''} · ajusta el 2025</div></div>
       <div class="mc" style="flex:1.5;min-width:185px;background:#f2f3f5!important;border:1px solid #b8bec6!important"><div class="ml2" style="color:#6f757e;min-height:72px"><span style="font-size:24px;font-weight:800;display:block;line-height:1;letter-spacing:.5px;margin-bottom:4px">2025</span>Facturación Total ajustado IPC · ${cmpSel==='YTD'?per.replace('YTD ',''):per}${cmpSel==='YTD'?'<br>YTD':''}</div><div class="mv" style="color:#6f757e!important;font-size:30px!important">${fmt(s25a)}</div><div class="ms" style="font-size:14px;font-weight:400;color:#6f757e;margin-top:3px">nominal: ${fmt(s25)}</div></div>
-      <div class="mc" style="flex:1.5;min-width:185px;background:#faeaf4!important;border:1px solid #d98fc4!important"><div class="ml2" style="color:#b0468f;min-height:72px"><span style="font-size:24px;font-weight:800;display:block;line-height:1;letter-spacing:.5px;margin-bottom:4px">2026</span>Facturación Total · ${cmpSel==='YTD'?per.replace('YTD ',''):per}${cmpSel==='YTD'?'<br>YTD':''}</div><div class="mv" style="color:#b0468f!important;font-size:30px!important">${fmt(s26)}</div><div class="ms">Total s/IVA</div></div>
+      ${_selFut?'':`<div class="mc" style="flex:1.5;min-width:185px;background:#faeaf4!important;border:1px solid #d98fc4!important"><div class="ml2" style="color:#b0468f;min-height:72px"><span style="font-size:24px;font-weight:800;display:block;line-height:1;letter-spacing:.5px;margin-bottom:4px">2026</span>Facturación Total · ${cmpSel==='YTD'?per.replace('YTD ',''):per}${cmpSel==='YTD'?'<br>YTD':''}</div><div class="mv" style="color:#b0468f!important;font-size:30px!important">${fmt(s26)}</div><div class="ms">Total s/IVA</div></div>
       <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:.6rem">
         <div class="mc" style="flex:1;display:flex;flex-direction:column;justify-content:center;background:#edf7f1!important;border:1px solid #69c39c!important;border-left:5px solid #69c39c!important"><div class="ml2" style="color:#3e9e6e">Crecimiento real · ${per}</div><div class="mv" style="color:${gr>=0?'#3e9e6e':'#d85a30'}!important;font-size:22px!important">${gr>=0?'+':''}${gr.toFixed(1)}%</div><div class="ms">2026 vs 2025 ajustado IPC</div></div>
         <div class="mc" style="flex:1;display:flex;flex-direction:column;justify-content:center;background:#edf7f1!important;border:1px solid #69c39c!important;border-left:5px solid #69c39c!important"><div class="ml2" style="color:#3e9e6e">Variación real (pesos)</div><div class="mv" style="color:${dif>=0?'#3e9e6e':'#d85a30'}!important;font-size:17px!important">${dif>=0?'+':''}${fmt(dif)}</div><div class="ms">2026 vs 2025 ajustado IPC</div></div>
-      </div>
+      </div>`}
     </div>`+chHtml;
   const body=rows.map(r=>{const dv=r.v26-r.v25a,g=r.v25a?((r.v26-r.v25a)/r.v25a*100):0,sel=cmpSel===r.mm;
     return `<tr${sel?' style="background:var(--info-bg);font-weight:600"':''}><td style="text-align:center">${MNF[r.i-1]}</td><td style="text-align:center;color:#a0a6ae">${fmt(r.v25)}</td><td style="text-align:center;color:#565b64">${fmt(r.v25a)}</td><td style="text-align:center;color:#b0468f;font-weight:600">${fmt(r.v26)}</td><td style="text-align:center;color:${dv>=0?'#3e9e6e':'#d85a30'};font-weight:600">${dv>=0?'+':''}${fmt(dv)}</td><td style="text-align:center;color:${g>=0?'#3e9e6e':'#d85a30'};font-weight:600">${g>=0?'+':''}${g.toFixed(1)}%</td></tr>`;}).join('');
@@ -2460,7 +2464,10 @@ function renderCmpChips(){
   const _now=new Date(), _curYM=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
   const av=['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>nd[mm]>=1 && ('2026-'+mm)!==_curYM);
   const el=document.getElementById('cmpChips'); if(!el)return;
-  el.innerHTML=['YTD',...av].map(v=>{const lbl=v==='YTD'?'YTD':MN[parseInt(v)-1];return `<button class="cmp-chip${cmpSel===v?' act':''}" onclick="setCmp('${v}')">${lbl}</button>`;}).join('');
+  // Meses próximos (sin 2026 cerrado) con 2025 disponible: chips oct/nov/dic en rosa.
+  const _lastC=av.length?av[av.length-1]:'00', _closed=new Set(av);
+  const _fut=['01','02','03','04','05','06','07','08','09','10','11','12'].filter(mm=>mm>_lastC && !_closed.has(mm) && _ytd25(parseInt(mm,10),mm)>0);
+  el.innerHTML=['YTD',...av,..._fut].map(v=>{const lbl=v==='YTD'?'YTD':MN[parseInt(v)-1];const isF=_fut.indexOf(v)>=0;return `<button class="cmp-chip${cmpSel===v?' act':''}${isF?' fut':''}" onclick="setCmp('${v}')">${lbl}</button>`;}).join('');
 }
 function setCmp(v){cmpSel=v;try{updPeriodoBar();}catch(e){}renderYTD();renderRPCompare();}
 const IPC_IDX={"2025-01": 7864.1257, "2025-02": 8052.9927, "2025-03": 8353.3158, "2025-04": 8585.6078, "2025-05": 8714.4871, "2025-06": 8855.5681, "2025-07": 9023.973, "2025-08": 9193.2441, "2025-09": 9384.0922, "2025-10": 9603.8623, "2025-11": 9841.3581, "2025-12": 10121.3715, "2026-01": 10413.0309, "2026-02": 10714.6255, "2026-03": 11077.0608, "2026-04": 11363.0904, "2026-05": 11607.3937, "2026-06": 11826.4103, "2026-07": 12076.3937, "2026-08": 12276.766};
