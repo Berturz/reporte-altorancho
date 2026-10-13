@@ -2432,7 +2432,7 @@ function renderYTD(){
   const labels=rowsExt.map(r=>MNF[r.i-1]),d25a=rowsExt.map(r=>Math.round(r.v25a)),d26=rowsExt.map(r=>r.est?null:Math.round(r.v26)),dg=rowsExt.map(r=>r.est?null:(r.v25a?+(((r.v26-r.v25a)/r.v25a*100).toFixed(1)):0));
   const d25aCols=rowsExt.map(r=>r.est?'#E6A9C7':'#cfd4da'); // rosa = 2025 aj. estimado (oct-dic)
   if(ytdChart)ytdChart.destroy();
-  const _cb=document.getElementById('cYTDbox');if(_cb)_cb.style.minWidth=(rowsExt.length>8?(rowsExt.length*150)+'px':'100%');
+  const _cb=document.getElementById('cYTDbox');if(_cb)_cb.style.minWidth='100%'; // año completo sin scroll horizontal
   const ytdBarVals={id:'ytdBarVals',afterDatasetsDraw(ch){const cx=ch.ctx;cx.save();
     const rr=(x,y,w,h,r)=>{cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();};
     const chip=(x,by,txt,bg,fg,font,bd)=>{cx.font=font;const w=cx.measureText(txt).width;const ph=parseInt((font.match(/(\d+)px/)||[0,11])[1],10);const px=5,py=3,rw=w+px*2,rh=ph+py*2,rx=x-rw/2,ry=by-rh;cx.fillStyle=bg;rr(rx,ry,rw,rh,5);cx.fill();if(bd){cx.strokeStyle=bd;cx.lineWidth=1;rr(rx+0.5,ry+0.5,rw-1,rh-1,5);cx.stroke();}cx.fillStyle=fg;cx.textAlign='center';cx.textBaseline='middle';cx.fillText(txt,x,ry+rh/2+0.5);};
