@@ -1550,6 +1550,7 @@ async function handleFile(file) {
     renderRPCompare();
     buildFactMonthChips();
     buildRPMonthChips(); renderRP();
+    initFactDefaultMonth();
     renderCobr();
     renderVend();
     try{ renderCostFin(); }catch(e){}
@@ -3010,6 +3011,9 @@ function setFactMonth(m){
   const a=document.getElementById('fmc_'+m); if(a)a.classList.add('act');
   buildCal();updDR();refreshFC();
 }
+// Último mes disponible (mes en curso). Default al abrir/refrescar: el filtro MES arranca en este mes, no en "Todo".
+function factLastMonth(){ const ms=[...new Set(Object.keys(DATA_D).map(d=>d.slice(0,7)))].sort(); return ms.length?ms[ms.length-1]:null; }
+function initFactDefaultMonth(){ try{ var m=factLastMonth(); if(m) setFactMonth(m); }catch(e){} }
 function refreshFC(){updMetrics();if(fCh)fCh.destroy();renderFC();renderDonut();renderOrig();renderProd();renderTopFC();renderProv();renderCobr();renderVend();}
 function refreshFin(){renderFin();}
 function refreshAll(){refreshFC();refreshFin();}
@@ -4525,6 +4529,7 @@ function renderEventos(){
   buildMonthChips(meses);
   buildRubros();buildFactMonthChips();buildCal();updDR();refreshAll();renderYTD();renderRPCompare();try{renderEvol();}catch(e){}try{renderEventos();}catch(e){}
   buildRPMonthChips();renderRP();
+  initFactDefaultMonth();
 })();
 </script>
 
@@ -7103,6 +7108,7 @@ function applyFactState(f){
   try{buildCal();updDR();}catch(e){}
   try{ var rng=ad.length?(ad[0]+' \u2192 '+ad[ad.length-1]):''; var di=document.getElementById('dataInfo'); if(di) di.innerHTML='Tu \u00faltima actualizaci\u00f3n'+(f.name?(': <strong>'+f.name+'</strong>'):'')+' \u00b7 '+rng+' \u00b7 '+ad.length+' d\u00edas \u00b7 <a href="#" onclick="resetFactState();return false;" style="color:#1C7C8C">usar datos del archivo</a>'; var bd=document.getElementById('dataBadge'); if(bd){bd.className='ok-badge';bd.innerHTML='<i class="ti ti-device-floppy" style="font-size:10px"></i> Restaurado';} }catch(e){}
   refreshAll();renderYTD();renderRPCompare();buildFactMonthChips();buildRPMonthChips();renderRP();renderCobr();renderVend();try{renderCostFin();}catch(e){}try{renderEvol();}catch(e){}try{renderEventos();}catch(e){}
+  initFactDefaultMonth();
 }
 function applySalidasState(s){ SALIDAS_B_D=s.SALIDAS_B_D;SALIDAS_AA_D=s.SALIDAS_AA_D;SALIDAS_EXTRA_D=s.SALIDAS_EXTRA_D; salidasSS=null;salidasSE=null;salidasPicking=false; var ad=getSalidasDKEYS(); if(ad.length){var f=ad[ad.length-1];salidasCy=parseInt(f.slice(0,4));salidasCm=parseInt(f.slice(5,7))-1;} buildSalidasCal();updSalidasDRI();renderSalidas(); }
 function applyIMPOState(im){ IMPO_D=im.IMPO_D; renderIMPO(); }
