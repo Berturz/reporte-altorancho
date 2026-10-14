@@ -637,9 +637,9 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   <div class="cp" style="margin-top:1.3rem">
     <div class="st" style="font-size:19px"><i class="ti ti-trending-up"></i>Facturación s/IVA + margen <span class="sec-sub" style="font-weight:400">· detalle por mes / día / canal</span></div>
     <div class="ctrls" id="fCtrl" style="justify-content:center;gap:8px;margin:10px 0 6px">
-      <button class="btn act" onclick="sfv('mes')" style="font-size:13.5px;font-weight:700;padding:6px 18px;border-radius:9px">Mensual</button>
+      <button class="btn act" onclick="sfv('canal')" style="font-size:13.5px;font-weight:700;padding:6px 18px;border-radius:9px">Por canal</button>
+      <button class="btn" onclick="sfv('mes')" style="font-size:13.5px;font-weight:700;padding:6px 18px;border-radius:9px">Mensual</button>
       <button class="btn" onclick="sfv('dia')" style="font-size:13.5px;font-weight:700;padding:6px 18px;border-radius:9px">Diario</button>
-      <button class="btn" onclick="sfv('canal')" style="font-size:13.5px;font-weight:700;padding:6px 18px;border-radius:9px">Por canal</button>
     </div>
     <div id="fCanalSel" style="display:none;justify-content:center;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
     <div class="leg" id="fLeg" style="justify-content:center"></div>
@@ -1689,7 +1689,7 @@ const MES_LABEL={'all':'Mes actual'};
 
 let cy=2026,cm=0,calMode='dia',sS=null,sE=null,picking=false;
 let aR=new Set(RUBROS);
-let fv='mes', finMes='all', fvCanal='total';
+let fv='canal', finMes='all', fvCanal='total';
 let fCh=null,dnCh=null;
 const charts={};
 
@@ -1912,7 +1912,7 @@ function updMetrics(){
     } else fb.style.display='none';
   }
 }
-function sfv(v){fv=v;const bs=document.querySelectorAll('#fCtrl .btn');bs[0].classList.toggle('act',v==='mes');bs[1].classList.toggle('act',v==='dia');bs[2].classList.toggle('act',v==='canal');var sel=document.getElementById('fCanalSel');if(v==='dia'){buildFCanalSel();sel.style.display='flex';}else{sel.style.display='none';}if(fCh)fCh.destroy();renderFC();}
+function sfv(v){fv=v;const bs=document.querySelectorAll('#fCtrl .btn');bs[0].classList.toggle('act',v==='canal');bs[1].classList.toggle('act',v==='mes');bs[2].classList.toggle('act',v==='dia');var sel=document.getElementById('fCanalSel');if(v==='dia'){buildFCanalSel();sel.style.display='flex';}else{sel.style.display='none';}if(fCh)fCh.destroy();renderFC();}
 function buildFCanalSel(){
   var el=document.getElementById('fCanalSel'); if(!el) return;
   var opts=[['total','Total','#4472c4'],['stack','Apilado x canal','#5b6472']].concat(CANALES.map(function(c){return [c,CANAL_LABELS[c]||c,CH_LIGHT[c]||'#4472c4'];}));
