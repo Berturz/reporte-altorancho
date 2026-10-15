@@ -1341,13 +1341,15 @@ async function handleFile(file) {
           if (cat) {
             if (!newRUBROPROV[mesKey]) newRUBROPROV[mesKey] = {};
             if (!newRUBROPROV[mesKey][canalKey2]) newRUBROPROV[mesKey][canalKey2] = {};
-            if (!newRUBROPROV[mesKey][canalKey2][cat]) newRUBROPROV[mesKey][canalKey2][cat] = {ventasSet:new Set(), fc:0, qty:0, skuQ:{}};
+            if (!newRUBROPROV[mesKey][canalKey2][cat]) newRUBROPROV[mesKey][canalKey2][cat] = {ventasSet:new Set(), fc:0, qty:0, skuQ:{}, freeBolsa:0};
             const idRep = row[COL.IDREP] ? String(row[COL.IDREP]).trim() : null;
             if (idRep) newRUBROPROV[mesKey][canalKey2][cat].ventasSet.add(idRep);
             newRUBROPROV[mesKey][canalKey2][cat].fc += tv;
             newRUBROPROV[mesKey][canalKey2][cat].qty += qty2;
             const skuRP = row[COL.SKU] ? String(row[COL.SKU]).trim() : '';
             if (skuRP) newRUBROPROV[mesKey][canalKey2][cat].skuQ[skuRP] = (newRUBROPROV[mesKey][canalKey2][cat].skuQ[skuRP]||0) + qty2;
+            // Bolsas gratis: unidades del SKU BBB001BL con precio 0 (tv===0), se regalan según mínimo de compra
+            if (skuRP && skuRP.toUpperCase()==='BBB001BL' && tv===0) newRUBROPROV[mesKey][canalKey2][cat].freeBolsa += qty2;
           }
         }
       }
@@ -1500,7 +1502,7 @@ async function handleFile(file) {
         for (const [catK, d] of Object.entries(cats)) {
           let topSku='', topQ=-1;
           for (const s in (d.skuQ||{})){ if(d.skuQ[s]>topQ){ topQ=d.skuQ[s]; topSku=s; } }
-          finalRUBROPROV[mesK][canalK][catK] = [d.ventasSet.size, Math.round(d.fc), d.qty, topSku];
+          finalRUBROPROV[mesK][canalK][catK] = [d.ventasSet.size, Math.round(d.fc), d.qty, topSku, d.freeBolsa||0];
         }
       }
     }
@@ -3636,13 +3638,13 @@ function rpIdentCell(cat){
 }
 function rpMetricCell(cell, col, rank, pct){
   if(!cell) return '<div class="rpt-cell rpt-empty">—</div>';
-  var ventas=cell[0]||0, fc=cell[1]||0, qty=cell[2]||0;
+  var ventas=cell[0]||0, fc=cell[1]||0, qty=cell[2]||0, free=cell[4]||0;
   var ticket = ventas>0 ? fc/ventas : 0;
   return '<div class="rpt-cell">'
     +'<span class="rpt-rank '+(rank===1?'top':'oth')+'">'+(rank===1?'🏆 #1':'#'+rank)+'</span>'
     +'<div class="rpt-faclbl">Facturación s/IVA</div><div class="rpt-fac" style="color:'+col+'">'+ffl(fc)+'</div>'
     +'<div class="rpt-metrics">'
-    +'<div class="rpt-m" style="--mc:#0F7A34"><span class="rpt-ml">Cantidad</span><span class="rpt-mv">'+qty.toLocaleString('es-AR')+'</span></div>'
+    +'<div class="rpt-m" style="--mc:#0F7A34"><span class="rpt-ml">Cantidad</span><span class="rpt-mv">'+qty.toLocaleString('es-AR')+'</span>'+(free>0?'<span style="font-size:9px;color:#b26a00;font-weight:700;line-height:1.1"><i class="ti ti-shopping-bag" style="font-size:9px;vertical-align:-1px"></i> '+free.toLocaleString('es-AR')+' gratis</span>':'')+'</div>'
     +'<div class="rpt-m" style="--mc:#B26A00"><span class="rpt-ml">Ticket</span><span class="rpt-mv">'+ffl(ticket)+'</span></div>'
     +'<div class="rpt-m" style="--mc:#2A6FD6"><span class="rpt-ml">Ventas</span><span class="rpt-mv">'+ventas+'</span></div>'
     +'<div class="rpt-m" style="--mc:#9B3D8C"><span class="rpt-ml">%</span><span class="rpt-mv">'+pct.toFixed(2)+'%</span></div>'
@@ -3719,7 +3721,9 @@ function renderRP(){
     var c1=CH_LIGHT[RP_CANAL_CHKEY[locCh[0]]]||'#2a9d8f', c2=CH_LIGHT[RP_CANAL_CHKEY[locCh[locCh.length-1]]]||'#c1873b';
     html += rpSection('<i class="ti ti-map-pin" style="font-size:15px"></i> Locales', c1, c2, locCh, mesData);
   }
-  host.innerHTML = rpStyleBlockT() + html;
+  var anyFree=false; for(var _ck in mesData){ var _cc=mesData[_ck]; for(var _cat in _cc){ if(_cc[_cat] && (_cc[_cat][4]||0)>0){ anyFree=true; break; } } if(anyFree) break; }
+  var freeNote = anyFree ? '<div style="font-size:10.5px;color:var(--txt2);margin-top:2px;padding:0 2px"><i class="ti ti-shopping-bag" style="font-size:11px;vertical-align:-1px;color:#b26a00"></i> <b>BBB001BL</b> = bolsas que se regalan según el mínimo de compra (precio $0); el "N gratis" bajo Cantidad son esas unidades.</div>' : '';
+  host.innerHTML = rpStyleBlockT() + html + freeNote;
   try{ rpApplyCutouts(); }catch(e){}
 }
 
