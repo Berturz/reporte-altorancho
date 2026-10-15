@@ -3644,7 +3644,7 @@ function rpMetricCell(cell, col, rank, pct){
     +'<span class="rpt-rank '+(rank===1?'top':'oth')+'">'+(rank===1?'🏆 #1':'#'+rank)+'</span>'
     +'<div class="rpt-faclbl">Facturación s/IVA</div><div class="rpt-fac" style="color:'+col+'">'+ffl(fc)+'</div>'
     +'<div class="rpt-metrics">'
-    +'<div class="rpt-m" style="--mc:#0F7A34"><span class="rpt-ml">Cantidad</span><span class="rpt-mv">'+qty.toLocaleString('es-AR')+'</span>'+(free>0?'<span style="font-size:9px;color:#b26a00;font-weight:700;line-height:1.1"><i class="ti ti-shopping-bag" style="font-size:9px;vertical-align:-1px"></i> '+free.toLocaleString('es-AR')+' gratis</span>':'')+'</div>'
+    +'<div class="rpt-m" style="--mc:#0F7A34"><span class="rpt-ml">Cantidad</span>'+(free>0?'<span style="font-size:9px;color:#b26a00;font-weight:700;line-height:1.1"><i class="ti ti-shopping-bag" style="font-size:9px;vertical-align:-1px"></i> '+free.toLocaleString('es-AR')+' gratis</span>':'')+'<span class="rpt-mv">'+qty.toLocaleString('es-AR')+'</span></div>'
     +'<div class="rpt-m" style="--mc:#B26A00"><span class="rpt-ml">Ticket</span><span class="rpt-mv">'+ffl(ticket)+'</span></div>'
     +'<div class="rpt-m" style="--mc:#2A6FD6"><span class="rpt-ml">Ventas</span><span class="rpt-mv">'+ventas+'</span></div>'
     +'<div class="rpt-m" style="--mc:#9B3D8C"><span class="rpt-ml">%</span><span class="rpt-mv">'+pct.toFixed(2)+'%</span></div>'
