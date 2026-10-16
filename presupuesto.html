@@ -349,7 +349,8 @@ table.t tr.sub td{background:color-mix(in srgb,var(--gc,#999) 7%,#fff);
   <div class="sec" id="sec4" style="--sc:#3C3489;--sct:#2b2566">
     <div class="sec-hdr"><h2><span class="num">4</span><span class="emo">🏷️</span>Presupuesto por sector — <span id="h4"></span></h2>
       <div class="sub">Cada línea del presupuesto del mes elegido, en importes completos.
-        Los subtotales suman el total de la sección 2.</div></div>
+        Los subtotales suman el total de la sección 2. En <b>📦 Compras</b> el presupuesto sale de la
+        hoja <b>Comunicación Sectores</b>, que es el que se les comunica a los sectores.</div></div>
     <div class="blkgrid" id="t4box"></div>
     <div class="tstrip" id="t4tot"></div>
   </div>
@@ -534,6 +535,16 @@ function parseVentas(wb){
     impo:fila(/^impo\b/i), imp:fila(/^impuestos/i), cubrir:fila(/^gastos totales a cubrir/i),
     resS:fila(/^resultado.*s\/impo/i), resC:fila(/^resultado.*c\/impo/i)};
 }
+// El presupuesto de COMPRAS se toma de la hoja "COMUNICACION SECTORES" (pedido de la usuaria):
+// es la misma grilla que "Análisis de desvios" pero redondeada a miles, que es el numero que
+// efectivamente se le comunica a cada sector.
+function comprasComunicadas(wb){
+  var ws=shGet(wb,/^comunicaci[oó]n sectores/i); if(!ws) return null;
+  var A=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  var bl=readBlocks(A,0,A.length), out=null;
+  bl.forEach(function(b){ if(/^compras/i.test(txt(b.name))) out=b.lines; });
+  return (out&&out.length)?out:null;
+}
 // Año del ejercicio: lo lee del encabezado de la grilla ("ene-26"), sea texto o fecha.
 function yearOf(A,iP){
   for(var i=iP;i<Math.min(iP+8,A.length);i++){
@@ -562,10 +573,19 @@ function parseFc(wb){
     if(bP[i].lines.length!==bR[i].lines.length)
       avisos.push(b[1]+': '+bP[i].lines.length+' líneas proyectadas vs '+bR[i].lines.length+' reales');
   });
+  // El presupuesto de compras se pisa con el de COMUNICACION SECTORES, si la hoja esta.
+  var cc=comprasComunicadas(wb);
+  if(cc){
+    if(cc.length===proy.compras.length) proy.compras=cc;
+    else avisos.push('Compras: la hoja COMUNICACION SECTORES tiene '+cc.length+
+      ' líneas y la de desvíos '+proy.compras.length+'; se usó la de desvíos');
+  }else{
+    avisos.push('no encontré la hoja COMUNICACION SECTORES; el presupuesto de compras salió de la hoja de desvíos');
+  }
   var iTP=-1,iTR=-1;
   for(var i=0;i<A.length;i++){var b=txt(A[i]&&A[i][1]);
     if(/^total presupuestado/i.test(b))iTP=i; else if(/^total real/i.test(b))iTR=i;}
-  return {proy:proy,real:real,yy:yearOf(A,iP),ventas:parseVentas(wb),
+  return {proy:proy,real:real,yy:yearOf(A,iP),ventas:parseVentas(wb),comprasCom:!!cc,
     totPres:iTP>=0?rowVals(A[iTP]):null, totReal:iTR>=0?rowVals(A[iTR]):null,
     avisos:avisos};
 }
