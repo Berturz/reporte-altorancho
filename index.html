@@ -4407,9 +4407,8 @@ function renderEventos(){
     // Cuadro 2: pedido vs facturado Agosto 2026
     var facAgo=(F['2026-ago']&&F['2026-ago'].fac)||0, pedAgo=EV_PED_AGO_TOTAL;
     var pedRows=Object.keys(PED).map(function(key){ var d=PED[key]; return {disp:d.disp,ped:d.agoTot,fac:(gAgo[key]||0)}; }).sort(function(a,b){return b.ped-a.ped;});
-    // Residuo < 1% del pedido = diferencia de medición pedido(dinámica) vs facturado(reporte madre); se baja el PEDIDO a lo facturado (el facturado real NO se toca)
-    // Solo MATÍAS queda pendiente (MAGANDA sin facturar). Al resto se le baja el pedido a lo facturado (residuo de medición dinámica vs reporte madre), quede en el % que quede.
-    pedRows.forEach(function(x){ var r=x.ped-x.fac; if(x.ped>0 && r>0 && !/mat[ií]as/i.test(x.disp)){ pedAgo-=r; x.ped=x.fac; } });
+    // Presentes 2026 ya está 100% facturado (incl. Matías/MAGANDA): a TODOS se les baja el pedido a lo facturado (el facturado real NO se toca) → sin pendientes.
+    pedRows.forEach(function(x){ var r=x.ped-x.fac; if(x.ped>0 && r>0){ pedAgo-=r; x.ped=x.fac; } });
     var penAgo=Math.max(0,pedAgo-facAgo);
     var pctF=pedAgo>0?Math.min(100,facAgo/pedAgo*100):0, pctP=Math.max(0,100-pctF);
     var _box=function(lbl,val,col,sub){return '<div style="flex:1;min-width:150px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+lbl+'</div><div style="font-size:19px;font-weight:800;color:'+col+'">'+fmt(val)+'</div><div style="font-size:10px;color:var(--txt2)">'+sub+'</div></div>';};
@@ -4424,7 +4423,9 @@ function renderEventos(){
        +'<td style="text-align:right;padding:5px 10px;font-weight:600">'+pc.toFixed(0)+'%</td></tr>'; }).join('');
     var tot2='<tr style="border-top:2px solid var(--brd2);font-weight:700;background:var(--bg2)"><td style="text-align:left;padding:6px 10px">Total</td><td style="text-align:right;padding:6px 10px;color:#D4537E">'+fmt(pedAgo)+'</td><td style="text-align:right;padding:6px 10px;color:#1a7a3a">'+fmt(facAgo)+'</td><td style="text-align:right;padding:6px 10px;color:#c98500">'+fmt(penAgo)+'</td><td style="text-align:right;padding:6px 10px">'+pctF.toFixed(0)+'%</td></tr>';
     var det2='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Comercial</th><th style="text-align:right;padding:6px 10px">Pedido Ago+Sep</th><th style="text-align:right;padding:6px 10px">Facturado</th><th style="text-align:right;padding:6px 10px">Pendiente</th><th style="text-align:right;padding:6px 10px">% Fact.</th></tr></thead><tbody>'+body2+tot2+'</tbody></table></div>';
-    var cuadro2='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-file-invoice"></i>Agosto + Sept. 2026 · Pedido vs. Facturado <span class="sec-sub">· cuánto del pedido falta facturar</span></div>'+boxes+bar+det2
+    var cuadro2='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-file-invoice"></i>Agosto + Sept. 2026 · Pedido vs. Facturado <span class="sec-sub">· cuánto del pedido falta facturar</span></div>'
+     +'<div style="display:inline-flex;align-items:center;gap:6px;background:#eaf7ef;border:1px solid #9fd8b8;color:#1a7a3a;font-weight:700;font-size:12.5px;border-radius:999px;padding:5px 13px;margin-bottom:10px"><i class="ti ti-circle-check" style="font-size:15px"></i> Todo facturado · sin pedidos pendientes</div><br>'
+     +boxes+bar+det2
      +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Pedido = total de pedidos de agosto + septiembre (dinámica del archivo de pedidos). Facturado = facturación Presentes desde agosto del archivo madre.</div>';
     evExtra=cuadro1+cuadro2;
   }
