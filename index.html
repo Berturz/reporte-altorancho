@@ -6309,43 +6309,28 @@ function objRealForMonth(mk){ // agrega DATA_D del mes por canal->rubro (lee dat
         var C=out[dn]||(out[dn]={tv:0,fc:0,cmv:0,r:{}}); C.tv+=v.tv;C.fc+=v.fc;C.cmv+=v.cmv;
         var R=C.r[rub]||(C.r[rub]={tv:0,fc:0,cmv:0}); R.tv+=v.tv;R.fc+=v.fc;R.cmv+=v.cmv; } } }
   return found?out:null;}
+function objMesLab(mk){for(var i=0;i<OBJ_MESES.length;i++){if(OBJ_MESES[i][0]===mk)return OBJ_MESES[i][1];}return mk;}
 function objRenderReal(){var M=OBJ_DATA[OBJ_SEL];var real=objRealForMonth(OBJ_SEL);var hdr=document.getElementById("objHdr");var b=document.getElementById("objBody");
-  if(!real){hdr.innerHTML="";b.innerHTML='<div style="background:#fbf6ef;border:1px solid #ece3d4;border-radius:10px;padding:16px;color:#8a7f70;font-size:13px">A\u00fan no hay datos reales de <b>'+OBJ_SEL+'</b> cargados en el dashboard (o es un mes futuro). Carg\u00e1 la facturaci\u00f3n del mes y volv\u00e9 a abrir esta vista.</div>';return;}
-  // totales
+  var mlab=objMesLab(OBJ_SEL);var mshort=mlab.split(" ")[0];
+  if(!real){hdr.innerHTML="";b.innerHTML='<div style="background:#fbf6ef;border:1px solid #ece3d4;border-radius:10px;padding:16px;color:#8a7f70;font-size:13px">Aún no hay datos reales de <b>'+mlab+'</b> cargados en el dashboard (o es un mes futuro). Cargá la facturación del mes y volvé a abrir esta vista.</div>';return;}
   var rtv=0,rfc=0,rcmv=0;for(var cn in real){rtv+=real[cn].tv;rfc+=real[cn].fc;rcmv+=real[cn].cmv;}
-  var obj=M?M.o:0;var rmk=rcmv>0?rfc/rcmv:null;
-  hdr.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;background:#f3f8f5;border:1px solid #d9ece2;border-radius:12px;padding:12px 16px;margin-bottom:.7rem">'
-    +'<div><div style="font-size:11px;color:#879;text-transform:uppercase;letter-spacing:.04em;font-weight:700">Facturado real</div><div style="font-family:Quicksand,inherit;font-size:22px;font-weight:700;color:#1D9E75">'+objFmt(rtv)+'</div></div>'
-    +'<div style="border-left:1px solid #cfe3d8;padding-left:14px"><div style="font-size:11px;color:#998;text-transform:uppercase;letter-spacing:.04em;font-weight:700">Objetivo</div><div style="font-family:Quicksand,inherit;font-size:22px;font-weight:700;color:#8a8075">'+objFmt(obj)+'</div></div>'
-    +'<div style="border-left:1px solid #cfe3d8;padding-left:14px"><div style="font-size:11px;color:#998;text-transform:uppercase;letter-spacing:.04em;font-weight:700">Cumplimiento</div><div style="font-family:Quicksand,inherit;font-size:22px;font-weight:700">'+objPc(rtv,obj)+'</div></div>'
-    +'<div style="border-left:1px solid #cfe3d8;padding-left:14px"><div style="font-size:11px;color:#998;text-transform:uppercase;letter-spacing:.04em;font-weight:700">Margen real</div><div style="font-family:Quicksand,inherit;font-size:22px;font-weight:700;color:#1D9E75">'+objMk(rmk)+'</div></div>'
-    +'<div style="font-size:12px;color:#aaa;margin-left:auto;max-width:180px">margen objetivo '+objMk(M?M.m:null)+'</div></div>';
+  var obj=M?M.o:0;var objmk=M?M.m:null;var rmk=rcmv>0?rfc/rcmv:null;
+  function bigCard(tit,sub,val,mglab,mgval,accent,bg,bd){return '<div style="flex:1;min-width:230px;background:'+bg+';border:1px solid '+bd+';border-radius:12px;padding:12px 16px"><div style="font-size:11px;color:#998;text-transform:uppercase;letter-spacing:.04em;font-weight:700">'+tit+'</div><div style="font-size:10.5px;color:#b3a99c;margin-bottom:2px">'+sub+'</div><div style="font-family:Quicksand,inherit;font-size:24px;font-weight:700;color:'+accent+'">'+val+'</div><div style="font-size:12px;color:#8a8075;margin-top:3px">'+mglab+' <b style="color:'+accent+'">'+mgval+'</b></div></div>';}
+  hdr.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;margin-bottom:.8rem">'+bigCard("Facturación ajustada 2025","objetivo a igualar · s/IVA",objFmt(obj),"Margen 2025",objMk(objmk),"#8a8075","#faf6ef","#ece3d4")+bigCard("Cómo venimos · "+mshort,"facturado real a la fecha · s/IVA",objFmt(rtv),"Margen real",objMk(rmk),"#1D9E75","#f3f8f5","#d9ece2")+'<div style="min-width:130px;background:#fff;border:1px solid #ece3d4;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center"><div style="font-size:11px;color:#998;text-transform:uppercase;letter-spacing:.04em;font-weight:700">Cumplimiento</div><div style="font-family:Quicksand,inherit;font-size:24px;font-weight:700;margin-top:2px">'+objPc(rtv,obj)+'</div></div></div>';
   window.__objReal=real;
-  var html="";
+  var head='<div style="display:flex;align-items:flex-end;gap:10px;padding:4px 14px 7px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#998;font-weight:700;border-bottom:2px solid #ece3d4;margin-bottom:6px"><span style="width:12px"></span><span style="flex:1;min-width:110px">Canal</span><span style="min-width:150px;text-align:right">Ajustado 2025<br><span style="font-weight:600;color:#b3aa9d;text-transform:none">facturación · margen</span></span><span style="min-width:150px;text-align:right">Cómo venimos ('+mshort+')<br><span style="font-weight:600;color:#b3aa9d;text-transform:none">facturación · margen</span></span><span style="min-width:62px;text-align:right">Cumpl.</span></div>';
+  var html=head;
   for(var i=0;i<OBJ_CAN.length;i++){var cn=OBJ_CAN[i];var R=real[cn];var OC=M?M.c[cn]:null;if(!R&&!OC)continue;var col=OBJ_COL[cn]||"#888";
-    var rv=R?R.tv:0;var ov=OC?OC.o:0;var mkr=(R&&R.cmv>0)?R.fc/R.cmv:null;var id="objrc_"+i;
-    html+='<div style="border:1px solid #ece3d4;border-left:4px solid '+col+';border-radius:10px;margin-bottom:7px;overflow:hidden">'
-    +'<div class="objrealrow" data-id="'+id+'" data-cn="'+objEsc(cn)+'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fff">'
-    +'<span id="'+id+'_a" style="color:'+col+';font-size:14px;width:12px">\u25b8</span>'
-    +'<span style="font-weight:700;color:#2b2b2b;flex:1;min-width:110px">'+cn+'</span>'
-    +'<span style="color:#1D9E75;font-weight:700;min-width:130px;text-align:right;font-size:14px">'+objFmt(rv)+'</span>'
-    +'<span style="color:#8a8075;min-width:130px;text-align:right;font-size:12.5px">/ '+objFmt(ov)+'</span>'
-    +'<span style="min-width:55px;text-align:right">'+objPc(rv,ov)+'</span>'
-    +'<span style="color:#1D9E75;font-weight:600;min-width:55px;text-align:right;font-size:12.5px">'+objMk(mkr)+'</span></div>'
-    +'<div id="'+id+'" data-cn="'+objEsc(cn)+'" style="display:none;padding:2px 14px 8px 30px;background:#fcfaf6"></div></div>';}
+    var rv=R?R.tv:0;var ov=OC?OC.o:0;var omk=OC?OC.m:null;var mkr=(R&&R.cmv>0)?R.fc/R.cmv:null;var id="objrc_"+i;
+    html+='<div style="border:1px solid #ece3d4;border-left:4px solid '+col+';border-radius:10px;margin-bottom:7px;overflow:hidden"><div class="objrealrow" data-id="'+id+'" data-cn="'+objEsc(cn)+'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fff"><span id="'+id+'_a" style="color:'+col+';font-size:14px;width:12px">▸</span><span style="font-weight:700;color:#2b2b2b;flex:1;min-width:110px">'+cn+'</span><span style="min-width:150px;text-align:right"><div style="font-weight:700;color:#8a8075;font-size:14px">'+objFmt(ov)+'</div><div style="font-size:11px;color:#a89f92">mg '+objMk(omk)+'</div></span><span style="min-width:150px;text-align:right"><div style="font-weight:700;color:#1D9E75;font-size:14px">'+objFmt(rv)+'</div><div style="font-size:11px;color:#7ba98f">mg '+objMk(mkr)+'</div></span><span style="min-width:62px;text-align:right;font-weight:700">'+objPc(rv,ov)+'</span></div><div id="'+id+'" data-cn="'+objEsc(cn)+'" style="display:none;padding:2px 14px 8px 30px;background:#fcfaf6"></div></div>';}
   b.innerHTML=html;
   var rows=b.querySelectorAll(".objrealrow");for(var k=0;k<rows.length;k++){rows[k].onclick=function(){objTogRealC(this.getAttribute("data-id"),this.getAttribute("data-cn"));};}}
-function objTogRealC(id,cn){var el=document.getElementById(id);var ar=document.getElementById(id+"_a");if(!el)return;if(el.style.display!=="none"){el.style.display="none";ar.innerHTML="\u25b8";return;}ar.innerHTML="\u25be";
+function objTogRealC(id,cn){var el=document.getElementById(id);var ar=document.getElementById(id+"_a");if(!el)return;if(el.style.display!=="none"){el.style.display="none";ar.innerHTML="▸";return;}ar.innerHTML="▾";
   if(!el.getAttribute("data-l")){var R=(window.__objReal||{})[cn]||{r:{}};var OC=(OBJ_DATA[OBJ_SEL]&&OBJ_DATA[OBJ_SEL].c[cn])?OBJ_DATA[OBJ_SEL].c[cn]:{r:{}};
     var rubs={};for(var k in R.r)rubs[k]=1;for(var k2 in OC.r)rubs[k2.toUpperCase()]=1;var arr=Object.keys(rubs).sort(function(a,b){return ((R.r[b]||{}).tv||0)-((R.r[a]||{}).tv||0);});
-    var html="";for(var i=0;i<arr.length;i++){var rn=arr[i];var rr=R.r[rn]||{tv:0,fc:0,cmv:0};var oo=null;for(var ok in OC.r){if(ok.toUpperCase()===rn){oo=OC.r[ok];break;}}var ov=oo?oo.o:0;var mkr=rr.cmv>0?rr.fc/rr.cmv:null;
-      html+='<div style="display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:1px solid #f0ebe1">'
-      +'<span style="width:11px"></span><span style="color:#5a534a;font-weight:600;flex:1;font-size:13px;min-width:90px">'+objEsc(rn)+'</span>'
-      +'<span style="color:#1D9E75;font-weight:700;min-width:120px;text-align:right;font-size:13px">'+objFmt(rr.tv)+'</span>'
-      +'<span style="color:#8a8075;min-width:120px;text-align:right;font-size:12px">/ '+objFmt(ov)+'</span>'
-      +'<span style="min-width:50px;text-align:right">'+objPc(rr.tv,ov)+'</span>'
-      +'<span style="color:#1D9E75;min-width:50px;text-align:right;font-size:12px">'+objMk(mkr)+'</span></div>';}
-    html+='<div style="font-size:11px;color:#b0a89c;padding:6px 4px">El detalle por <b>modelo</b> del real lo sumamos en el pr\u00f3ximo paso (necesita el ajuste aditivo del parser).</div>';
+    var html="";for(var i=0;i<arr.length;i++){var rn=arr[i];var rr=R.r[rn]||{tv:0,fc:0,cmv:0};var oo=null;for(var ok in OC.r){if(ok.toUpperCase()===rn){oo=OC.r[ok];break;}}var ov=oo?oo.o:0;var omk=oo?oo.m:null;var mkr=rr.cmv>0?rr.fc/rr.cmv:null;
+      html+='<div style="display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:1px solid #f0ebe1"><span style="width:11px"></span><span style="color:#5a534a;font-weight:600;flex:1;font-size:13px;min-width:90px">'+objEsc(rn)+'</span><span style="min-width:150px;text-align:right"><div style="color:#8a8075;font-weight:700;font-size:13px">'+objFmt(ov)+'</div><div style="font-size:10.5px;color:#a89f92">mg '+objMk(omk)+'</div></span><span style="min-width:150px;text-align:right"><div style="color:#1D9E75;font-weight:700;font-size:13px">'+objFmt(rr.tv)+'</div><div style="font-size:10.5px;color:#7ba98f">mg '+objMk(mkr)+'</div></span><span style="min-width:62px;text-align:right">'+objPc(rr.tv,ov)+'</span></div>';}
+    html+='<div style="font-size:11px;color:#b0a89c;padding:6px 4px">El detalle por <b>modelo</b> del real lo sumamos en el próximo paso (necesita el ajuste aditivo del parser).</div>';
     el.innerHTML=html;el.setAttribute("data-l","1");}
   el.style.display="block";}
 try{objTabs();objModeBar();objRender();}catch(e){console.warn("obj render",e);}
