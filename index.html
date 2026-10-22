@@ -6503,6 +6503,18 @@ function updSalidasDRI(){
   el.textContent = a===b ? `Día: ${a}` : `${a} → ${b} (${getSalidasRange().length} días)`;
 }
 function clearSalidasD(){ salidasSS=null; salidasSE=null; salidasPicking=false; buildSalidasCal(); updSalidasDRI(); renderSalidas(); }
+// Default al abrir/refrescar/actualizar: la semana miércoles→martes de la última fecha con datos.
+function salidasDefaultWeek(){
+  var dk=getSalidasDKEYS();
+  if(!dk.length){ salidasSS=null; salidasSE=null; salidasPicking=false; return; }
+  var last=dk[dk.length-1], d=new Date(last+'T00:00:00');
+  var back=(d.getDay()-3+7)%7; // días desde el miércoles anterior o igual (Wed=3)
+  var start=new Date(d); start.setDate(d.getDate()-back);
+  var end=new Date(start); end.setDate(start.getDate()+6); // martes
+  var iso=function(x){ return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); };
+  salidasSS=iso(start); salidasSE=iso(end); salidasPicking=false;
+  salidasCy=start.getFullYear(); salidasCm=start.getMonth();
+}
 function pmSalidas(){ salidasCm--; if(salidasCm<0){salidasCm=11;salidasCy--;} buildSalidasCal(); }
 function nmSalidas(){ salidasCm++; if(salidasCm>11){salidasCm=0;salidasCy++;} buildSalidasCal(); }
 
@@ -7016,9 +7028,8 @@ async function handleSalidasFile(file) {
     SALIDAS_B_D = newB;
     SALIDAS_AA_D = newAA;
     SALIDAS_EXTRA_D = newEXTRA;
-    salidasSS = null; salidasSE = null; salidasPicking = false;
     const allDates = getSalidasDKEYS();
-    if(allDates.length){ const f = allDates[allDates.length-1]; salidasCy = parseInt(f.slice(0,4)); salidasCm = parseInt(f.slice(5,7))-1; }
+    salidasDefaultWeek();
     buildSalidasCal(); updSalidasDRI(); renderSalidas();
     try{ persistSalidas(); }catch(e){}
 
@@ -7047,8 +7058,7 @@ salidasZone.addEventListener('drop', e=>{ e.preventDefault(); salidasZone.classL
 
 // ── INIT SALIDAS ──
 (function(){
-  const allDates = getSalidasDKEYS();
-  if(allDates.length){ const f = allDates[allDates.length-1]; salidasCy = parseInt(f.slice(0,4)); salidasCm = parseInt(f.slice(5,7))-1; }
+  salidasDefaultWeek();
   buildSalidasCal(); updSalidasDRI(); renderSalidas();
 })();
 </script>
@@ -7116,7 +7126,7 @@ function applyFactState(f){
   refreshAll();renderYTD();renderRPCompare();buildFactMonthChips();buildRPMonthChips();renderRP();renderCobr();renderVend();try{renderCostFin();}catch(e){}try{renderEvol();}catch(e){}try{renderEventos();}catch(e){}
   initFactDefaultMonth();
 }
-function applySalidasState(s){ SALIDAS_B_D=s.SALIDAS_B_D;SALIDAS_AA_D=s.SALIDAS_AA_D;SALIDAS_EXTRA_D=s.SALIDAS_EXTRA_D; salidasSS=null;salidasSE=null;salidasPicking=false; var ad=getSalidasDKEYS(); if(ad.length){var f=ad[ad.length-1];salidasCy=parseInt(f.slice(0,4));salidasCm=parseInt(f.slice(5,7))-1;} buildSalidasCal();updSalidasDRI();renderSalidas(); }
+function applySalidasState(s){ SALIDAS_B_D=s.SALIDAS_B_D;SALIDAS_AA_D=s.SALIDAS_AA_D;SALIDAS_EXTRA_D=s.SALIDAS_EXTRA_D; salidasDefaultWeek(); buildSalidasCal();updSalidasDRI();renderSalidas(); }
 function applyIMPOState(im){ IMPO_D=im.IMPO_D; renderIMPO(); }
 function resetFactState(){ idbDel('fact').then(function(){ location.reload(); }); }
 if(typeof prodImgUser==='undefined'){ var prodImgUser = {}; }
