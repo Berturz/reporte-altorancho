@@ -886,6 +886,17 @@ var CLIENTE_TIPO = {};   // { clienteUpper: tipo }  ← del Excel de etiquetas (
 var EVENTOS_D = {Presentes:{}, Hotelga:{}};
 // Ferias AR (archivos propios, no salen del reporte madre). { '2025':{year,mes,cats:{cat:{qty,tv,fac,cn}}, na:{qty,tv}, artv:{qty,tv}, otros:{qty,tv,fac,cn}, tot:{qty,tv}, mgFac, mgCn}, '2026':{...} }
 var FERIA_AR = {};
+// AR Cyber Monday · por fase (Pre/Durante/Post) · Web + Locales (sin Mayorista). Misma forma que una edición de FERIA_AR.
+// { '2025':{ pre:{cats,na,artv,otros,tot,mgFac,mgCn}, durante:{...}, post:{...} }, '2026':{...} }
+var CYBER_AR = {};
+var CYBER_DATES = {
+  '2025':{ pre:['2025-10-30','2025-11-02'], durante:['2025-11-03','2025-11-05'], post:['2025-11-06','2025-11-09'] },
+  '2026':{ pre:['2026-10-30','2026-11-01'], durante:['2026-11-02','2026-11-04'], post:['2026-11-05','2026-11-15'] }
+};
+var cyberFase='durante';
+function setCyberFase(f){ cyberFase=f; try{renderEventos();}catch(e){} }
+function _cyberPhase(dia, year){ var dd=CYBER_DATES[year]; if(!dd||!dia) return null; if(dia>=dd.pre[0]&&dia<=dd.pre[1]) return 'pre'; if(dia>=dd.durante[0]&&dia<=dd.durante[1]) return 'durante'; if(dia>=dd.post[0]&&dia<=dd.post[1]) return 'post'; return null; }
+function _cyInit(){ return {cats:{},na:{qty:0,tv:0},artv:{qty:0,tv:0},otros:{qty:0,tv:0,fac:0,cn:0},tot:{qty:0,tv:0},mgFac:0,mgCn:0}; }
 function evFeria(equipo){ var s=String(equipo||'').toLowerCase(); if(s.indexOf('presente')>=0) return 'Presentes'; if(s.indexOf('hotelga')>=0) return 'Hotelga'; return null; }
 function evAdd(feria, ed, tv, mg, facIpc, vend, rubroCat, cant){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0,byV:{},byR:{}}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; if(!E.byV)E.byV={}; var vn=(vend&&String(vend).trim())||'(s/vend)'; var V=E.byV[vn]||(E.byV[vn]={fac:0,facIpc:0}); V.fac+=tv||0; if(facIpc)V.facIpc+=facIpc; if(!E.byR)E.byR={}; if(rubroCat){ var R=E.byR[rubroCat]||(E.byR[rubroCat]={cant:0,fac:0}); R.fac+=tv||0; R.cant+=cant||0; } }
 // Clasificación única de ventas por rubro/proveedor (misma en parser 2026, 2025 y captura de eventos). Sillas Importadas = Wendy + Urun + Zhaolu Thomas + Putai · Reposeras Importadas = Topmax.
@@ -2698,6 +2709,7 @@ async function handleFact2025File(file){
     }
     var CANAL_MAP2={Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
     var acc={}, nFilas=0, cliAcc={}, evol2025={};
+    var cyberAcc={pre:_cyInit(),durante:_cyInit(),post:_cyInit()}; // AR Cyber Monday 2025 (Web + Locales, sin Mayorista)
     evReset(['2025']); // ferias 2025 se reconstruyen en cada carga del reporte 2025
     for(var ri=1;ri<rows.length;ri++){
       var row=rows[ri]; if(!row) continue;
@@ -2729,7 +2741,16 @@ async function handleFact2025File(file){
         if(RUBROS_VALID.has(rubro)){ _ev.tv += n(row[COL.TV]); _ev.fc += n(row[COL.FC]); _ev.cmv += n(row[COL.CMV]); } }
       var provNombre2=row[COL.PROV]?String(row[COL.PROV]).trim():'';
       var origVal2=row[COL.ORIG]?String(row[COL.ORIG]).trim():'';
-      var cat=rpClasificar(rubro, provNombre2, origVal2, (row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''));
+      var skuU2=(row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():'');
+      var cat=rpClasificar(rubro, provNombre2, origVal2, skuU2);
+      // ── AR Cyber Monday 2025: Web + Locales (sin Mayorista/Lett), en las franjas de fecha del Cyber. #N/A y ARTVARIOS aparte; margen solo filas con costo. ──
+      { var _cyf=_cyberPhase(dia,'2025');
+        if(_cyf && canal!=='Lett'){ var _P=cyberAcc[_cyf]; var _tvC=n(row[COL.TV]); var _qC=Math.round(n(row[COL.QTY])); var _cmvC=n(row[COL.CMV]);
+          if(skuU2==='ARTVARIOS'){ _P.artv.qty+=_qC; _P.artv.tv+=_tvC; }
+          else if(!cat){ _P.na.qty+=_qC; _P.na.tv+=_tvC; }
+          else { if(!_P.cats[cat])_P.cats[cat]={qty:0,tv:0,fac:0,cn:0}; var _bk=_P.cats[cat]; _bk.qty+=_qC; _bk.tv+=_tvC; if(_cmvC>0){ _bk.fac+=_tvC; _bk.cn+=_cmvC; _P.mgFac+=_tvC; _P.mgCn+=_cmvC; } }
+          _P.tot.qty+=_qC; _P.tot.tv+=_tvC;
+        } }
       if(!cat) continue;
       var mm2=dia.slice(5,7);
       var tv=n(row[COL.TV]);
@@ -2745,6 +2766,10 @@ async function handleFact2025File(file){
     if(typeof RP2025_CANAL==='undefined'||!RP2025_CANAL) window.RP2025_CANAL={};
     for(var _mmC in acc){ RP2025_CANAL[_mmC]=acc[_mmC]; }
     EVOL_2025 = evol2025;
+    // AR Cyber Monday 2025: conservar solo las fases con datos
+    { var _cyOut={}; ['pre','durante','post'].forEach(function(k){ if(cyberAcc[k].tot.tv>0||cyberAcc[k].tot.qty>0) _cyOut[k]=cyberAcc[k]; });
+      if(typeof CYBER_AR==='undefined'||!CYBER_AR) window.CYBER_AR={};
+      if(Object.keys(_cyOut).length) CYBER_AR['2025']=_cyOut; else { try{ delete CYBER_AR['2025']; }catch(e){} } }
     // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
     var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb,comps:Object.keys(dc.comps)}; } }
     CLIENTE_2025=finalCli25;
@@ -2900,6 +2925,63 @@ function _feriaRow(label, sub, a, b, fmt, special){
 }
 function _mesAbbr(mm){ var a=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; var i=parseInt(mm,10)-1; return (i>=0&&i<12)?a[i]:''; }
 function _mesNom(mm){ var a=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; var i=parseInt(mm,10)-1; return (i>=0&&i<12)?a[i]:'noviembre'; }
+// ── AR Cyber Monday (solo 2025 por ahora · Web + Locales, sin Mayorista) ──
+function _cyberDDMM(iso){ var p=String(iso||'').split('-'); return p.length===3?(p[2]+'/'+p[1]):iso; }
+function _cyberRow(label, sub, cell, special){
+  var q=cell?cell.qty:0, t=cell?cell.tv:0;
+  var mg=(!special && cell && cell.cn>0 && cell.fac>0)?(cell.fac/cell.cn):null;
+  var lblCol=special?'#b4322a':'var(--txt)';
+  return '<tr style="border-top:'+(special?'1.5px dashed var(--brd)':'.5px solid var(--brd)')+'">'
+   +'<td style="text-align:left;padding:6px 10px;font-weight:700;color:'+lblCol+'">'+label+(sub?'<div style="font-size:9px;font-weight:600;color:#8a8880">'+sub+'</div>':'')+'</td>'
+   +'<td style="text-align:right;padding:6px 10px;font-weight:700">'+(q?q.toLocaleString('es-AR'):'—')+'</td>'
+   +'<td style="text-align:right;padding:6px 10px;color:#8a5a2b;font-weight:700">'+((t&&Math.abs(t)>0.5)?('$'+Math.round(t).toLocaleString('es-AR')):'—')+'</td>'
+   +'<td style="text-align:right;padding:6px 10px;color:'+(mg!=null?'#1f7a44':'var(--txt2)')+';font-weight:'+(mg!=null?'700':'400')+'">'+(mg!=null?(mg.toFixed(2).replace('.',',')+'×'):'—')+'</td></tr>';
+}
+function renderCyberARBody(){
+  var fmt=function(v){return (v&&Math.abs(v)>0.5)?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
+  var Y=CYBER_AR['2025'];
+  if(!Y || !(Y.pre||Y.durante||Y.post)){
+    return '<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-bolt" style="font-size:26px;color:#5a4e9c"></i><div style="margin-top:8px">El Cyber 2025 aparece al <b>re-subir el “Reporte 2025 USAR.xlsx”</b> y Guardar (toma Web + Locales, sin Mayorista, en las fechas del Cyber).</div></div>';
+  }
+  var dd=(CYBER_DATES['2025']||{});
+  var FASES=[['pre','Pre Cyber','#6f757e'],['durante','Durante','#c98500'],['post','Post Cyber','#1f7a8c']];
+  if(!Y[cyberFase]){ for(var _i=0;_i<FASES.length;_i++){ if(Y[FASES[_i][0]]){ cyberFase=FASES[_i][0]; break; } } }
+  // sub-tabs de fase
+  var tabs=FASES.map(function(f){ var on=cyberFase===f[0]; var rng=dd[f[0]]?(_cyberDDMM(dd[f[0]][0])+' → '+_cyberDDMM(dd[f[0]][1])):''; var has=!!Y[f[0]];
+    return '<button onclick="setCyberFase(\''+f[0]+'\')"'+(has?'':' disabled')+' style="flex:1;min-width:120px;text-align:center;cursor:'+(has?'pointer':'default')+';border:1.5px solid '+(on?f[2]:'var(--brd)')+';background:'+(on?f[2]+'18':'var(--bg)')+';border-radius:10px;padding:7px 6px;opacity:'+(has?1:.5)+'"><div style="font-size:12.5px;font-weight:800;color:'+(on?f[2]:'var(--txt)')+'">'+f[1]+'</div><div style="font-size:9.5px;color:var(--txt2)">'+rng+'</div></button>';
+  }).join('');
+  var fasesBar='<div style="display:flex;gap:7px;flex-wrap:wrap;max-width:620px;margin:2px 0 14px">'+tabs+'</div>';
+  var P=Y[cyberFase];
+  var faseLbl=(FASES.filter(function(f){return f[0]===cyberFase;})[0]||['','',''])[1];
+  var faseCol=(FASES.filter(function(f){return f[0]===cyberFase;})[0]||['','','#c98500'])[2];
+  var coef=(P&&P.mgCn>0&&P.mgFac>0)?(P.mgFac/P.mgCn):null;
+  // resumen (3 cajas)
+  var _box=function(lbl,val,col,sub){return '<div style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+lbl+'</div><div style="font-size:21px;font-weight:800;color:'+col+'">'+val+'</div>'+(sub?'<div style="font-size:9.5px;color:var(--txt2)">'+sub+'</div>':'')+'</div>';};
+  var resumen='<div style="display:flex;gap:12px;flex-wrap:wrap;max-width:620px;margin-bottom:14px">'
+    +_box('Total s/IVA · '+faseLbl, fmt(P.tot.tv), faseCol, 'Web + Locales · sin Mayorista')
+    +_box('Margen (coef.)', (coef!=null?(coef.toFixed(2).replace('.',',')+'×'):'—'), '#1f7a44', 'sin ARTVARIOS / #N/A')
+    +_box('Unidades', (P.tot.qty||0).toLocaleString('es-AR'), '#274d80', '')
+    +'</div>';
+  // cuadro rubro/proveedor (single-year)
+  var getc=function(cat){ if(cat==='__NA')return P.na; if(cat==='__ARTV')return P.artv; if(cat==='__OTROS')return P.otros; return P.cats&&P.cats[cat]; };
+  var hasCat=function(cat){ var a=getc(cat); return a&&(a.tv||a.qty); };
+  var ordered=RP_ORDER.filter(hasCat);
+  var rowsHtml=ordered.map(function(cat){ return _cyberRow(cat, RP_PROVDESC[cat]||'', getc(cat), false); }).join('');
+  var sp='';
+  if(hasCat('__NA')) sp+=_cyberRow('#N/A', 'sin margen · costo no identificado', getc('__NA'), true);
+  if(hasCat('__ARTV')) sp+=_cyberRow('ARTVARIOS', 'sin margen · costo no identificado', getc('__ARTV'), true);
+  if(hasCat('__OTROS')) sp+=_cyberRow('OTROS / a reclasificar', '', getc('__OTROS'), true);
+  var totRow='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:7px 10px">TOTAL '+faseLbl.toUpperCase()+'</td>'
+    +'<td style="text-align:right;padding:7px 10px">'+(P.tot.qty||0).toLocaleString('es-AR')+'</td>'
+    +'<td style="text-align:right;padding:7px 10px;color:#8a5a2b">'+fmt(P.tot.tv)+'</td>'
+    +'<td style="text-align:right;padding:7px 10px;color:#1f7a44">'+(coef!=null?(coef.toFixed(2).replace('.',',')+'×'):'—')+'</td></tr>';
+  var cuadro='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-table"></i>Cyber 2025 · '+faseLbl+' · por Rubro / Proveedor <span class="sec-sub">· cantidad · importe s/IVA · margen</span></div>'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:620px"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+   +'<thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Rubro / Proveedor</th><th style="text-align:right;padding:6px 10px">Cant.</th><th style="text-align:right;padding:6px 10px">Importe s/IVA</th><th style="text-align:right;padding:6px 10px">Margen</th></tr></thead>'
+   +'<tbody>'+rowsHtml+sp+totRow+'</tbody></table></div>'
+   +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:620px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Margen = coef. precio/costo ponderado, sin ARTVARIOS ni #N/A. ARTVARIOS y #N/A van aparte (sin margen). Canales: Web + Locales (San Isidro, Belgrano, Alcorta, Nordelta); Mayorista no entra.</div>';
+  return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday 2025 <span class="sec-sub">· Pre · Durante · Post · Web + Locales (sin Mayorista)</span></div>'+fasesBar+resumen+cuadro;
+}
 function _feriaUploadBar(){
   return '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
    +'<label style="cursor:pointer;background:#1f7a8c;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px"><i class="ti ti-upload" style="vertical-align:-2px;margin-right:5px"></i>Cargar Feria AR (2025 o 2026)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleFeriaFile(this.files[0])"></label>'
@@ -4342,17 +4424,23 @@ function renderEventos(){
   var fmt=function(v){return (v&&Math.abs(v)>0.5)?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
   var coefOf=function(e){ return (e&&e.cn>0&&e.fac>0)?(e.fac/e.cn):null; };
   var cf=function(c){ return c==null?'—':c.toFixed(2).replace('.',','); };
-  var FER=[['Presentes','#D4537E','ti-building-store','2 ediciones/año','Presentes'],['Hotelga','#4a86b8','ti-building-pavilion','feria gastronómica/hotelera','Hotelga'],['FeriaAR','#1f7a8c','ti-tent','liquidación AR · propio','Ferias AR']];
+  var FER=[['Presentes','#D4537E','ti-building-store','2 ediciones/año','Presentes'],['Hotelga','#4a86b8','ti-building-pavilion','feria gastronómica/hotelera','Hotelga'],['FeriaAR','#1f7a8c','ti-tent','liquidación AR · propio','Ferias AR'],['CyberAR','#5a4e9c','ti-bolt','Pre · Durante · Post · 2025','AR Cyber Monday']];
   var feriaAny=!!(FERIA_AR['2025']||FERIA_AR['2026']);
-  var any=feriaAny; for(var f in EVENTOS_D){ if(Object.keys(EVENTOS_D[f]||{}).length){ any=true; break; } }
+  var cyberAny=!!(CYBER_AR['2025']||CYBER_AR['2026']);
+  var any=feriaAny||cyberAny; for(var f in EVENTOS_D){ if(Object.keys(EVENTOS_D[f]||{}).length){ any=true; break; } }
   if(!any){ wrap.innerHTML='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-confetti" style="font-size:26px;color:#D4537E"></i><div style="margin-top:8px">Subí <b>Reporte 2025</b> y <b>Reporte 2026</b> (con la columna Equipo de ventas) y Guardá para ver el análisis de ferias. Para <b>Ferias AR</b> usá el botón “Cargar Feria AR”.</div></div>'; return; }
-  if(evSel!=='FeriaAR' && (!EVENTOS_D[evSel]||!Object.keys(EVENTOS_D[evSel]).length)){ var pk=''; for(var ff in EVENTOS_D){ if(Object.keys(EVENTOS_D[ff]||{}).length){ pk=ff; break; } } if(pk) evSel=pk; else if(feriaAny) evSel='FeriaAR'; }
-  var totFer=function(f2){ if(f2==='FeriaAR'){ var tt=0; if(FERIA_AR['2025'])tt+=FERIA_AR['2025'].tot.tv; if(FERIA_AR['2026'])tt+=FERIA_AR['2026'].tot.tv; return tt; } var F2=EVENTOS_D[f2]||{}; var t=0; for(var e in F2) t+=F2[e].fac||0; return t; };
+  if(evSel!=='FeriaAR' && evSel!=='CyberAR' && (!EVENTOS_D[evSel]||!Object.keys(EVENTOS_D[evSel]).length)){ var pk=''; for(var ff in EVENTOS_D){ if(Object.keys(EVENTOS_D[ff]||{}).length){ pk=ff; break; } } if(pk) evSel=pk; else if(feriaAny) evSel='FeriaAR'; else if(cyberAny) evSel='CyberAR'; }
+  var _cyTot=function(){ var tt=0, Y=CYBER_AR['2025']; if(Y){ ['pre','durante','post'].forEach(function(k){ if(Y[k]&&Y[k].tot) tt+=Y[k].tot.tv||0; }); } return tt; };
+  var totFer=function(f2){ if(f2==='CyberAR'){ return _cyTot(); } if(f2==='FeriaAR'){ var tt=0; if(FERIA_AR['2025'])tt+=FERIA_AR['2025'].tot.tv; if(FERIA_AR['2026'])tt+=FERIA_AR['2026'].tot.tv; return tt; } var F2=EVENTOS_D[f2]||{}; var t=0; for(var e in F2) t+=F2[e].fac||0; return t; };
   var cards=FER.map(function(x){ var on=evSel===x[0]; var t=totFer(x[0]); var dn=x[4]||x[0];
     return '<div onclick="setEvSel(\''+x[0]+'\')" style="cursor:pointer;border:1.5px solid '+(on?x[1]:'var(--brd)')+';border-radius:12px;padding:10px 14px;background:'+(on?x[1]+'14':'var(--bg)')+';box-shadow:'+(on?'0 0 0 2px '+x[1]+'40':'none')+'"><div style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:'+x[1]+'"><i class="ti '+x[2]+'" style="font-size:16px"></i>'+dn+(on?' <i class="ti ti-eye" style="font-size:11px"></i>':'')+'</div><div style="font-size:16px;font-weight:800;color:'+x[1]+';margin-top:2px">'+fmt(t)+'</div><div style="font-size:10.5px;color:var(--txt2)">'+x[3]+'</div></div>';
   }).join('');
   if(evSel==='FeriaAR'){
     wrap.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;max-width:620px">'+cards+'</div>'+_feriaUploadBar()+renderFeriaARBody();
+    return;
+  }
+  if(evSel==='CyberAR'){
+    wrap.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;max-width:620px">'+cards+'</div>'+renderCyberARBody();
     return;
   }
   var F=EVENTOS_D[evSel]||{};
@@ -7368,7 +7456,7 @@ function rsemSnapObj(){
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
     stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo'),LLEGADAS_D:g('LLEGADAS_D')},
     logistica:{LOG_D:g('LOG_D')},
-    hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M'),EVOL_2025:g('EVOL_2025')},
+    hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M'),EVOL_2025:g('EVOL_2025'),CYBER_AR:g('CYBER_AR')},
     biblia:{BIBLIA_INAL:g('BIBLIA_INAL')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
@@ -7377,7 +7465,7 @@ function rsemSnapObj(){
 function rsemApplySnap(s){
   if(!s) return false;
   try{if(s.notas){if(s.notas.arMayoristaNotas)localStorage.setItem('arMayoristaNotas',s.notas.arMayoristaNotas);if(s.notas.cajasNotas)localStorage.setItem('cajasNotas',s.notas.cajasNotas);}}catch(e){}
-  try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;if(s.hist.EVOL_2025)EVOL_2025=s.hist.EVOL_2025;}}catch(e){}
+  try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;if(s.hist.EVOL_2025)EVOL_2025=s.hist.EVOL_2025;if(s.hist.CYBER_AR)CYBER_AR=s.hist.CYBER_AR;}}catch(e){}
   try{if(s.biblia&&s.biblia.BIBLIA_INAL)BIBLIA_INAL=s.biblia.BIBLIA_INAL;}catch(e){}
   try{if(s.cajas&&s.cajas.CAJAS_D)CAJAS_D=s.cajas.CAJAS_D;}catch(e){}
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
