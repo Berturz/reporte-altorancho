@@ -2963,9 +2963,12 @@ function renderCyberARBody(){
   var FASES=[['total','Total Cyber','#5a4e9c'],['pre','Pre Cyber','#6f757e'],['durante','Durante','#c98500'],['post','Post Cyber','#1f7a8c']];
   var hasF=function(f){ if(f==='total') return anyP(Y25)||anyP(Y26); return (Y25&&Y25[f])||(Y26&&Y26[f]); };
   if(!hasF(cyberFase)) cyberFase='total';
+  var _cyLine=function(yr,chBg,chFg,dCol,bold,r){ return '<div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-top:3px"><span style="font-size:8.5px;font-weight:800;background:'+chBg+';color:'+chFg+';border-radius:5px;padding:1px 6px">'+yr+'</span><span style="font-size:10.5px;color:'+dCol+';font-weight:'+(bold?'700':'400')+'">'+(r?(_cyberDDMM(r[0])+' → '+_cyberDDMM(r[1])):'—')+'</span></div>'; };
   var tabs=FASES.map(function(f){ var on=cyberFase===f[0]; var has=hasF(f[0]);
-    var rng=(f[0]==='total')?'Pre + Durante + Post':((dd25[f[0]]?_cyberDDMM(dd25[f[0]][0])+'→'+_cyberDDMM(dd25[f[0]][1]):'')+(dd26[f[0]]?(' · 26: '+_cyberDDMM(dd26[f[0]][0])+'→'+_cyberDDMM(dd26[f[0]][1])):''));
-    return '<button onclick="setCyberFase(\''+f[0]+'\')"'+(has?'':' disabled')+' style="flex:1;min-width:120px;text-align:center;cursor:'+(has?'pointer':'default')+';border:1.5px solid '+(on?f[2]:'var(--brd)')+';background:'+(on?f[2]+'18':'var(--bg)')+';border-radius:10px;padding:7px 6px;opacity:'+(has?1:.5)+'"><div style="font-size:12.5px;font-weight:800;color:'+(on?f[2]:'var(--txt)')+'">'+f[1]+'</div><div style="font-size:9px;color:var(--txt2)">'+rng+'</div></button>';
+    var datesHtml = (f[0]==='total')
+      ? '<div style="font-size:10px;color:var(--txt2);text-align:center;margin-top:5px">Pre + Durante + Post</div>'
+      : _cyLine('2025','#ececf0','#6b6b72','#565b64',false,dd25[f[0]])+_cyLine('2026','#f7e2ee','#b0468f','#b0468f',true,dd26[f[0]]);
+    return '<button onclick="setCyberFase(\''+f[0]+'\')"'+(has?'':' disabled')+' style="flex:1;min-width:140px;text-align:center;cursor:'+(has?'pointer':'default')+';border:1.5px solid '+(on?f[2]:'var(--brd)')+';background:'+(on?f[2]+'18':'var(--bg)')+';border-radius:11px;padding:8px 8px;opacity:'+(has?1:.5)+'"><div style="font-size:13px;font-weight:800;color:'+(on?f[2]:'var(--txt)')+'">'+f[1]+'</div>'+datesHtml+'</button>';
   }).join('');
   var fasesBar='<div style="display:flex;gap:7px;flex-wrap:wrap;max-width:760px;margin:2px 0 14px">'+tabs+'</div>';
   var P25=(cyberFase==='total')?_cySum(Y25):(Y25&&Y25[cyberFase]?Y25[cyberFase]:null);
