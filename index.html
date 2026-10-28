@@ -2745,7 +2745,7 @@ async function handleFact2025File(file){
       var cat=rpClasificar(rubro, provNombre2, origVal2, skuU2);
       // ── AR Cyber Monday 2025: Web + Locales (sin Mayorista/Lett), en las franjas de fecha del Cyber. #N/A y ARTVARIOS aparte; margen solo filas con costo. ──
       { var _cyf=_cyberPhase(dia,'2025');
-        if(_cyf && canal!=='Lett'){ var _P=cyberAcc[_cyf]; var _tvC=n(row[COL.TV]); var _qC=Math.round(n(row[COL.QTY])); var _cmvC=n(row[COL.CMV]);
+        if(_cyf && canal!=='Lett' && rubro!=='ENVIOS'){ var _P=cyberAcc[_cyf]; var _tvC=n(row[COL.TV]); var _qC=Math.round(n(row[COL.QTY])); var _cmvC=n(row[COL.CMV]);
           if(skuU2==='ARTVARIOS'){ _P.artv.qty+=_qC; _P.artv.tv+=_tvC; }
           else if(!cat){ _P.na.qty+=_qC; _P.na.tv+=_tvC; }
           else { if(!_P.cats[cat])_P.cats[cat]={qty:0,tv:0,fac:0,cn:0}; var _bk=_P.cats[cat]; _bk.qty+=_qC; _bk.tv+=_tvC; if(_cmvC>0){ _bk.fac+=_tvC; _bk.cn+=_cmvC; _P.mgFac+=_tvC; _P.mgCn+=_cmvC; } }
