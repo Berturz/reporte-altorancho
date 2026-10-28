@@ -2990,22 +2990,31 @@ function renderCyberARBody(){
   // por canal (desplegable)
   var _ipc11=ipcFactor('11');
   var _crecCell=function(t25,t26,pad){ var p=pad||'5px 10px'; if(!(t25>0)||!(t26>0)) return '<td style="text-align:right;padding:'+p+';color:var(--txt2)">—</td>'; var g=(t26/(t25*_ipc11)-1)*100; return '<td style="text-align:right;padding:'+p+';font-weight:700;color:'+(g<0?'#a32d2d':'#1a7a3a')+'">'+(g>=0?'+':'')+g.toFixed(1)+'%</td>'; };
-  var canRows=CYBER_CANORD.map(function(ck){ var a=P25&&P25.byC?P25.byC[ck]:null, b=P26&&P26.byC?P26.byC[ck]:null; if(!a&&!b) return ''; var a25=a?a.tv:0, b26=b?b.tv:0;
+  var _c25bg='#eef3f8', _ajbg='#fbf4ea', _c26bg='#fbf0f6'; // tintes por año (2025 gris-azul · aj ámbar · 2026 magenta)
+  var canRows=CYBER_CANORD.map(function(ck){ var a=P25&&P25.byC?P25.byC[ck]:null, b=P26&&P26.byC?P26.byC[ck]:null; if(!a&&!b) return ''; var a25=a?a.tv:0, aj=a25*_ipc11, b26=b?b.tv:0;
     return '<tr style="border-top:.5px solid var(--brd)"><td style="padding:5px 10px;font-weight:600">'+CYBER_CANLBL[ck]+'</td>'
-      +'<td style="text-align:right;padding:5px 10px;color:#565b64">'+fmt(a25)+'</td>'
-      +'<td style="text-align:right;padding:5px 10px;color:#b0468f;font-weight:700">'+(b?fmt(b26):'—')+'</td>'
-      +'<td style="text-align:right;padding:5px 10px;color:#8a8880">'+((a&&a.qty)?a.qty.toLocaleString('es-AR'):'—')+'</td>'
-      +'<td style="text-align:right;padding:5px 10px;color:#b0468f">'+((b&&b.qty)?b.qty.toLocaleString('es-AR'):'—')+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;color:#565b64;background:'+_c25bg+'">'+fmt(a25)+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;color:#8a5a2b;background:'+_ajbg+'">'+(a25?fmt(aj):'—')+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;color:#b0468f;font-weight:700;background:'+_c26bg+'">'+(b?fmt(b26):'—')+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;color:#565b64;background:'+_c25bg+'">'+((a&&a.qty)?a.qty.toLocaleString('es-AR'):'—')+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;color:#b0468f;background:'+_c26bg+'">'+((b&&b.qty)?b.qty.toLocaleString('es-AR'):'—')+'</td>'
       +_crecCell(a25,b26)+'</tr>';
   }).join('');
   var canTot='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="padding:6px 10px">Total</td>'
     +'<td style="text-align:right;padding:6px 10px;color:#565b64">'+fmt(tv25)+'</td>'
+    +'<td style="text-align:right;padding:6px 10px;color:#8a5a2b">'+(tv25?fmt(tv25*_ipc11):'—')+'</td>'
     +'<td style="text-align:right;padding:6px 10px;color:#b0468f">'+(tv26?fmt(tv26):'—')+'</td>'
-    +'<td style="text-align:right;padding:6px 10px">'+(q25?q25.toLocaleString('es-AR'):'—')+'</td>'
+    +'<td style="text-align:right;padding:6px 10px;color:#565b64">'+(q25?q25.toLocaleString('es-AR'):'—')+'</td>'
     +'<td style="text-align:right;padding:6px 10px;color:#b0468f">'+(q26?q26.toLocaleString('es-AR'):'—')+'</td>'
     +_crecCell(tv25,tv26,'6px 10px')+'</tr>';
-  var porCanal='<details style="max-width:660px;margin-top:10px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#5a4e9c;padding:6px 2px;list-style:none"><i class="ti ti-chevron-right" style="font-size:12px;vertical-align:-1px"></i> Por canal</summary>'
-   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:6px 10px">Canal</th><th style="text-align:right;padding:6px 10px">s/IVA 2025</th><th style="text-align:right;padding:6px 10px">s/IVA 2026</th><th style="text-align:right;padding:6px 10px">Unid. 25</th><th style="text-align:right;padding:6px 10px">Unid. 26</th><th style="text-align:right;padding:6px 10px">Crec. real</th></tr></thead><tbody>'+canRows+canTot+'</tbody></table></div></details>';
+  var porCanal='<details style="max-width:760px;margin-top:10px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#5a4e9c;padding:6px 2px;list-style:none"><i class="ti ti-chevron-right" style="font-size:12px;vertical-align:-1px"></i> Por canal</summary>'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:left;padding:6px 10px;background:#eef2f6;color:#274d80">Canal</th>'
+     +'<th style="text-align:right;padding:6px 10px;background:'+_c25bg+';color:#42617f">s/IVA 2025</th>'
+     +'<th style="text-align:right;padding:6px 10px;background:'+_ajbg+';color:#8a5a2b">s/IVA 2025 <span style="font-weight:400;font-size:9px">aj.IPC</span></th>'
+     +'<th style="text-align:right;padding:6px 10px;background:'+_c26bg+';color:#b0468f">s/IVA 2026</th>'
+     +'<th style="text-align:right;padding:6px 10px;background:'+_c25bg+';color:#42617f">Unid. 25</th>'
+     +'<th style="text-align:right;padding:6px 10px;background:'+_c26bg+';color:#b0468f">Unid. 26</th>'
+     +'<th style="text-align:right;padding:6px 10px;background:#eef6f2;color:#1f7a44">Crec. real</th></tr></thead><tbody>'+canRows+canTot+'</tbody></table></div></details>';
   // cuadro rubro/proveedor 2 años
   var g25=function(cat){ if(!P25)return null; if(cat==='__NA')return P25.na; return P25.cats&&P25.cats[cat]; };
   var g26=function(cat){ if(!P26)return null; if(cat==='__NA')return P26.na; return P26.cats&&P26.cats[cat]; };
