@@ -903,7 +903,7 @@ function _cyInit(){ return {cats:{},na:{qty:0,tv:0},byC:{},tot:{qty:0,tv:0},mgFa
 // Agrega una fila al acumulador del Cyber del año. Excluidos: Mayorista (Lett), ENVIOS, ARTVARIOS. #N/A (cat null) va aparte. Margen solo filas con costo.
 function _cyberAcc(accObj, dia, year, canal, rubro, skuU, cat, tv, qty, cmv){
   var ph=_cyberPhase(dia, year); if(!ph) return;
-  var ck=CYBER_CANMAP[canal]; if(!ck || rubro==='ENVIOS' || skuU==='ARTVARIOS') return;
+  var ck=CYBER_CANMAP[canal]; if(!ck || rubro==='ENVIOS' || rubro==='GIFTCARD' || skuU==='ARTVARIOS') return;
   var P=accObj[ph]; if(!P) P=accObj[ph]=_cyInit();
   if(!cat){ P.na.qty+=qty; P.na.tv+=tv; }
   else { if(!P.cats[cat]) P.cats[cat]={qty:0,tv:0,fac:0,cn:0}; var bk=P.cats[cat]; bk.qty+=qty; bk.tv+=tv; if(cmv>0){ bk.fac+=tv; bk.cn+=cmv; P.mgFac+=tv; P.mgCn+=cmv; } }
@@ -3006,7 +3006,7 @@ function renderCyberARBody(){
    +'<thead><tr style="color:#274d80"><th rowspan="2" style="text-align:left;padding:6px 10px;vertical-align:bottom">Rubro / Proveedor</th><th colspan="2" style="text-align:center;padding:5px 10px;background:#e2efe9;color:#1f6b52">Cantidad</th><th colspan="2" style="text-align:center;padding:5px 10px;background:#f5e9da;color:#8a5a2b">Facturación s/IVA</th></tr>'
    +'<tr style="color:#274d80"><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2025</th><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2026</th></tr></thead>'
    +'<tbody>'+rowsHtml+sp+totR+'</tbody></table></div>'
-   +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Web + Locales (San Isidro, Belgrano, Alcorta, Nordelta); Mayorista no entra. ENVIOS y ARTVARIOS no se cuentan. #N/A aparte (sin margen). Margen = coef. precio/costo, solo filas con costo. Aj.IPC = interanual noviembre'+(ipcEstim('11')?' (estim.)':'')+'.</div>';
+   +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Web + Locales (San Isidro, Belgrano, Alcorta, Nordelta); Mayorista no entra. ENVIOS, ARTVARIOS y GIFTCARD no se cuentan. #N/A aparte (sin margen). Margen = coef. precio/costo, solo filas con costo. Aj.IPC = interanual noviembre'+(ipcEstim('11')?' (estim.)':'')+'.</div>';
   return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Total · Pre · Durante · Post · 2025 vs 2026 · Web + Locales (sin Mayorista)</span></div>'+fasesBar+resTbl+porCanal+cuadro;
 }
 function _feriaUploadBar(){
