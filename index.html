@@ -3108,14 +3108,33 @@ function renderCyberARBody(){
   // ── Top 5 productos · total Cyber · doble año (2025 + 2026 pendiente), 5 en una fila ──
   var buildTop=function(){
     var items25=_cyberTop5((Y25&&Y25.prod)||null), items26=_cyberTop5((Y26&&Y26.prod)||null);
-    var ph=''; for(var i=0;i<5;i++){ ph+='<div style="border:1.5px dashed var(--brd);border-radius:var(--rl);min-height:150px;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:11px">— pendiente —</div>'; }
-    var blk25=items25.length?'<div id="cyberTop25" class="top5-wrap"></div>':'<div style="font-size:12px;color:var(--txt2);padding:8px;border:1px dashed var(--brd);border-radius:12px">Sin datos 2025. Re-subí el “Reporte 2025 USAR.xlsx” y Guardá (el Top es un dato nuevo del importador).</div>';
-    var blk26=items26.length?'<div id="cyberTop26" class="top5-wrap"></div>':'<div class="top5-wrap">'+ph+'</div>';
-    if(items25.length||items26.length){ setTimeout(function(){ try{ if(items25.length){ var a=document.getElementById('cyberTop25'); if(a) renderTop5('cyberTop25',items25,'web'); } if(items26.length){ var b=document.getElementById('cyberTop26'); if(b) renderTop5('cyberTop26',items26,'web'); } }catch(_){} },0); }
-    return '<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-trophy"></i>Top productos · Total Cyber <span class="sec-sub">· Top 5 más vendidos · 2025 vs 2026 · Web + Locales</span></div>'
-      +'<div style="margin:2px 0 7px"><span style="background:#ececf0;color:#6b6b72;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:800">2025</span></div>'+blk25
-      +'<div style="margin:18px 0 7px"><span style="background:#f7e2ee;color:#b0468f;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:800">2026</span>'+(items26.length?'':' <span style="color:var(--txt2);font-size:11px">· pendiente (se llena al pasar el Cyber 2026)</span>')+'</div>'+blk26
-      +'<div style="font-size:11px;color:var(--txt2);margin-top:12px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Top 5 por unidades en todo el Cyber (Pre + Durante + Post), Web + Locales. Sin Mayorista, ENVIOS, GIFTCARD ni #N/A. Fotos del mapa de productos.</div>';
+    // tarjeta compacta: foto chica con SKU encima, unidades + margen, colores en 1 línea
+    var cyCard=function(p,i,rc){
+      var foto=resolveProdFoto(p.skus), url=foto.url||'', sku=foto.sku||'';
+      var mg=p.mg, mgCol=mg>=2.2?'#0f6e56':'#854f0b';
+      var by={}; for(var s in (p.skus||{})){ var c=String(s).slice(-2).toUpperCase(); by[c]=(by[c]||0)+(p.skus[s]||0); }
+      var cl=Object.keys(by).map(function(c){return [c,by[c]];}).sort(function(a,b){return b[1]-a[1];});
+      var emph=sku?sku.slice(-2).toUpperCase():(cl[0]?cl[0][0]:null);
+      var cols=cl.slice(0,6).map(function(x){ var on=x[0]===emph; return '<span style="color:'+(on?rc:'var(--txt)')+';font-weight:'+(on?800:600)+'">'+x[0]+'</span> <span style="color:var(--txt2)">'+x[1].toLocaleString('es-AR')+'</span>'; }).join('<span style="color:var(--txt2);opacity:.4"> · </span>');
+      var img=url?'<img src="'+url+'" alt="'+p.modelo+'" style="width:100%;height:80px;object-fit:contain;display:block">':'<div style="height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--txt2);font-size:8.5px"><i class="ti ti-photo-off" style="font-size:15px"></i>Falta foto</div>';
+      var skuBadge=sku?'<span style="position:absolute;left:5px;bottom:5px;background:rgba(20,20,22,.72);color:#fff;font-size:8.5px;font-weight:700;border-radius:4px;padding:1px 6px;letter-spacing:.3px"><i class="ti ti-camera" style="font-size:8px;vertical-align:.5px;margin-right:2px"></i>'+sku+'</span>':'';
+      return '<div style="background:var(--bg2);border:1px solid var(--brd);border-radius:10px;overflow:hidden">'
+        +'<div style="position:relative;background:#f4f4f5">'+img
+          +'<span style="position:absolute;left:5px;top:5px;background:var(--bg);border-radius:6px;padding:0 6px;font-size:11px;font-weight:800;color:'+rc+'">#'+(i+1)+'</span>'+skuBadge+'</div>'
+        +'<div style="padding:6px 8px 7px">'
+          +'<div style="font-size:9.5px;font-weight:700;line-height:1.18;min-height:23px">'+p.modelo+' <span style="color:var(--txt2);font-weight:500">· '+p.estilo+'</span></div>'
+          +'<div style="display:flex;align-items:baseline;gap:4px;margin-top:3px"><span style="font-size:16px;font-weight:800">'+p.qty.toLocaleString('es-AR')+'</span><span style="font-size:8.5px;color:var(--txt2)">unid.</span><span style="margin-left:auto;font-size:11.5px;font-weight:800;color:'+mgCol+'">'+mg.toFixed(2)+'</span><span style="font-size:8px;color:var(--txt2)">mg</span></div>'
+          +'<div style="font-size:8px;color:var(--txt2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+cols+'</div>'
+        +'</div></div>';
+    };
+    var grid=function(items,rc){ return '<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px">'+items.map(function(p,i){return cyCard(p,i,rc);}).join('')+'</div>'; };
+    var ph=''; for(var i=0;i<5;i++){ ph+='<div style="border:1.5px dashed var(--brd);border-radius:10px;min-height:118px;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:10px">— pendiente —</div>'; }
+    var blk25=items25.length?grid(items25,'#4472c4'):'<div style="font-size:11.5px;color:var(--txt2);padding:8px;border:1px dashed var(--brd);border-radius:10px">Sin datos 2025. Re-subí el “Reporte 2025 USAR.xlsx” y Guardá (el Top es un dato nuevo del importador).</div>';
+    var blk26=items26.length?grid(items26,'#b0468f'):'<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px">'+ph+'</div>';
+    return '<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-trophy"></i>Top productos · Total Cyber <span class="sec-sub">· Top 5 por unidades · 2025 vs 2026 · Web + Locales</span></div>'
+      +'<div style="margin:2px 0 6px"><span style="background:#e7effa;color:#2f5fa6;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:800">2025</span></div>'+blk25
+      +'<div style="margin:12px 0 6px"><span style="background:#f7e2ee;color:#b0468f;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:800">2026</span>'+(items26.length?'':' <span style="color:var(--txt2);font-size:11px">· pendiente (se llena al pasar el Cyber 2026)</span>')+'</div>'+blk26
+      +'<div style="font-size:10.5px;color:var(--txt2);margin-top:10px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Top 5 por unidades en todo el Cyber (Pre + Durante + Post), Web + Locales. Sin Mayorista, ENVIOS, GIFTCARD ni #N/A. El <b>SKU</b> sobre la foto es el color más vendido (de ahí sale la imagen). Fotos del mapa de productos.</div>';
   };
   var body=(cyberView==='dia')?porCanal:((cyberView==='top')?buildTop():(fasesBar+resTbl+cuadro));
   return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Total · Pre · Durante · Post · 2025 vs 2026 · Web + Locales (sin Mayorista)</span><i class="ti ti-settings" title="Cargar fechas Cyber Web (Apunte contable · hoja CYBER)" onclick="document.getElementById(\'cyberWebFileInput\').click()" style="cursor:pointer;color:var(--txt2);font-size:13px;margin-left:8px;opacity:.4"></i></div>'
