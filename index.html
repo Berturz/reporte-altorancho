@@ -900,6 +900,8 @@ var CYBER_WEB_DATES = {};
 function _cyberInvNorm(s){ return String(s==null?'':s).toUpperCase().replace(/\s*\(.*$/,'').replace(/\s+/g,' ').trim(); }
 var cyberFase='total';
 function setCyberFase(f){ cyberFase=f; try{renderEventos();}catch(e){} }
+var cyberView='total'; // 'total' (resumen+rubro/prov) · 'dia' (por canal/día) · 'top' (top 5 productos)
+function setCyberView(v){ cyberView=v; try{renderEventos();}catch(e){} }
 function _cyberPhase(dia, year){ var dd=CYBER_DATES[year]; if(!dd||!dia) return null; if(dia>=dd.pre[0]&&dia<=dd.pre[1]) return 'pre'; if(dia>=dd.durante[0]&&dia<=dd.durante[1]) return 'durante'; if(dia>=dd.post[0]&&dia<=dd.post[1]) return 'post'; return null; }
 var CYBER_CANMAP={Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'}; // Lett (Mayorista) no entra
 var CYBER_CANLBL={web:'Web', lbe:'Belgrano', lsi:'San Isidro', alc:'Alcorta', lnd:'Nordelta'};
@@ -907,20 +909,24 @@ var CYBER_CANORD=['web','lbe','lsi','alc','lnd'];
 function _cyInit(){ return {cats:{},na:{qty:0,tv:0},byC:{},tot:{qty:0,tv:0},mgFac:0,mgCn:0}; }
 // Agrega una fila al acumulador del Cyber del año. Excluidos: Mayorista (Lett), ENVIOS, GIFTCARD, ARTVARIOS. #N/A (cat null) va aparte. Margen solo filas con costo.
 // daysObj: acumula facturación s/IVA por día y canal (para el cuadro por día), en todo CYBER_RANGE (incluye el 29/10, que no es fase).
-function _cyberAcc(accObj, daysObj, dia, year, canal, rubro, skuU, cat, tv, qty, cmv){
+function _cyberAcc(accObj, daysObj, prodObj, dia, year, canal, rubro, skuU, cat, tv, qty, cmv, modelo, estilo){
   var ck=CYBER_CANMAP[canal]; if(!ck || rubro==='ENVIOS' || rubro==='N/A' || skuU==='ARTVARIOS') return; // Mayorista/ENVIOS/N/A/ARTVARIOS: fuera de todo
   var isGift=(rubro==='GIFTCARD');
-  // Fase / rubro-proveedor / resumen (margen): SOLO filas clasificadas (sin GIFTCARD, sin #N/A sin clasificar)
+  // Fase / rubro-proveedor / resumen (margen) / Top5: SOLO filas clasificadas (sin GIFTCARD, sin #N/A sin clasificar)
   if(cat && !isGift){ var ph=_cyberPhase(dia, year);
     if(ph){ var P=accObj[ph]; if(!P) P=accObj[ph]=_cyInit();
       if(!P.cats[cat]) P.cats[cat]={qty:0,tv:0,fac:0,cn:0}; var bk=P.cats[cat]; bk.qty+=qty; bk.tv+=tv; if(cmv>0){ bk.fac+=tv; bk.cn+=cmv; P.mgFac+=tv; P.mgCn+=cmv; }
       if(!P.byC[ck]) P.byC[ck]={qty:0,tv:0,fac:0,cn:0}; var bc=P.byC[ck]; bc.qty+=qty; bc.tv+=tv; if(cmv>0){ bc.fac+=tv; bc.cn+=cmv; }
       P.tot.qty+=qty; P.tot.tv+=tv;
+      // Top 5 productos (total del Cyber = todas las fases): [qty, tv, cmv, {sku:qty}] por modelo|estilo
+      if(prodObj){ var pk=(modelo||'')+'|'+(estilo||''); if(!prodObj[pk]) prodObj[pk]=[0,0,0,{}]; prodObj[pk][0]+=qty; prodObj[pk][1]+=tv; prodObj[pk][2]+=cmv; if(skuU) prodObj[pk][3][skuU]=(prodObj[pk][3][skuU]||0)+qty; }
     }
   }
   // Detalle por día: incluye clasificados + GIFTCARD; excluye #N/A (cat null que no sea giftcard)
   if(daysObj && (cat || isGift)){ var rg=CYBER_RANGE[year]; if(rg && dia>=rg[0] && dia<=rg[1]){ if(!daysObj[dia]) daysObj[dia]={}; daysObj[dia][ck]=(daysObj[dia][ck]||0)+tv; } }
 }
+// Top 5 productos de un CYBER_AR[year].prod → items estilo aggProd (modelo/estilo/qty/fc/cmv/mg/skus)
+function _cyberTop5(prod){ if(!prod) return []; return Object.keys(prod).map(function(k){ var v=prod[k], sep=k.indexOf('|'); return { modelo:k.slice(0,sep), estilo:k.slice(sep+1), qty:v[0], fc:v[1], cmv:v[2], mg:(v[2]>0?v[1]/v[2]:0), skus:v[3]||{} }; }).sort(function(a,b){return b.qty-a.qty;}).slice(0,5); }
 function _cyFin(accObj){ var out={}; ['pre','durante','post'].forEach(function(k){ if(accObj[k] && (accObj[k].tot.tv>0||accObj[k].tot.qty>0)) out[k]=accObj[k]; }); return out; }
 // Suma las fases de un año en un objeto fase-like (para "Total Cyber")
 function _cySum(Y){ if(!Y) return null; var S=_cyInit(), any=false;
@@ -1233,7 +1239,7 @@ async function handleFile(file) {
     const newTOPFC = {};
     const newPROV = {};
     const newRUBROPROV = {};
-    var cyberAcc26 = {}, cyberDays26 = {}; // AR Cyber Monday 2026 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS) · por día/canal
+    var cyberAcc26 = {}, cyberDays26 = {}, cyberProd26 = {}; // AR Cyber Monday 2026 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS) · por día/canal · cyberProd26 = Top5 por modelo|estilo
     const newCLI = {}; // clientes Mayorista (Lett): { mm: { cliente: {fc, comps:{}, vend, rub:{}} } }
     const newCOBR = {};
     const newVEND = {};
@@ -1425,7 +1431,7 @@ async function handleFile(file) {
       }
 
       // ── AR Cyber Monday 2026 (solo filas en el rango del Cyber; evita rpClasificar en el resto) ──
-      { var _r26=CYBER_RANGE['2026']; if(dia>=_r26[0] && dia<=_r26[1]){ var _skC2=(row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''); _cyberAcc(cyberAcc26, cyberDays26, dia, '2026', canal, rubro, _skC2, rpClasificar(rubro, row[COL.PROV], origVal, _skC2), tv, qty2, cmv); } }
+      { var _r26=CYBER_RANGE['2026']; if(dia>=_r26[0] && dia<=_r26[1]){ var _skC2=(row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''); _cyberAcc(cyberAcc26, cyberDays26, cyberProd26, dia, '2026', canal, rubro, _skC2, rpClasificar(rubro, row[COL.PROV], origVal, _skC2), tv, qty2, cmv, (row[COL.MODELO]?String(row[COL.MODELO]).trim():''), (row[COL.ESTILO]?String(row[COL.ESTILO]).trim():'')); } }
       // ── RUBROPROV_D: acumulado mensual por rubro/proveedor (clasificación especial) ──
       {
         const mesKey = dia.slice(0,7);
@@ -1604,7 +1610,7 @@ async function handleFile(file) {
     RUBROPROV_D = finalRUBROPROV;
     // AR Cyber Monday 2026: conservar solo las fases con datos
     { if(typeof CYBER_AR==='undefined'||!CYBER_AR) window.CYBER_AR={};
-      var _cy26=_cyFin(cyberAcc26); if(Object.keys(cyberDays26).length) _cy26.days=cyberDays26;
+      var _cy26=_cyFin(cyberAcc26); if(Object.keys(cyberDays26).length) _cy26.days=cyberDays26; if(Object.keys(cyberProd26).length) _cy26.prod=cyberProd26;
       if(Object.keys(_cy26).length) CYBER_AR['2026']=_cy26; else { try{ delete CYBER_AR['2026']; }catch(e){} } }
     // Clientes Mayorista (Lett): comprobantes → cantidad de pedidos + redondeo
     const finalCLI = {};
@@ -2784,7 +2790,7 @@ async function handleFact2025File(file){
     }
     var CANAL_MAP2={Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
     var acc={}, nFilas=0, cliAcc={}, evol2025={};
-    var cyberAcc={}, cyberDays={}; // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS) · cyberDays = por día/canal
+    var cyberAcc={}, cyberDays={}, cyberProd={}; // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS) · cyberDays = por día/canal · cyberProd = Top5 por modelo|estilo
     var _cwHas = (typeof CYBER_WEB_DATES!=='undefined') && CYBER_WEB_DATES && Object.keys(CYBER_WEB_DATES).length>0; // Web: re-fechar por factura con el Apunte contable
     var _asIdx = -1; for(var _aj=0;_aj<hdr.length;_aj++){ if(String(hdr[_aj]||'').toLowerCase().indexOf('asiento contable')>=0){ _asIdx=_aj; break; } } if(_asIdx<0) _asIdx=COL.IDREP; // col "Asiento contable" del Reporte (cruce Web)
     evReset(['2025']); // ferias 2025 se reconstruyen en cada carga del reporte 2025
@@ -2823,7 +2829,7 @@ async function handleFact2025File(file){
       // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS)
       // Web: si hay mapa del Apunte contable, re-fechar por factura (col A) y contar SOLO las facturas que estén en el archivo; Locales con la fecha del Reporte.
       { var _cyDia=dia; if(canal==='Web' && _cwHas){ _cyDia=CYBER_WEB_DATES[_cyberInvNorm(row[_asIdx])]||null; }
-        if(_cyDia) _cyberAcc(cyberAcc, cyberDays, _cyDia, '2025', canal, rubro, skuU2, cat, n(row[COL.TV]), Math.round(n(row[COL.QTY])), n(row[COL.CMV])); }
+        if(_cyDia) _cyberAcc(cyberAcc, cyberDays, cyberProd, _cyDia, '2025', canal, rubro, skuU2, cat, n(row[COL.TV]), Math.round(n(row[COL.QTY])), n(row[COL.CMV]), (row[COL.MODELO]?String(row[COL.MODELO]).trim():''), (row[COL.ESTILO]?String(row[COL.ESTILO]).trim():'')); }
       if(!cat) continue;
       var mm2=dia.slice(5,7);
       var tv=n(row[COL.TV]);
@@ -2841,7 +2847,7 @@ async function handleFact2025File(file){
     EVOL_2025 = evol2025;
     // AR Cyber Monday 2025: conservar solo las fases con datos
     { if(typeof CYBER_AR==='undefined'||!CYBER_AR) window.CYBER_AR={};
-      var _cyOut=_cyFin(cyberAcc); if(Object.keys(cyberDays).length) _cyOut.days=cyberDays;
+      var _cyOut=_cyFin(cyberAcc); if(Object.keys(cyberDays).length) _cyOut.days=cyberDays; if(Object.keys(cyberProd).length) _cyOut.prod=cyberProd;
       if(Object.keys(_cyOut).length) CYBER_AR['2025']=_cyOut; else { try{ delete CYBER_AR['2025']; }catch(e){} } }
     // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
     var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb,comps:Object.keys(dc.comps)}; } }
@@ -3093,9 +3099,28 @@ function renderCyberARBody(){
    +'<tr style="color:#274d80"><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2025</th><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2026</th></tr></thead>'
    +'<tbody>'+rowsHtml+sp+totR+'</tbody></table></div>'
    +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Web + Locales (San Isidro, Belgrano, Alcorta, Nordelta); Mayorista no entra. ENVIOS, N/A, #N/A (sin clasificar) y ARTVARIOS no se cuentan. GIFTCARD cuenta en el detalle por día pero no en el cuadro rubro/proveedor ni en el margen. Margen = coef. precio/costo, solo filas con costo. Aj.IPC = interanual noviembre'+(ipcEstim('11')?' (estim.)':'')+'.</div>';
+  // ── 3 tarjetas selectoras de vista (Cyber total · por día · Top productos) ──
+  var VIEWS=[['total','Cyber total','Resumen + Rubro / Proveedor','ti-bolt','#5a4e9c'],['dia','Cyber por día','Canal × día · por fase','ti-calendar-stats','#1f7a8c'],['top','Top productos','Top 5 más vendidos','ti-trophy','#b0468f']];
+  if(['total','dia','top'].indexOf(cyberView)<0) cyberView='total';
+  var selCards='<div style="display:flex;gap:10px;flex-wrap:wrap;max-width:760px;margin:6px 0 16px">'+VIEWS.map(function(v){ var on=cyberView===v[0];
+    return '<button onclick="setCyberView(\''+v[0]+'\')" style="flex:1;min-width:200px;text-align:left;cursor:pointer;border:1.5px solid '+(on?v[4]:'var(--brd)')+';background:'+(on?v[4]+'14':'var(--bg)')+';border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:11px"><i class="ti '+v[3]+'" style="font-size:20px;color:'+(on?v[4]:'var(--txt2)')+'"></i><div><div style="font-size:13.5px;font-weight:800;color:'+(on?v[4]:'var(--txt)')+'">'+v[1]+'</div><div style="font-size:10.5px;color:var(--txt2);margin-top:1px">'+v[2]+'</div></div></button>';
+  }).join('')+'</div>';
+  // ── Top 5 productos · total Cyber · doble año (2025 + 2026 pendiente), 5 en una fila ──
+  var buildTop=function(){
+    var items25=_cyberTop5((Y25&&Y25.prod)||null), items26=_cyberTop5((Y26&&Y26.prod)||null);
+    var ph=''; for(var i=0;i<5;i++){ ph+='<div style="border:1.5px dashed var(--brd);border-radius:var(--rl);min-height:150px;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:11px">— pendiente —</div>'; }
+    var blk25=items25.length?'<div id="cyberTop25" class="top5-wrap"></div>':'<div style="font-size:12px;color:var(--txt2);padding:8px;border:1px dashed var(--brd);border-radius:12px">Sin datos 2025. Re-subí el “Reporte 2025 USAR.xlsx” y Guardá (el Top es un dato nuevo del importador).</div>';
+    var blk26=items26.length?'<div id="cyberTop26" class="top5-wrap"></div>':'<div class="top5-wrap">'+ph+'</div>';
+    if(items25.length||items26.length){ setTimeout(function(){ try{ if(items25.length){ var a=document.getElementById('cyberTop25'); if(a) renderTop5('cyberTop25',items25,'web'); } if(items26.length){ var b=document.getElementById('cyberTop26'); if(b) renderTop5('cyberTop26',items26,'web'); } }catch(_){} },0); }
+    return '<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-trophy"></i>Top productos · Total Cyber <span class="sec-sub">· Top 5 más vendidos · 2025 vs 2026 · Web + Locales</span></div>'
+      +'<div style="margin:2px 0 7px"><span style="background:#ececf0;color:#6b6b72;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:800">2025</span></div>'+blk25
+      +'<div style="margin:18px 0 7px"><span style="background:#f7e2ee;color:#b0468f;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:800">2026</span>'+(items26.length?'':' <span style="color:var(--txt2);font-size:11px">· pendiente (se llena al pasar el Cyber 2026)</span>')+'</div>'+blk26
+      +'<div style="font-size:11px;color:var(--txt2);margin-top:12px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Top 5 por unidades en todo el Cyber (Pre + Durante + Post), Web + Locales. Sin Mayorista, ENVIOS, GIFTCARD ni #N/A. Fotos del mapa de productos.</div>';
+  };
+  var body=(cyberView==='dia')?porCanal:((cyberView==='top')?buildTop():(fasesBar+resTbl+cuadro));
   return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Total · Pre · Durante · Post · 2025 vs 2026 · Web + Locales (sin Mayorista)</span><i class="ti ti-settings" title="Cargar fechas Cyber Web (Apunte contable · hoja CYBER)" onclick="document.getElementById(\'cyberWebFileInput\').click()" style="cursor:pointer;color:var(--txt2);font-size:13px;margin-left:8px;opacity:.4"></i></div>'
     +'<input type="file" id="cyberWebFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleCyberWebFile(this.files[0])"><div id="cyberWebStatus" style="font-size:10.5px;color:var(--txt2);margin:2px 0 0">'+((typeof CYBER_WEB_DATES!=='undefined'&&CYBER_WEB_DATES&&Object.keys(CYBER_WEB_DATES).length)?('<i class="ti ti-check" style="color:#2a6b53"></i> '+Object.keys(CYBER_WEB_DATES).length.toLocaleString('es-AR')+' fechas Web cargadas (Apunte contable)'):'')+'</div>'
-    +fasesBar+resTbl+porCanal+cuadro;
+    +selCards+body;
 }
 function _feriaUploadBar(){
   return '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
