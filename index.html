@@ -893,6 +893,8 @@ var CYBER_DATES = {
   '2025':{ pre:['2025-10-30','2025-11-02'], durante:['2025-11-03','2025-11-05'], post:['2025-11-06','2025-11-09'] },
   '2026':{ pre:['2026-10-30','2026-11-01'], durante:['2026-11-02','2026-11-04'], post:['2026-11-05','2026-11-15'] }
 };
+// Rango del cuadro por día (incluye el día previo al Pre, 29/10): facturación por canal/día
+var CYBER_RANGE = { '2025':['2025-10-29','2025-11-09'], '2026':['2026-10-29','2026-11-15'] };
 var cyberFase='total';
 function setCyberFase(f){ cyberFase=f; try{renderEventos();}catch(e){} }
 function _cyberPhase(dia, year){ var dd=CYBER_DATES[year]; if(!dd||!dia) return null; if(dia>=dd.pre[0]&&dia<=dd.pre[1]) return 'pre'; if(dia>=dd.durante[0]&&dia<=dd.durante[1]) return 'durante'; if(dia>=dd.post[0]&&dia<=dd.post[1]) return 'post'; return null; }
@@ -900,15 +902,18 @@ var CYBER_CANMAP={Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'}; // Let
 var CYBER_CANLBL={web:'Web', lbe:'Belgrano', lsi:'San Isidro', alc:'Alcorta', lnd:'Nordelta'};
 var CYBER_CANORD=['web','lbe','lsi','alc','lnd'];
 function _cyInit(){ return {cats:{},na:{qty:0,tv:0},byC:{},tot:{qty:0,tv:0},mgFac:0,mgCn:0}; }
-// Agrega una fila al acumulador del Cyber del año. Excluidos: Mayorista (Lett), ENVIOS, ARTVARIOS. #N/A (cat null) va aparte. Margen solo filas con costo.
-function _cyberAcc(accObj, dia, year, canal, rubro, skuU, cat, tv, qty, cmv){
-  var ph=_cyberPhase(dia, year); if(!ph) return;
+// Agrega una fila al acumulador del Cyber del año. Excluidos: Mayorista (Lett), ENVIOS, GIFTCARD, ARTVARIOS. #N/A (cat null) va aparte. Margen solo filas con costo.
+// daysObj: acumula facturación s/IVA por día y canal (para el cuadro por día), en todo CYBER_RANGE (incluye el 29/10, que no es fase).
+function _cyberAcc(accObj, daysObj, dia, year, canal, rubro, skuU, cat, tv, qty, cmv){
   var ck=CYBER_CANMAP[canal]; if(!ck || rubro==='ENVIOS' || rubro==='GIFTCARD' || skuU==='ARTVARIOS') return;
-  var P=accObj[ph]; if(!P) P=accObj[ph]=_cyInit();
-  if(!cat){ P.na.qty+=qty; P.na.tv+=tv; }
-  else { if(!P.cats[cat]) P.cats[cat]={qty:0,tv:0,fac:0,cn:0}; var bk=P.cats[cat]; bk.qty+=qty; bk.tv+=tv; if(cmv>0){ bk.fac+=tv; bk.cn+=cmv; P.mgFac+=tv; P.mgCn+=cmv; } }
-  if(!P.byC[ck]) P.byC[ck]={qty:0,tv:0,fac:0,cn:0}; var bc=P.byC[ck]; bc.qty+=qty; bc.tv+=tv; if(cmv>0){ bc.fac+=tv; bc.cn+=cmv; }
-  P.tot.qty+=qty; P.tot.tv+=tv;
+  var ph=_cyberPhase(dia, year);
+  if(ph){ var P=accObj[ph]; if(!P) P=accObj[ph]=_cyInit();
+    if(!cat){ P.na.qty+=qty; P.na.tv+=tv; }
+    else { if(!P.cats[cat]) P.cats[cat]={qty:0,tv:0,fac:0,cn:0}; var bk=P.cats[cat]; bk.qty+=qty; bk.tv+=tv; if(cmv>0){ bk.fac+=tv; bk.cn+=cmv; P.mgFac+=tv; P.mgCn+=cmv; } }
+    if(!P.byC[ck]) P.byC[ck]={qty:0,tv:0,fac:0,cn:0}; var bc=P.byC[ck]; bc.qty+=qty; bc.tv+=tv; if(cmv>0){ bc.fac+=tv; bc.cn+=cmv; }
+    P.tot.qty+=qty; P.tot.tv+=tv;
+  }
+  if(daysObj){ var rg=CYBER_RANGE[year]; if(rg && dia>=rg[0] && dia<=rg[1]){ if(!daysObj[dia]) daysObj[dia]={}; daysObj[dia][ck]=(daysObj[dia][ck]||0)+tv; } }
 }
 function _cyFin(accObj){ var out={}; ['pre','durante','post'].forEach(function(k){ if(accObj[k] && (accObj[k].tot.tv>0||accObj[k].tot.qty>0)) out[k]=accObj[k]; }); return out; }
 // Suma las fases de un año en un objeto fase-like (para "Total Cyber")
@@ -1189,7 +1194,7 @@ async function handleFile(file) {
     const newTOPFC = {};
     const newPROV = {};
     const newRUBROPROV = {};
-    var cyberAcc26 = {}; // AR Cyber Monday 2026 (Web + Locales; sin Mayorista/ENVIOS/ARTVARIOS)
+    var cyberAcc26 = {}, cyberDays26 = {}; // AR Cyber Monday 2026 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS) · por día/canal
     const newCLI = {}; // clientes Mayorista (Lett): { mm: { cliente: {fc, comps:{}, vend, rub:{}} } }
     const newCOBR = {};
     const newVEND = {};
@@ -1380,8 +1385,8 @@ async function handleFile(file) {
         }
       }
 
-      // ── AR Cyber Monday 2026 (solo filas en las franjas del Cyber; evita rpClasificar en el resto) ──
-      if(_cyberPhase(dia,'2026')){ var _skC2=(row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''); _cyberAcc(cyberAcc26, dia, '2026', canal, rubro, _skC2, rpClasificar(rubro, row[COL.PROV], origVal, _skC2), tv, qty2, cmv); }
+      // ── AR Cyber Monday 2026 (solo filas en el rango del Cyber; evita rpClasificar en el resto) ──
+      { var _r26=CYBER_RANGE['2026']; if(dia>=_r26[0] && dia<=_r26[1]){ var _skC2=(row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():''); _cyberAcc(cyberAcc26, cyberDays26, dia, '2026', canal, rubro, _skC2, rpClasificar(rubro, row[COL.PROV], origVal, _skC2), tv, qty2, cmv); } }
       // ── RUBROPROV_D: acumulado mensual por rubro/proveedor (clasificación especial) ──
       {
         const mesKey = dia.slice(0,7);
@@ -1560,7 +1565,7 @@ async function handleFile(file) {
     RUBROPROV_D = finalRUBROPROV;
     // AR Cyber Monday 2026: conservar solo las fases con datos
     { if(typeof CYBER_AR==='undefined'||!CYBER_AR) window.CYBER_AR={};
-      var _cy26=_cyFin(cyberAcc26);
+      var _cy26=_cyFin(cyberAcc26); if(Object.keys(cyberDays26).length) _cy26.days=cyberDays26;
       if(Object.keys(_cy26).length) CYBER_AR['2026']=_cy26; else { try{ delete CYBER_AR['2026']; }catch(e){} } }
     // Clientes Mayorista (Lett): comprobantes → cantidad de pedidos + redondeo
     const finalCLI = {};
@@ -2740,7 +2745,7 @@ async function handleFact2025File(file){
     }
     var CANAL_MAP2={Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
     var acc={}, nFilas=0, cliAcc={}, evol2025={};
-    var cyberAcc={}; // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/ARTVARIOS)
+    var cyberAcc={}, cyberDays={}; // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS) · cyberDays = por día/canal
     evReset(['2025']); // ferias 2025 se reconstruyen en cada carga del reporte 2025
     for(var ri=1;ri<rows.length;ri++){
       var row=rows[ri]; if(!row) continue;
@@ -2774,8 +2779,8 @@ async function handleFact2025File(file){
       var origVal2=row[COL.ORIG]?String(row[COL.ORIG]).trim():'';
       var skuU2=(row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():'');
       var cat=rpClasificar(rubro, provNombre2, origVal2, skuU2);
-      // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/ARTVARIOS)
-      _cyberAcc(cyberAcc, dia, '2025', canal, rubro, skuU2, cat, n(row[COL.TV]), Math.round(n(row[COL.QTY])), n(row[COL.CMV]));
+      // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS)
+      _cyberAcc(cyberAcc, cyberDays, dia, '2025', canal, rubro, skuU2, cat, n(row[COL.TV]), Math.round(n(row[COL.QTY])), n(row[COL.CMV]));
       if(!cat) continue;
       var mm2=dia.slice(5,7);
       var tv=n(row[COL.TV]);
@@ -2793,7 +2798,7 @@ async function handleFact2025File(file){
     EVOL_2025 = evol2025;
     // AR Cyber Monday 2025: conservar solo las fases con datos
     { if(typeof CYBER_AR==='undefined'||!CYBER_AR) window.CYBER_AR={};
-      var _cyOut=_cyFin(cyberAcc);
+      var _cyOut=_cyFin(cyberAcc); if(Object.keys(cyberDays).length) _cyOut.days=cyberDays;
       if(Object.keys(_cyOut).length) CYBER_AR['2025']=_cyOut; else { try{ delete CYBER_AR['2025']; }catch(e){} } }
     // Clientes Mayorista 2025: finalizar (comprobantes → pedidos)
     var finalCli25={}; for(var mmk in cliAcc){ finalCli25[mmk]={}; for(var clk in cliAcc[mmk]){ var dc=cliAcc[mmk][clk]; var rb={}; for(var rr2 in dc.rub) rb[rr2]=Math.round(dc.rub[rr2]); finalCli25[mmk][clk]={fc:Math.round(dc.fc),ped:Object.keys(dc.comps).length,vend:dc.vend,rub:rb,comps:Object.keys(dc.comps)}; } }
@@ -3007,14 +3012,25 @@ function renderCyberARBody(){
     +'<td style="text-align:right;padding:6px 10px;color:#565b64">'+(q25?q25.toLocaleString('es-AR'):'—')+'</td>'
     +'<td style="text-align:right;padding:6px 10px;color:#b0468f">'+(q26?q26.toLocaleString('es-AR'):'—')+'</td>'
     +_crecCell(tv25,tv26,'6px 10px')+'</tr>';
-  var porCanal='<details style="max-width:760px;margin-top:10px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#5a4e9c;padding:6px 2px;list-style:none"><i class="ti ti-chevron-right" style="font-size:12px;vertical-align:-1px"></i> Por canal</summary>'
-   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:left;padding:6px 10px;background:#eef2f6;color:#274d80">Canal</th>'
-     +'<th style="text-align:right;padding:6px 10px;background:'+_c25bg+';color:#42617f">s/IVA 2025</th>'
-     +'<th style="text-align:right;padding:6px 10px;background:'+_ajbg+';color:#8a5a2b">s/IVA 2025 <span style="font-weight:400;font-size:9px">aj.IPC</span></th>'
-     +'<th style="text-align:right;padding:6px 10px;background:'+_c26bg+';color:#b0468f">s/IVA 2026</th>'
-     +'<th style="text-align:right;padding:6px 10px;background:'+_c25bg+';color:#42617f">Unid. 25</th>'
-     +'<th style="text-align:right;padding:6px 10px;background:'+_c26bg+';color:#b0468f">Unid. 26</th>'
-     +'<th style="text-align:right;padding:6px 10px;background:#eef6f2;color:#1f7a44">Crec. real</th></tr></thead><tbody>'+canRows+canTot+'</tbody></table></div></details>';
+  // Por canal · por día (reemplaza el resumen): matriz canal × día, 2025 arriba y 2026 abajo, columnas coloreadas por fase.
+  var porCanal=(function(){
+    var PHC={pre:{bg:'#eef0f3',hd:'#dfe2e6',tx:'#5a6066'},durante:{bg:'#fbf4e6',hd:'#f6e3b8',tx:'#9a6b12'},post:{bg:'#eaf3f5',hd:'#bfe0e6',tx:'#1a6b7a'},neu:{bg:'#f7f7f8',hd:'#ececee',tx:'#8a8a90'}};
+    var _dl=function(a,bb){ var out=[],d=new Date(a+'T00:00:00'),e=new Date(bb+'T00:00:00'); while(d<=e){ out.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); d.setDate(d.getDate()+1); } return out; };
+    var _blk=function(yr,lbl,lblCol,lblBg){ var rg=CYBER_RANGE[yr]; if(!rg) return ''; var Y=CYBER_AR[yr]; var days=(Y&&Y.days)||{}; var hasData=false; for(var k in days){hasData=true;break;} var dates=_dl(rg[0],rg[1]); var tot=dates.map(function(){return 0;});
+      var h='<table style="border-collapse:collapse;font-size:11px;white-space:nowrap"><tr><th colspan="'+(dates.length+1)+'" style="text-align:left;padding:6px 10px;background:'+lblBg+';color:'+lblCol+';border-bottom:1px solid var(--brd);font-weight:800">'+lbl+'</th></tr>';
+      h+='<tr><th style="position:sticky;left:0;z-index:2;background:var(--bg);text-align:left;padding:5px 10px;border-bottom:1px solid var(--brd);min-width:88px">Canal</th>';
+      dates.forEach(function(iso){ var c=PHC[_cyberPhase(iso,yr)||'neu']; h+='<th style="padding:4px 8px;text-align:right;background:'+c.hd+';color:'+c.tx+';border-bottom:1px solid var(--brd);min-width:88px;font-weight:700">'+_cyberDDMM(iso)+'</th>'; });
+      h+='</tr>';
+      CYBER_CANORD.forEach(function(ck){ h+='<tr><td style="position:sticky;left:0;z-index:1;background:var(--bg);font-weight:600;padding:5px 10px;border-bottom:.5px solid var(--brd)">'+CYBER_CANLBL[ck]+'</td>';
+        dates.forEach(function(iso,i){ var c=PHC[_cyberPhase(iso,yr)||'neu']; var v=(days[iso]&&days[iso][ck])?days[iso][ck]:null; tot[i]+=v||0; h+='<td style="padding:5px 8px;text-align:right;background:'+c.bg+';color:'+(v?'#3a3a3a':'var(--txt2)')+';border-bottom:.5px solid var(--brd)">'+(v?fmt(v):'—')+'</td>'; });
+        h+='</tr>'; });
+      h+='<tr><td style="position:sticky;left:0;z-index:1;background:var(--bg2);font-weight:800;padding:6px 10px;border-top:2px solid var(--brd2)">Total</td>';
+      dates.forEach(function(iso,i){ var c=PHC[_cyberPhase(iso,yr)||'neu']; h+='<td style="padding:6px 8px;text-align:right;background:'+c.bg+';font-weight:800;border-top:2px solid var(--brd2);color:'+(hasData?'#2a2a2a':'var(--txt2)')+'">'+(hasData?fmt(tot[i]):'—')+'</td>'; });
+      h+='</tr></table>';
+      return '<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;margin-bottom:12px">'+h+'</div>'; };
+    var leg='<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;font-size:11px"><span style="font-weight:700">Fases:</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#dfe2e6"></span> Pre</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#f6e3b8"></span> Durante</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#bfe0e6"></span> Post</span></div>';
+    return '<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#5a4e9c;padding:6px 2px;list-style:none"><i class="ti ti-chevron-right" style="font-size:12px;vertical-align:-1px"></i> Por canal · por día</summary>'+leg+_blk('2025','Cyber 2025 · '+_cyberDDMM(CYBER_RANGE['2025'][0])+' → '+_cyberDDMM(CYBER_RANGE['2025'][1]),'#42617f','#eef3f8')+_blk('2026','Cyber 2026 · '+_cyberDDMM(CYBER_RANGE['2026'][0])+' → '+_cyberDDMM(CYBER_RANGE['2026'][1])+' (pendiente)','#b0468f','#fbf0f6')+'</details>';
+  })();
   // cuadro rubro/proveedor 2 años
   var g25=function(cat){ if(!P25)return null; if(cat==='__NA')return P25.na; return P25.cats&&P25.cats[cat]; };
   var g26=function(cat){ if(!P26)return null; if(cat==='__NA')return P26.na; return P26.cats&&P26.cats[cat]; };
