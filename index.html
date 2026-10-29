@@ -895,6 +895,9 @@ var CYBER_DATES = {
 };
 // Rango del cuadro por día (incluye el día previo al Pre, 29/10): facturación por canal/día
 var CYBER_RANGE = { '2025':['2025-10-29','2025-11-09'], '2026':['2026-10-29','2026-11-15'] };
+// Fechas del Cyber Web 2025 por factura (del "Apunte contable" hoja CYBER, col A=Creado el). Solo Web: se usa para re-fechar las filas Web del Reporte 2025. { 'FA-B 00009-00018279':'2025-11-03', ... }
+var CYBER_WEB_DATES = {};
+function _cyberInvNorm(s){ return String(s==null?'':s).toUpperCase().replace(/\s*\(.*$/,'').replace(/\s+/g,' ').trim(); }
 var cyberFase='total';
 function setCyberFase(f){ cyberFase=f; try{renderEventos();}catch(e){} }
 function _cyberPhase(dia, year){ var dd=CYBER_DATES[year]; if(!dd||!dia) return null; if(dia>=dd.pre[0]&&dia<=dd.pre[1]) return 'pre'; if(dia>=dd.durante[0]&&dia<=dd.durante[1]) return 'durante'; if(dia>=dd.post[0]&&dia<=dd.post[1]) return 'post'; return null; }
@@ -925,6 +928,40 @@ function _cySum(Y){ if(!Y) return null; var S=_cyInit(), any=false;
     S.tot.qty+=P.tot.qty; S.tot.tv+=P.tot.tv; S.mgFac+=P.mgFac; S.mgCn+=P.mgCn;
   });
   return any?S:null;
+}
+// Importador "Apunte contable" (hoja CYBER): mapa factura(col C) → fecha(col A) para re-fechar el Cyber Web 2025. Solo invoices con fecha en CYBER_RANGE 2025.
+async function handleCyberWebFile(file){
+  if(!file) return;
+  var st=document.getElementById('cyberWebStatus');
+  var setS=function(m){ if(st) st.innerHTML=m; };
+  setS('<span class="spin">&#8635;</span> Leyendo...');
+  try{
+    var buf=await file.arrayBuffer();
+    var wb=XLSX.read(buf,{type:'array',cellDates:false});
+    var SH=null; wb.SheetNames.forEach(function(n){ if(/cyber/i.test(n)) SH=SH||n; });
+    if(!SH) throw new Error('No encontré la hoja "CYBER". Hojas: '+wb.SheetNames.join(', '));
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[SH],{header:1,raw:true,defval:null});
+    var hdr=rows[0]||[];
+    var nh=function(x){return String(x==null?'':x).trim().toLowerCase();};
+    var find=function(names){ for(var j=0;j<hdr.length;j++){ var h=nh(hdr[j]); for(var k=0;k<names.length;k++){ if(h===nh(names[k])) return j; } } return -1; };
+    var iInv=find(['Asiento contable']);
+    var iDate=find(['Líneas pedido de ventas/Creado el','Lineas pedido de ventas/Creado el']);
+    if(iInv<0) iInv=2; // col C
+    if(iDate<0) iDate=0; // col A
+    var toISO=function(v){ if(typeof v==='number'){ var d=XLSX.SSF.parse_date_code(v); if(d) return d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0'); } if(typeof v==='string'){ var s=v.slice(0,10); return /^\d{4}-\d{2}-\d{2}$/.test(s)?s:null; } return null; };
+    var rg=CYBER_RANGE['2025'];
+    var map={}, nTot=0, nIn=0;
+    for(var ri=1; ri<rows.length; ri++){ var r=rows[ri]; if(!r) continue;
+      var inv=_cyberInvNorm(r[iInv]); if(!inv) continue;
+      var iso=toISO(r[iDate]); if(!iso) continue;
+      nTot++;
+      if(iso>=rg[0] && iso<=rg[1]){ if(!map[inv]) nIn++; map[inv]=iso; } // 1 fecha por factura (dentro del Cyber)
+    }
+    CYBER_WEB_DATES=map;
+    try{ persistFact && persistFact(); }catch(e){}
+    try{ renderEventos(); }catch(e){}
+    setS('<i class="ti ti-check" style="color:#2a6b53"></i> <b>'+nIn.toLocaleString('es-AR')+'</b> facturas Web en fechas del Cyber (de '+nTot.toLocaleString('es-AR')+' líneas). Re-subí el Reporte 2025 y Guardá.');
+  }catch(err){ setS('<span style="color:#c0392b">&#9888; '+(err&&err.message?err.message:err)+'</span>'); console.error(err); }
 }
 function evFeria(equipo){ var s=String(equipo||'').toLowerCase(); if(s.indexOf('presente')>=0) return 'Presentes'; if(s.indexOf('hotelga')>=0) return 'Hotelga'; return null; }
 function evAdd(feria, ed, tv, mg, facIpc, vend, rubroCat, cant){ if(!EVENTOS_D[feria]) EVENTOS_D[feria]={}; var E=EVENTOS_D[feria][ed]||(EVENTOS_D[feria][ed]={fac:0,cn:0,facIpc:0,byV:{},byR:{}}); E.fac+=tv||0; E.cn+=((mg>0.01)?(tv/mg):(tv||0)); if(facIpc) E.facIpc+=facIpc; if(!E.byV)E.byV={}; var vn=(vend&&String(vend).trim())||'(s/vend)'; var V=E.byV[vn]||(E.byV[vn]={fac:0,facIpc:0}); V.fac+=tv||0; if(facIpc)V.facIpc+=facIpc; if(!E.byR)E.byR={}; if(rubroCat){ var R=E.byR[rubroCat]||(E.byR[rubroCat]={cant:0,fac:0}); R.fac+=tv||0; R.cant+=cant||0; } }
@@ -2746,6 +2783,8 @@ async function handleFact2025File(file){
     var CANAL_MAP2={Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
     var acc={}, nFilas=0, cliAcc={}, evol2025={};
     var cyberAcc={}, cyberDays={}; // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS) · cyberDays = por día/canal
+    var _cwHas = (typeof CYBER_WEB_DATES!=='undefined') && CYBER_WEB_DATES && Object.keys(CYBER_WEB_DATES).length>0; // Web: re-fechar por factura con el Apunte contable
+    var _asIdx = -1; for(var _aj=0;_aj<hdr.length;_aj++){ if(String(hdr[_aj]||'').toLowerCase().indexOf('asiento contable')>=0){ _asIdx=_aj; break; } } if(_asIdx<0) _asIdx=COL.IDREP; // col "Asiento contable" del Reporte (cruce Web)
     evReset(['2025']); // ferias 2025 se reconstruyen en cada carga del reporte 2025
     for(var ri=1;ri<rows.length;ri++){
       var row=rows[ri]; if(!row) continue;
@@ -2780,7 +2819,9 @@ async function handleFact2025File(file){
       var skuU2=(row[COL.SKU]?String(row[COL.SKU]).trim().toUpperCase():'');
       var cat=rpClasificar(rubro, provNombre2, origVal2, skuU2);
       // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS)
-      _cyberAcc(cyberAcc, cyberDays, dia, '2025', canal, rubro, skuU2, cat, n(row[COL.TV]), Math.round(n(row[COL.QTY])), n(row[COL.CMV]));
+      // Web: si hay mapa del Apunte contable, re-fechar por factura (col A) y contar SOLO las facturas que estén en el archivo; Locales con la fecha del Reporte.
+      { var _cyDia=dia; if(canal==='Web' && _cwHas){ _cyDia=CYBER_WEB_DATES[_cyberInvNorm(row[_asIdx])]||null; }
+        if(_cyDia) _cyberAcc(cyberAcc, cyberDays, _cyDia, '2025', canal, rubro, skuU2, cat, n(row[COL.TV]), Math.round(n(row[COL.QTY])), n(row[COL.CMV])); }
       if(!cat) continue;
       var mm2=dia.slice(5,7);
       var tv=n(row[COL.TV]);
@@ -2962,7 +3003,10 @@ function renderCyberARBody(){
   var Y25=CYBER_AR['2025']||null, Y26=CYBER_AR['2026']||null;
   var anyP=function(Y){ return !!(Y&&(Y.pre||Y.durante||Y.post)); };
   if(!anyP(Y25) && !anyP(Y26)){
-    return '<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px"><i class="ti ti-bolt" style="font-size:26px;color:#5a4e9c"></i><div style="margin-top:8px">El Cyber aparece al <b>re-subir el “Reporte 2025 USAR.xlsx”</b> (2025) y la <b>facturación 2026</b> cuando pase el Cyber, y Guardar. Toma <b>Web + Locales</b> (sin Mayorista) en las fechas del Cyber.</div></div>';
+    var _cwN=(typeof CYBER_WEB_DATES!=='undefined'&&CYBER_WEB_DATES)?Object.keys(CYBER_WEB_DATES).length:0;
+    return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Web + Locales (sin Mayorista)</span><i class="ti ti-settings" title="Cargar fechas Cyber Web (Apunte contable · hoja CYBER)" onclick="document.getElementById(\'cyberWebFileInput\').click()" style="cursor:pointer;color:var(--txt2);font-size:13px;margin-left:8px;opacity:.4"></i></div>'
+      +'<input type="file" id="cyberWebFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleCyberWebFile(this.files[0])"><div id="cyberWebStatus" style="font-size:10.5px;color:var(--txt2);margin:2px 0 0">'+(_cwN?('<i class="ti ti-check" style="color:#2a6b53"></i> '+_cwN.toLocaleString('es-AR')+' fechas Web cargadas'):'')+'</div>'
+      +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px;margin-top:8px"><i class="ti ti-bolt" style="font-size:26px;color:#5a4e9c"></i><div style="margin-top:8px">El Cyber aparece al <b>re-subir el “Reporte 2025 USAR.xlsx”</b> (2025) y la <b>facturación 2026</b> cuando pase el Cyber, y Guardar. Toma <b>Web + Locales</b> (sin Mayorista). Para Web, las fechas salen del <b>Apunte contable</b> (engranaje ⚙ arriba).</div></div>';
   }
   var dd25=CYBER_DATES['2025']||{}, dd26=CYBER_DATES['2026']||{};
   var FASES=[['total','Total Cyber','#5a4e9c'],['pre','Pre Cyber','#6f757e'],['durante','Durante','#c98500'],['post','Post Cyber','#1f7a8c']];
@@ -3047,7 +3091,9 @@ function renderCyberARBody(){
    +'<tr style="color:#274d80"><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2025</th><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2026</th></tr></thead>'
    +'<tbody>'+rowsHtml+sp+totR+'</tbody></table></div>'
    +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Web + Locales (San Isidro, Belgrano, Alcorta, Nordelta); Mayorista no entra. ENVIOS, ARTVARIOS y GIFTCARD no se cuentan. #N/A aparte (sin margen). Margen = coef. precio/costo, solo filas con costo. Aj.IPC = interanual noviembre'+(ipcEstim('11')?' (estim.)':'')+'.</div>';
-  return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Total · Pre · Durante · Post · 2025 vs 2026 · Web + Locales (sin Mayorista)</span></div>'+fasesBar+resTbl+porCanal+cuadro;
+  return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Total · Pre · Durante · Post · 2025 vs 2026 · Web + Locales (sin Mayorista)</span><i class="ti ti-settings" title="Cargar fechas Cyber Web (Apunte contable · hoja CYBER)" onclick="document.getElementById(\'cyberWebFileInput\').click()" style="cursor:pointer;color:var(--txt2);font-size:13px;margin-left:8px;opacity:.4"></i></div>'
+    +'<input type="file" id="cyberWebFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleCyberWebFile(this.files[0])"><div id="cyberWebStatus" style="font-size:10.5px;color:var(--txt2);margin:2px 0 0"></div>'
+    +fasesBar+resTbl+porCanal+cuadro;
 }
 function _feriaUploadBar(){
   return '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
@@ -7523,7 +7569,7 @@ function rsemSnapObj(){
     cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
     stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo'),LLEGADAS_D:g('LLEGADAS_D')},
     logistica:{LOG_D:g('LOG_D')},
-    hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M'),EVOL_2025:g('EVOL_2025'),CYBER_AR:g('CYBER_AR')},
+    hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M'),EVOL_2025:g('EVOL_2025'),CYBER_AR:g('CYBER_AR'),CYBER_WEB_DATES:g('CYBER_WEB_DATES')},
     biblia:{BIBLIA_INAL:g('BIBLIA_INAL')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
     notas:{arMayoristaNotas:localStorage.getItem('arMayoristaNotas'),cajasNotas:localStorage.getItem('cajasNotas')}
@@ -7532,7 +7578,7 @@ function rsemSnapObj(){
 function rsemApplySnap(s){
   if(!s) return false;
   try{if(s.notas){if(s.notas.arMayoristaNotas)localStorage.setItem('arMayoristaNotas',s.notas.arMayoristaNotas);if(s.notas.cajasNotas)localStorage.setItem('cajasNotas',s.notas.cajasNotas);}}catch(e){}
-  try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;if(s.hist.EVOL_2025)EVOL_2025=s.hist.EVOL_2025;if(s.hist.CYBER_AR)CYBER_AR=s.hist.CYBER_AR;}}catch(e){}
+  try{if(s.hist){if(s.hist.YTD_2025)YTD_2025=s.hist.YTD_2025;if(s.hist.RP2025_CANAL)RP2025_CANAL=s.hist.RP2025_CANAL;if(s.hist.RP2025M)RP2025M=s.hist.RP2025M;if(s.hist.EVOL_2025)EVOL_2025=s.hist.EVOL_2025;if(s.hist.CYBER_AR)CYBER_AR=s.hist.CYBER_AR;if(s.hist.CYBER_WEB_DATES)CYBER_WEB_DATES=s.hist.CYBER_WEB_DATES;}}catch(e){}
   try{if(s.biblia&&s.biblia.BIBLIA_INAL)BIBLIA_INAL=s.biblia.BIBLIA_INAL;}catch(e){}
   try{if(s.cajas&&s.cajas.CAJAS_D)CAJAS_D=s.cajas.CAJAS_D;}catch(e){}
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
