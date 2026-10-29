@@ -932,8 +932,7 @@ function _cySum(Y){ if(!Y) return null; var S=_cyInit(), any=false;
 // Importador "Apunte contable" (hoja CYBER): mapa factura(col C) → fecha(col A) para re-fechar el Cyber Web 2025. Solo invoices con fecha en CYBER_RANGE 2025.
 async function handleCyberWebFile(file){
   if(!file) return;
-  var st=document.getElementById('cyberWebStatus');
-  var setS=function(m){ if(st) st.innerHTML=m; };
+  var setS=function(m){ var e=document.getElementById('cyberWebStatus'); if(e) e.innerHTML=m; };
   setS('<span class="spin">&#8635;</span> Leyendo...');
   try{
     var buf=await file.arrayBuffer();
@@ -3092,7 +3091,7 @@ function renderCyberARBody(){
    +'<tbody>'+rowsHtml+sp+totR+'</tbody></table></div>'
    +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Web + Locales (San Isidro, Belgrano, Alcorta, Nordelta); Mayorista no entra. ENVIOS, ARTVARIOS y GIFTCARD no se cuentan. #N/A aparte (sin margen). Margen = coef. precio/costo, solo filas con costo. Aj.IPC = interanual noviembre'+(ipcEstim('11')?' (estim.)':'')+'.</div>';
   return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Total · Pre · Durante · Post · 2025 vs 2026 · Web + Locales (sin Mayorista)</span><i class="ti ti-settings" title="Cargar fechas Cyber Web (Apunte contable · hoja CYBER)" onclick="document.getElementById(\'cyberWebFileInput\').click()" style="cursor:pointer;color:var(--txt2);font-size:13px;margin-left:8px;opacity:.4"></i></div>'
-    +'<input type="file" id="cyberWebFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleCyberWebFile(this.files[0])"><div id="cyberWebStatus" style="font-size:10.5px;color:var(--txt2);margin:2px 0 0"></div>'
+    +'<input type="file" id="cyberWebFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleCyberWebFile(this.files[0])"><div id="cyberWebStatus" style="font-size:10.5px;color:var(--txt2);margin:2px 0 0">'+((typeof CYBER_WEB_DATES!=='undefined'&&CYBER_WEB_DATES&&Object.keys(CYBER_WEB_DATES).length)?('<i class="ti ti-check" style="color:#2a6b53"></i> '+Object.keys(CYBER_WEB_DATES).length.toLocaleString('es-AR')+' fechas Web cargadas (Apunte contable)'):'')+'</div>'
     +fasesBar+resTbl+porCanal+cuadro;
 }
 function _feriaUploadBar(){
