@@ -5598,14 +5598,14 @@ renderCajas();
           </div>
           <div class="progress-bar" id="stockProgressBar"><div class="progress-fill" id="stockProgressFill" style="width:0%;background:#4B5CC4"></div></div>
           <div class="upload-zone" id="pricingUploadZone" style="border-color:#B0568F">
-            <input type="file" accept=".xlsx,.xls" id="pricingFileInput" onchange="handlePricingFile(this.files[0])">
+            <input type="file" accept=".xlsx,.xlsm,.xls" id="pricingFileInput" onchange="handlePricingFile(this.files[0])">
             <i class="ti ti-tag upload-icon" style="color:#B0568F"></i>
             <div class="upload-txt"><strong>Cargar Pricing (márgenes)</strong><span>Hoja "Pricing" · precio final min. por SKU</span></div>
             <div class="upload-status" id="pricingUploadStatus"></div>
           </div>
           <div class="progress-bar" id="pricingProgressBar"><div class="progress-fill" id="pricingProgressFill" style="width:0%;background:#B0568F"></div></div>
           <div class="upload-zone" id="costosUploadZone" style="border-color:#3E8FA6">
-            <input type="file" accept=".xlsx,.xls" id="costosFileInput" onchange="handleCostosFile(this.files[0])">
+            <input type="file" accept=".xlsx,.xlsm,.xls" id="costosFileInput" onchange="handleCostosFile(this.files[0])">
             <i class="ti ti-coin upload-icon" style="color:#3E8FA6"></i>
             <div class="upload-txt"><strong>Cargar Costos (galpón)</strong><span>Hoja "Costo Pricing" · costo por SKU (último)</span></div>
             <div class="upload-status" id="costosUploadStatus"></div>
