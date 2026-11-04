@@ -6288,8 +6288,9 @@ function renderStock(){
     : '<span style="font-size:12px;color:var(--txt2)">sin ventas</span>'; }
   if(fl) fl.textContent = S.fecha?('· stock al '+S.fecha.split('-').reverse().join('/')):'';
   var stTot={}, vtTot={};
-  (S.stockRows||[]).forEach(function(a){var e=a[0];(stTot[e]=stTot[e]||{cant:0,val:0});stTot[e].cant+=a[5];stTot[e].val+=stkRowCostoUSD(a[7],a[5],a[6]);});
-  (S.ventasRows||[]).forEach(function(a){ if(a[0]!==stockSelMes)return; var e=a[1];(vtTot[e]=vtTot[e]||{cant:0,val:0});vtTot[e].cant+=a[6];vtTot[e].val+=stkRowCostoUSD(a[8],a[6],a[7]);});
+  // valorizado = "Total Valorizado al costo USD" del propio archivo (a[6] stock / a[7] ventas); el costo galpón solo rellena filas sin valorizado (igual que stkTreeCosto)
+  (S.stockRows||[]).forEach(function(a){var e=a[0];(stTot[e]=stTot[e]||{cant:0,val:0});stTot[e].cant+=a[5];stTot[e].val+=(a[6]>0?a[6]:stkRowCostoUSD(a[7],a[5],0));});
+  (S.ventasRows||[]).forEach(function(a){ if(a[0]!==stockSelMes)return; var e=a[1];(vtTot[e]=vtTot[e]||{cant:0,val:0});vtTot[e].cant+=a[6];vtTot[e].val+=(a[7]>0?a[7]:stkRowCostoUSD(a[8],a[6],0));});
   var allSt={cant:0,val:0}, allVt={cant:0,val:0};
   estados.forEach(function(e){var s=stTot[e]||{};allSt.cant+=s.cant||0;allSt.val+=s.val||0;var v=vtTot[e]||{};allVt.cant+=v.cant||0;allVt.val+=v.val||0;});
   var todoCol='#8B4630', todoAct=stockSelEstado==='__ALL__';
