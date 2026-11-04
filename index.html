@@ -890,8 +890,8 @@ var FERIA_AR = {};
 // { '2025':{ pre:{cats,na,artv,otros,tot,mgFac,mgCn}, durante:{...}, post:{...} }, '2026':{...} }
 var CYBER_AR = {};
 var CYBER_DATES = {
-  '2025':{ pre:['2025-10-30','2025-11-02'], durante:['2025-11-03','2025-11-05'], post:['2025-11-06','2025-11-09'] },
-  '2026':{ pre:['2026-10-30','2026-11-01'], durante:['2026-11-02','2026-11-04'], post:['2026-11-05','2026-11-15'] }
+  '2025':{ pre:['2025-10-30','2025-11-02'], durante:['2025-11-03','2025-11-05'], post:['2025-11-06','2025-11-09'] }, // 2025 no tuvo días extras
+  '2026':{ pre:['2026-10-30','2026-11-01'], durante:['2026-11-02','2026-11-04'], post:['2026-11-05','2026-11-08'], extras:['2026-11-09','2026-11-15'] } // Post = 4 días (igual que 2025); extras 09→15 = días que el 2025 no tuvo (solo 2026)
 };
 // Rango del cuadro por día (incluye el día previo al Pre, 29/10): facturación por canal/día
 var CYBER_RANGE = { '2025':['2025-10-29','2025-11-09'], '2026':['2026-10-29','2026-11-15'] };
@@ -902,7 +902,7 @@ var cyberFase='total';
 function setCyberFase(f){ cyberFase=f; try{renderEventos();}catch(e){} }
 var cyberView='total'; // 'total' (resumen+rubro/prov) · 'dia' (por canal/día) · 'top' (top 5 productos)
 function setCyberView(v){ cyberView=v; try{renderEventos();}catch(e){} }
-function _cyberPhase(dia, year){ var dd=CYBER_DATES[year]; if(!dd||!dia) return null; if(dia>=dd.pre[0]&&dia<=dd.pre[1]) return 'pre'; if(dia>=dd.durante[0]&&dia<=dd.durante[1]) return 'durante'; if(dia>=dd.post[0]&&dia<=dd.post[1]) return 'post'; return null; }
+function _cyberPhase(dia, year){ var dd=CYBER_DATES[year]; if(!dd||!dia) return null; if(dia>=dd.pre[0]&&dia<=dd.pre[1]) return 'pre'; if(dia>=dd.durante[0]&&dia<=dd.durante[1]) return 'durante'; if(dia>=dd.post[0]&&dia<=dd.post[1]) return 'post'; if(dd.extras&&dia>=dd.extras[0]&&dia<=dd.extras[1]) return 'extras'; return null; }
 var CYBER_CANMAP={Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'}; // Lett (Mayorista) no entra
 var CYBER_CANLBL={web:'Web', lbe:'Belgrano', lsi:'San Isidro', alc:'Alcorta', lnd:'Nordelta'};
 var CYBER_CANORD=['web','lbe','lsi','alc','lnd'];
@@ -919,7 +919,7 @@ function _cyberAcc(accObj, daysObj, prodObj, dia, year, canal, rubro, skuU, cat,
       if(!P.byC[ck]) P.byC[ck]={qty:0,tv:0,fac:0,cn:0}; var bc=P.byC[ck]; bc.qty+=qty; bc.tv+=tv; if(cmv>0){ bc.fac+=tv; bc.cn+=cmv; }
       P.tot.qty+=qty; P.tot.tv+=tv;
       // Top 5 productos (total del Cyber = todas las fases): [qty, tv, cmv, {sku:qty}] por modelo|estilo
-      if(prodObj){ var pk=(modelo||'')+'|'+(estilo||''); if(!prodObj[pk]) prodObj[pk]=[0,0,0,{}]; prodObj[pk][0]+=qty; prodObj[pk][1]+=tv; prodObj[pk][2]+=cmv; if(skuU) prodObj[pk][3][skuU]=(prodObj[pk][3][skuU]||0)+qty; }
+      if(prodObj && ph!=='extras'){ var pk=(modelo||'')+'|'+(estilo||''); if(!prodObj[pk]) prodObj[pk]=[0,0,0,{}]; prodObj[pk][0]+=qty; prodObj[pk][1]+=tv; prodObj[pk][2]+=cmv; if(skuU) prodObj[pk][3][skuU]=(prodObj[pk][3][skuU]||0)+qty; } // Top excluye extras (comparable con 2025)
     }
   }
   // Detalle por día: incluye clasificados + GIFTCARD; excluye #N/A (cat null que no sea giftcard)
@@ -927,7 +927,7 @@ function _cyberAcc(accObj, daysObj, prodObj, dia, year, canal, rubro, skuU, cat,
 }
 // Top 5 productos de un CYBER_AR[year].prod → items estilo aggProd (modelo/estilo/qty/fc/cmv/mg/skus)
 function _cyberTop5(prod){ if(!prod) return []; return Object.keys(prod).map(function(k){ var v=prod[k], sep=k.indexOf('|'); return { modelo:k.slice(0,sep), estilo:k.slice(sep+1), qty:v[0], fc:v[1], cmv:v[2], mg:(v[2]>0?v[1]/v[2]:0), skus:v[3]||{} }; }).sort(function(a,b){return b.qty-a.qty;}).slice(0,5); }
-function _cyFin(accObj){ var out={}; ['pre','durante','post'].forEach(function(k){ if(accObj[k] && (accObj[k].tot.tv>0||accObj[k].tot.qty>0)) out[k]=accObj[k]; }); return out; }
+function _cyFin(accObj){ var out={}; ['pre','durante','post','extras'].forEach(function(k){ if(accObj[k] && (accObj[k].tot.tv>0||accObj[k].tot.qty>0)) out[k]=accObj[k]; }); return out; }
 // Suma las fases de un año en un objeto fase-like (para "Total Cyber")
 function _cySum(Y){ if(!Y) return null; var S=_cyInit(), any=false;
   ['pre','durante','post'].forEach(function(k){ var P=Y[k]; if(!P) return; any=true;
@@ -3026,7 +3026,7 @@ function renderCyberARBody(){
       +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:22px;text-align:center;color:var(--txt2);font-size:13px;margin-top:8px"><i class="ti ti-bolt" style="font-size:26px;color:#5a4e9c"></i><div style="margin-top:8px">El Cyber aparece al <b>re-subir el “Reporte 2025 USAR.xlsx”</b> (2025) y la <b>facturación 2026</b> cuando pase el Cyber, y Guardar. Toma <b>Web + Locales</b> (sin Mayorista). Para Web, las fechas salen del <b>Apunte contable</b> (engranaje ⚙ arriba).</div></div>';
   }
   var dd25=CYBER_DATES['2025']||{}, dd26=CYBER_DATES['2026']||{};
-  var FASES=[['total','Total Cyber','#5a4e9c'],['pre','Pre Cyber','#6f757e'],['durante','Durante','#c98500'],['post','Post Cyber','#1f7a8c']];
+  var FASES=[['total','Total Cyber','#5a4e9c'],['pre','Pre Cyber','#6f757e'],['durante','Durante','#c98500'],['post','Post Cyber','#1f7a8c'],['extras','Días extras','#a8562a']];
   var hasF=function(f){ if(f==='total') return anyP(Y25)||anyP(Y26); return (Y25&&Y25[f])||(Y26&&Y26[f]); };
   if(!hasF(cyberFase)) cyberFase='total';
   var _cyLine=function(yr,chBg,chFg,dCol,bold,r){ return '<div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-top:3px"><span style="font-size:8.5px;font-weight:800;background:'+chBg+';color:'+chFg+';border-radius:5px;padding:1px 6px">'+yr+'</span><span style="font-size:10.5px;color:'+dCol+';font-weight:'+(bold?'700':'400')+'">'+(r?(_cyberDDMM(r[0])+' → '+_cyberDDMM(r[1])):'—')+'</span></div>'; };
@@ -3051,7 +3051,7 @@ function renderCyberARBody(){
    +'<thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:left;padding:7px 12px"></th><th style="text-align:right;padding:7px 12px">Total s/IVA</th><th style="text-align:right;padding:7px 12px">Unidades</th><th style="text-align:right;padding:7px 12px">Margen</th><th style="text-align:right;padding:7px 12px">Aj.IPC</th></tr></thead><tbody>'
    +'<tr style="border-top:.5px solid var(--brd)"><td style="padding:7px 12px;font-weight:700">Cyber 2025</td><td style="text-align:right;padding:7px 12px;font-weight:700;color:#565b64">'+fmt(tv25)+'</td><td style="text-align:right;padding:7px 12px">'+(q25?q25.toLocaleString('es-AR'):'—')+'</td><td style="text-align:right;padding:7px 12px;color:#1f7a44;font-weight:700">'+cf(coef(P25))+'</td><td style="text-align:right;padding:7px 12px;color:#8a5a2b;font-weight:700">'+fmt(aj25)+'</td></tr>'
    +'<tr style="border-top:.5px solid var(--brd)"><td style="padding:7px 12px;font-weight:700">Cyber 2026</td><td style="text-align:right;padding:7px 12px;font-weight:800;color:#b0468f">'+(tv26?fmt(tv26):'<span style="color:var(--txt2);font-weight:400">— pendiente</span>')+'</td><td style="text-align:right;padding:7px 12px">'+(q26?q26.toLocaleString('es-AR'):'—')+'</td><td style="text-align:right;padding:7px 12px;color:#1f7a44;font-weight:800">'+cf(coef(P26))+'</td><td style="text-align:right;padding:7px 12px;color:var(--txt2)">—</td></tr>'
-   +'<tr style="border-top:2px solid var(--brd2);background:var(--bg2)"><td style="padding:7px 12px;font-weight:700">Crecimiento real <span style="font-weight:400;color:var(--txt2);font-size:11px">· 26 vs 25 aj.IPC</span></td><td colspan="4" style="text-align:right;padding:7px 12px;font-weight:800;color:'+(crec==null?'var(--txt2)':(crec<0?'#a32d2d':'#1a7a3a'))+'">'+(crec==null?'— (falta 2026)':((crec>=0?'+':'')+crec.toFixed(1)+'%'))+'</td></tr>'
+   +'<tr style="border-top:2px solid var(--brd2);background:var(--bg2)"><td style="padding:7px 12px;font-weight:700">Crecimiento real <span style="font-weight:400;color:var(--txt2);font-size:11px">· 26 vs 25 aj.IPC</span></td><td colspan="4" style="text-align:right;padding:7px 12px;font-weight:800;color:'+(crec==null?'var(--txt2)':(crec<0?'#a32d2d':'#1a7a3a'))+'">'+(crec==null?(cyberFase==='extras'?'— · solo 2026 (el 2025 no tuvo estos días)':'— (falta 2026)'):((crec>=0?'+':'')+crec.toFixed(1)+'%'))+'</td></tr>'
    +'</tbody></table></div>';
   // por canal (desplegable)
   var _ipc11=ipcFactor('11');
@@ -3075,7 +3075,7 @@ function renderCyberARBody(){
     +_crecCell(tv25,tv26,'6px 10px')+'</tr>';
   // Por canal · por día (reemplaza el resumen): matriz canal × día, 2025 arriba y 2026 abajo, columnas coloreadas por fase.
   var porCanal=(function(){
-    var PHC={pre:{bg:'#eef0f3',hd:'#dfe2e6',tx:'#5a6066'},durante:{bg:'#fbf4e6',hd:'#f6e3b8',tx:'#9a6b12'},post:{bg:'#eaf3f5',hd:'#bfe0e6',tx:'#1a6b7a'},neu:{bg:'#f7f7f8',hd:'#ececee',tx:'#8a8a90'}};
+    var PHC={pre:{bg:'#eef0f3',hd:'#dfe2e6',tx:'#5a6066'},durante:{bg:'#fbf4e6',hd:'#f6e3b8',tx:'#9a6b12'},post:{bg:'#eaf3f5',hd:'#bfe0e6',tx:'#1a6b7a'},extras:{bg:'#f7ece4',hd:'#eccfb6',tx:'#9a5a2a'},neu:{bg:'#f7f7f8',hd:'#ececee',tx:'#8a8a90'}};
     var _dl=function(a,bb){ var out=[],d=new Date(a+'T00:00:00'),e=new Date(bb+'T00:00:00'); while(d<=e){ out.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); d.setDate(d.getDate()+1); } return out; };
     var _blk=function(yr,lbl,lblCol,lblBg){ var rg=CYBER_RANGE[yr]; if(!rg) return ''; var Y=CYBER_AR[yr]; var days=(Y&&Y.days)||{}; var hasData=false; for(var k in days){hasData=true;break;} var dates=_dl(rg[0],rg[1]); var tot=dates.map(function(){return 0;});
       var h='<table style="border-collapse:collapse;font-size:11px;white-space:nowrap"><tr><th colspan="'+(dates.length+1)+'" style="text-align:left;padding:6px 10px;background:'+lblBg+';color:'+lblCol+';border-bottom:1px solid var(--brd);font-weight:800">'+lbl+'</th></tr>';
@@ -3089,7 +3089,7 @@ function renderCyberARBody(){
       dates.forEach(function(iso,i){ var c=PHC[_cyberPhase(iso,yr)||'neu']; h+='<td style="padding:6px 8px;text-align:right;background:'+c.bg+';font-weight:800;border-top:2px solid var(--brd2);color:'+(hasData?'#2a2a2a':'var(--txt2)')+'">'+(hasData?fmt(tot[i]):'—')+'</td>'; });
       h+='</tr></table>';
       return '<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;margin-bottom:12px">'+h+'</div>'; };
-    var leg='<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;font-size:11px"><span style="font-weight:700">Fases:</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#dfe2e6"></span> Pre</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#f6e3b8"></span> Durante</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#bfe0e6"></span> Post</span></div>';
+    var leg='<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;font-size:11px"><span style="font-weight:700">Fases:</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#dfe2e6"></span> Pre</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#f6e3b8"></span> Durante</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#bfe0e6"></span> Post</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#eccfb6"></span> Extras <span style="color:var(--txt2)">(solo 2026)</span></span></div>';
     return '<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-table"></i>Por canal · por día <span class="sec-sub">· facturación s/IVA · coloreado por fase</span></div>'+leg+_blk('2025','Cyber 2025 · '+_cyberDDMM(CYBER_RANGE['2025'][0])+' → '+_cyberDDMM(CYBER_RANGE['2025'][1]),'#42617f','#eef3f8')+_blk('2026','Cyber 2026 · '+_cyberDDMM(CYBER_RANGE['2026'][0])+' → '+_cyberDDMM(CYBER_RANGE['2026'][1])+' (pendiente)','#b0468f','#fbf0f6');
   })();
   // cuadro rubro/proveedor 2 años
