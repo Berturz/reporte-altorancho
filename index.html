@@ -4142,24 +4142,34 @@ function renderCobrCards(mdpTot){
       <div class="salcard-val" style="color:${col}">${fmt(v)}</div><div class="salcard-pct">${pct.toFixed(1)}% del total</div></div>`;
   }).join('')||'<div class="prov-empty">Sin cobranzas en el período</div>';
 }
-function renderCobrCanalDetail(mdpTot){
+function renderCobrCanalDetail(mdpTot, baaTot){
   const w=document.getElementById('cobrDetailWrap'); const c=cobrSelCanal;
   w.style.setProperty('--cobrc', (c&&CC[COBR_CMAP[c]])?CC[COBR_CMAP[c]]:'#2c2c2a');
   if(!c||!mdpTot[c]){ w.innerHTML='<div class="prov-empty" style="padding:1rem">Tocá un canal para ver el desglose</div>'; return; }
   const entries=Object.entries(mdpTot[c]).filter(([,v])=>Math.abs(v)>0.5).sort((a,b)=>b[1]-a[1]);
   const tot=entries.reduce((s,[,v])=>s+v,0);
   const rows=entries.map(([mg,v])=>`<tr><td>${mg}</td><td style="text-align:right">${ffl(v)}</td></tr>`).join('');
+  // AA / B · Total del canal (importe facturado s/IVA en cada tipo de comprobante)
+  const baa=(baaTot&&baaTot[c])||{}; const aa=baa['AA']||0, b=baa['B']||0, tb=aa+b;
+  const pc=(x)=>tb>0?` <span style="font-size:9px;color:var(--txt2);font-weight:400">${(x/tb*100).toFixed(0)}%</span>`:'';
+  const baaHTML = (Math.abs(aa)>0.5||Math.abs(b)>0.5) ? `<div class="prov-title" style="margin-top:12px">Facturación AA / B · ${COBR_CANAL_LABELS[c]}</div>
+    <table class="prov-table"><thead><tr><th style="text-align:right">AA</th><th style="text-align:right">B</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody><tr>
+      <td style="text-align:right">${ffl(aa)}${pc(aa)}</td>
+      <td style="text-align:right">${ffl(b)}${pc(b)}</td>
+      <td style="text-align:right;font-weight:700">${ffl(tb)}</td>
+    </tr></tbody></table>` : '';
   w.innerHTML=`<div class="prov-title">Medios de pago · ${COBR_CANAL_LABELS[c]}</div>
     <table class="prov-table"><thead><tr><th>MDP</th><th>Importe</th></tr></thead>
-    <tbody>${rows}<tr class="cobr-total-row"><td>Total</td><td style="text-align:right">${ffl(tot)}</td></tr></tbody></table>`;
+    <tbody>${rows}<tr class="cobr-total-row"><td>Total</td><td style="text-align:right">${ffl(tot)}</td></tr></tbody></table>`+baaHTML;
 }
-function selectCobrCanal(c){ cobrSelCanal=c; const {mdpTot}=aggCobr(getRange()); renderCobrCards(mdpTot); renderCobrCanalDetail(mdpTot); }
+function selectCobrCanal(c){ cobrSelCanal=c; const {mdpTot,baaTot}=aggCobr(getRange()); renderCobrCards(mdpTot); renderCobrCanalDetail(mdpTot, baaTot); }
 
 function renderCobr(){
   const dates = getRange();
   const {mdpTot, baaTot} = aggCobr(dates);
   renderCobrCards(mdpTot);
-  renderCobrCanalDetail(mdpTot);
+  renderCobrCanalDetail(mdpTot, baaTot);
   renderCobrBAADonut(baaTot);
   renderCobrBAATable(baaTot);
 }
