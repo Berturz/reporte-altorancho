@@ -2997,7 +2997,7 @@ function _feriaRow(label, sub, a, b, fmt, special, ipc){
   var lblCol=special?'#b4322a':'var(--txt)';
   var fcCells;
   if(ipc){ var aj=t25*ipc, cr=(t25>0&&t26>0)?((t26/aj-1)*100):null; // aj.IPC 2025 + Crec. real % (26 vs 25 aj)
-    fcCells='<td style="text-align:right;padding:6px 10px;color:#8a5a2b">'+fmt(t25)+'</td>'
+    fcCells='<td style="text-align:right;padding:6px 10px;color:#6b6b72">'+fmt(t25)+'</td>'
      +'<td style="text-align:right;padding:6px 10px;color:#a5764a">'+(t25?fmt(aj):'—')+'</td>'
      +'<td style="text-align:right;padding:6px 10px;color:#8a5a2b;font-weight:700">'+fmt(t26)+'</td>'
      +'<td style="text-align:right;padding:6px 10px;font-weight:700;color:'+(cr==null?'var(--txt2)':(cr<0?'#a32d2d':'#1a7a3a'))+'">'+(cr==null?'—':((cr>=0?'+':'')+cr.toFixed(1)+'%'))+'</td>';
@@ -3107,14 +3107,14 @@ function renderCyberARBody(){
   var _ajT=tv25*_ipc11, _crT=(tv25>0&&tv26>0)?((tv26/_ajT-1)*100):null;
   var totR='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:7px 10px">TOTAL</td>'
     +'<td style="text-align:right;padding:7px 10px;background:#eef6f2">'+(q25?q25.toLocaleString('es-AR'):'—')+'</td><td style="text-align:right;padding:7px 10px;background:#eef6f2">'+(q26?q26.toLocaleString('es-AR'):'—')+'</td>'
-    +'<td style="text-align:right;padding:7px 10px;background:#faf1e6;color:#8a5a2b">'+fmt(tv25)+'</td>'
+    +'<td style="text-align:right;padding:7px 10px;background:#f0f0f2;color:#6b6b72">'+fmt(tv25)+'</td>'
     +'<td style="text-align:right;padding:7px 10px;background:#faf1e6;color:#a5764a">'+(tv25?fmt(_ajT):'—')+'</td>'
     +'<td style="text-align:right;padding:7px 10px;background:#faf1e6;color:#8a5a2b">'+fmt(tv26)+'</td>'
     +'<td style="text-align:right;padding:7px 10px;color:'+(_crT==null?'var(--txt2)':(_crT<0?'#a32d2d':'#1a7a3a'))+'">'+(_crT==null?'—':((_crT>=0?'+':'')+_crT.toFixed(1)+'%'))+'</td></tr>';
   var cuadro='<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-table"></i>'+faseLbl+' · por Rubro / Proveedor <span class="sec-sub">· cantidad · importe · aj.IPC · crec. real · 2025 vs 2026</span></div>'
    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:auto;max-width:760px"><table style="width:100%;border-collapse:collapse;font-size:12px">'
    +'<thead><tr style="color:#274d80"><th rowspan="2" style="text-align:left;padding:6px 10px;vertical-align:bottom">Rubro / Proveedor</th><th colspan="2" style="text-align:center;padding:5px 10px;background:#e2efe9;color:#1f6b52">Cantidad</th><th colspan="4" style="text-align:center;padding:5px 10px;background:#f5e9da;color:#8a5a2b">Facturación s/IVA</th></tr>'
-   +'<tr style="color:#274d80"><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2025</th><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025 aj.IPC</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">Crec. real</th></tr></thead>'
+   +'<tr style="color:#274d80"><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2025</th><th style="text-align:right;padding:4px 10px;background:#eef6f2;color:#3f8266">2026</th><th style="text-align:right;padding:4px 10px;background:#f0f0f2;color:#6b6b72">2025</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2025 aj.IPC</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">2026</th><th style="text-align:right;padding:4px 10px;background:#faf1e6;color:#a5764a">Crec. real</th></tr></thead>'
    +'<tbody>'+rowsHtml+sp+totR+'</tbody></table></div>'
    +'<div style="font-size:11px;color:var(--txt2);margin-top:6px;max-width:760px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Web + Locales (San Isidro, Belgrano, Alcorta, Nordelta); Mayorista no entra. ENVIOS, N/A, #N/A (sin clasificar) y ARTVARIOS no se cuentan. GIFTCARD cuenta en el detalle por día pero no en el cuadro rubro/proveedor ni en el margen. Margen = coef. precio/costo, solo filas con costo. Aj.IPC = interanual noviembre'+(ipcEstim('11')?' (estim.)':'')+'.</div>';
   // ── 3 tarjetas selectoras de vista (Cyber total · por día · Top productos) ──
