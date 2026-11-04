@@ -5998,8 +5998,9 @@ function stkTreeCosto(rows, isVentas, mes, estado){
   var tree={}, tot={cant:0,val:0};
   rows.forEach(function(a){
     var est,ori,rub,esti,mod,cant,val;
-    if(isVentas){ if(a[0]!==mes) return; est=a[1]; if(!stkEstOk(est,estado))return; ori=a[2];rub=a[3];esti=a[4];mod=a[5];cant=a[6];val=stkRowCostoUSD(a[8],cant,a[7]); }
-    else { est=a[0]; if(!stkEstOk(est,estado))return; ori=a[1];rub=a[2];esti=a[3];mod=a[4];cant=a[5];val=stkRowCostoUSD(a[7],cant,a[6]); }
+    // "Valorizado al costo": priorizar la columna "Total Valorizado al costo USD" del PROPIO archivo de cada cierre (a[7] ventas / a[6] stock). El costo galpón solo rellena filas sin valorizado en el archivo.
+    if(isVentas){ if(a[0]!==mes) return; est=a[1]; if(!stkEstOk(est,estado))return; ori=a[2];rub=a[3];esti=a[4];mod=a[5];cant=a[6];val=(a[7]>0?a[7]:stkRowCostoUSD(a[8],cant,0)); }
+    else { est=a[0]; if(!stkEstOk(est,estado))return; ori=a[1];rub=a[2];esti=a[3];mod=a[4];cant=a[5];val=(a[6]>0?a[6]:stkRowCostoUSD(a[7],cant,0)); }
     mod=mod||'(s/m)';
     tot.cant+=cant; tot.val+=val;
     var o=tree[ori]||(tree[ori]={cant:0,val:0,rubros:{}}); o.cant+=cant;o.val+=val;
