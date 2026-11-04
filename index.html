@@ -796,9 +796,9 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
 <div class="sec" id="secCobr">
   <div class="sec-hdr"><i class="ti ti-cash-banknote"></i>Cobranzas MDP importe S/IVA <span class="sec-sub">· controlado por el calendario</span></div>
   <style>
-  #cobrDetailWrap table thead th{background:var(--cobrc,var(--ink))!important;color:#fff!important}
-  #cobrDetailWrap .prov-title{color:var(--cobrc,var(--txt))!important;font-style:normal!important;font-weight:800!important;font-size:14px!important;border-left:4px solid var(--cobrc,var(--brd2));padding:3px 0 5px 9px;margin-bottom:.5rem}
-  #cobrDetailWrap .cobr-total-row td{font-weight:800!important;color:var(--cobrc,var(--txt))!important;border-top:2px solid var(--cobrc,var(--brd2))!important;background:var(--bg3)!important}
+  #cobrDetailWrap table thead th,#cobrSegDetail table thead th{background:var(--cobrc,var(--ink))!important;color:#fff!important}
+  #cobrDetailWrap .prov-title,#cobrSegDetail .prov-title{color:var(--cobrc,var(--txt))!important;font-style:normal!important;font-weight:800!important;font-size:14px!important;border-left:4px solid var(--cobrc,var(--brd2));padding:3px 0 5px 9px;margin-bottom:.5rem}
+  #cobrDetailWrap .cobr-total-row td,#cobrSegDetail .cobr-total-row td{font-weight:800!important;color:var(--cobrc,var(--txt))!important;border-top:2px solid var(--cobrc,var(--brd2))!important;background:var(--bg3)!important}
   #cobrBAATableWrap{width:fit-content;max-width:100%}
   #cobrBAATableWrap .cobr-table{min-width:0!important;font-size:12px}
   #cobrBAATableWrap .cobr-table th,#cobrBAATableWrap .cobr-table td{padding:.45rem 1.15rem}
@@ -821,6 +821,10 @@ table.vend-table thead th.vend-total-col{background:var(--c-mayorista)!important
   </div>
 
   <div class="prov-table-wrap" id="cobrBAATableWrap"></div>
+
+  <div class="st" style="margin:1.1rem 0 .5rem"><i class="ti ti-receipt-2"></i>AA / B por segmento <span class="sec-sub">· tocá Mayorista o Minorista para ver el detalle por método de pago</span></div>
+  <div id="cobrSegCards" class="salidas-cards"></div>
+  <div class="prov-table-wrap" id="cobrSegDetail" style="margin-top:.7rem"></div>
 </div>
 
 <!-- SECCIÓN 9: PERFORMANCE AR MAYORISTA SEMANAL -->
@@ -4188,7 +4192,45 @@ function renderCobr(){
   renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot);
   renderCobrBAADonut(baaTot);
   renderCobrBAATable(baaTot);
+  renderCobrSegCards(mdpBaaTot, mdpTot);
+  renderCobrSegDetail(mdpBaaTot, mdpTot);
 }
+
+// ── AA/B por segmento: Mayorista (Lett) vs Minorista (Web + Locales → desglose) · por método de pago ──
+const COBR_SEG = { may:{lbl:'Mayorista AA/B', cans:['lett'], col:'#6b4a8f', ic:'ti-building-warehouse'},
+                   min:{lbl:'Minorista AA/B', cans:['web','lbe','lsi','alc','lnd'], col:'#1a7a8c', ic:'ti-shopping-cart'} };
+let cobrSegSel='may';
+function cobrSegAgg(mdpBaaTot, mdpTot, cans){ const mb={}, mt={};
+  cans.forEach(c=>{ const cmb=(mdpBaaTot&&mdpBaaTot[c])||{}; for(const mg in cmb){ if(!mb[mg])mb[mg]={AA:0,B:0}; mb[mg].AA+=cmb[mg].AA||0; mb[mg].B+=cmb[mg].B||0; }
+    const cmt=(mdpTot&&mdpTot[c])||{}; for(const mg in cmt){ mt[mg]=(mt[mg]||0)+cmt[mg]; } });
+  return {mb, mt}; }
+function cobrSegTable(mb, mt, title){ const mgs=Object.keys(mt).filter(mg=>Math.abs(mt[mg])>0.5).sort((a,b)=>mt[b]-mt[a]);
+  if(!mgs.length) return title?`<div class="prov-title">${title}</div><div class="prov-empty" style="padding:.6rem">Sin datos</div>`:'';
+  let tA=0,tB=0,tT=0; let anyAB=false;
+  const rows=mgs.map(mg=>{ const bb=mb[mg]||{}; const aa=bb.AA||0,b=bb.B||0,t=mt[mg]; tA+=aa;tB+=b;tT+=t; if(aa||b)anyAB=true;
+    return `<tr><td>${mg}</td><td style="text-align:right">${aa?ffl(aa):'—'}</td><td style="text-align:right">${b?ffl(b):'—'}</td><td style="text-align:right">${ffl(t)}</td></tr>`; }).join('');
+  const note = anyAB ? '' : '<div style="font-size:10px;color:var(--txt2);margin-top:4px"><i class="ti ti-info-circle"></i> El AA/B por método de pago aparece al re-subir la facturación 2026.</div>';
+  return `${title?`<div class="prov-title">${title}</div>`:''}<table class="prov-table"><thead><tr><th>Método de pago</th><th style="text-align:right">AA</th><th style="text-align:right">B</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>${rows}<tr class="cobr-total-row"><td>Total</td><td style="text-align:right">${ffl(tA)}</td><td style="text-align:right">${ffl(tB)}</td><td style="text-align:right">${ffl(tT)}</td></tr></tbody></table>${note}`; }
+function renderCobrSegCards(mdpBaaTot, mdpTot){ const el=document.getElementById('cobrSegCards'); if(!el) return;
+  el.innerHTML = Object.keys(COBR_SEG).map(k=>{ const s=COBR_SEG[k]; const {mb,mt}=cobrSegAgg(mdpBaaTot,mdpTot,s.cans);
+    let imp=0; for(const mg in mt) imp+=mt[mg]; let aa=0,b=0; for(const mg in mb){aa+=mb[mg].AA;b+=mb[mg].B;} const ab=aa+b;
+    const act=k===cobrSegSel;
+    return `<div class="salcard${act?' act':''}" onclick="selectCobrSeg('${k}')" style="background:${chTint(s.col,act?0.80:0.88)};border:${act?'2px':'1px'} solid ${s.col};box-shadow:${act?'0 3px 12px rgba(44,44,42,.14)':'none'};cursor:pointer">
+      <div class="salcard-lbl" style="color:${s.col}"><span class="salcard-dot" style="background:${s.col}"></span><i class="ti ${s.ic}" style="font-size:12px;margin-right:2px"></i>${s.lbl}</div>
+      <div class="salcard-val" style="color:${s.col}">${fmt(imp)}</div>
+      <div class="salcard-pct">${ab>0?('AA '+(aa/ab*100).toFixed(0)+'% · B '+(b/ab*100).toFixed(0)+'%'):'AA/B · re-subir fact.'}</div></div>`;
+  }).join('');
+}
+function renderCobrSegDetail(mdpBaaTot, mdpTot){ const w=document.getElementById('cobrSegDetail'); if(!w) return; const s=COBR_SEG[cobrSegSel]||COBR_SEG.may;
+  w.style.setProperty('--cobrc', s.col);
+  if(cobrSegSel==='min'){ const tot=cobrSegAgg(mdpBaaTot,mdpTot,['web','lbe','lsi','alc','lnd']); const web=cobrSegAgg(mdpBaaTot,mdpTot,['web']); const loc=cobrSegAgg(mdpBaaTot,mdpTot,['lbe','lsi','alc','lnd']);
+    w.innerHTML = cobrSegTable(tot.mb,tot.mt,'Minorista · por método de pago')
+      + `<div style="margin-top:14px">`+cobrSegTable(web.mb,web.mt,'↳ Web')+`</div>`
+      + `<div style="margin-top:12px">`+cobrSegTable(loc.mb,loc.mt,'↳ Locales')+`</div>`;
+  } else { const may=cobrSegAgg(mdpBaaTot,mdpTot,['lett']); w.innerHTML = cobrSegTable(may.mb,may.mt,'Mayorista · por método de pago'); }
+}
+function selectCobrSeg(k){ cobrSegSel=k; const {mdpTot,mdpBaaTot}=aggCobr(getRange()); renderCobrSegCards(mdpBaaTot,mdpTot); renderCobrSegDetail(mdpBaaTot,mdpTot); }
 
 
 // ── PERFORMANCE AR MAYORISTA POR VENDEDOR (canal Lett) ──
