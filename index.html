@@ -4108,22 +4108,24 @@ function renderCobrBAATable(baaTot){
     document.getElementById('cobrBAATableWrap').innerHTML='<div class="prov-empty">Sin datos para el período seleccionado</div>';
     return;
   }
-  const headerHTML = canalesConDatos.map(c=>`<th style="text-align:center">${COBR_CANAL_LABELS[c]}</th>`).join('');
+  const headerHTML = canalesConDatos.map(c=>`<th style="text-align:right">${COBR_CANAL_LABELS[c]}</th>`).join('');
   function rowFor(label){
     return canalesConDatos.map(c=>{
       const d = baaTot[c]||{};
       const total = (d['AA']||0)+(d['B']||0);
       const val = d[label]||0;
       const pct = total>0 ? (val/total*100) : 0;
-      return `<td style="text-align:center">${pct.toFixed(2)}%</td>`;
+      return `<td style="text-align:right">${ffl(val)}<div style="font-size:9px;color:var(--txt2)">${pct.toFixed(1)}%</div></td>`;
     }).join('');
   }
+  const totRow = canalesConDatos.map(c=>{ const d=baaTot[c]||{}; return `<td style="text-align:right;font-weight:700">${ffl((d['AA']||0)+(d['B']||0))}</td>`; }).join('');
   document.getElementById('cobrBAATableWrap').innerHTML = `
     <table class="cobr-table">
       <thead><tr><th style="text-align:left">AA/B</th>${headerHTML}</tr></thead>
       <tbody>
         <tr><td style="font-weight:600">AA</td>${rowFor('AA')}</tr>
         <tr><td style="font-weight:600">B</td>${rowFor('B')}</tr>
+        <tr class="cobr-total-row"><td style="font-weight:700">Total</td>${totRow}</tr>
       </tbody>
     </table>`;
 }
