@@ -1476,7 +1476,7 @@ async function handleFile(file) {
         const CANAL_MAP3 = {Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
         const canalKey3 = CANAL_MAP3[canal];
         if (canalKey3 && rubro !== 'ENVIOS' && rubro !== 'N/A') {
-          if (!newCOBR[dia]) newCOBR[dia] = {mdp:{}, baa:{}};
+          if (!newCOBR[dia]) newCOBR[dia] = {mdp:{}, baa:{}, mdpbaa:{}};
           const mdpGrupo = row[COL.MDPR] ? String(row[COL.MDPR]).trim() : null;
           if (mdpGrupo) {
             if (!newCOBR[dia].mdp[canalKey3]) newCOBR[dia].mdp[canalKey3] = {};
@@ -1486,6 +1486,13 @@ async function handleFile(file) {
           if (baaVal) {
             if (!newCOBR[dia].baa[canalKey3]) newCOBR[dia].baa[canalKey3] = {};
             newCOBR[dia].baa[canalKey3][baaVal] = (newCOBR[dia].baa[canalKey3][baaVal]||0) + tv;
+          }
+          // cruce MDP × AA/B: importe por medio de pago y por AA/B (para mostrar AA/B en cada línea de MDP)
+          if (mdpGrupo && baaVal) {
+            if (!newCOBR[dia].mdpbaa[canalKey3]) newCOBR[dia].mdpbaa[canalKey3] = {};
+            const _mb = newCOBR[dia].mdpbaa[canalKey3];
+            if (!_mb[mdpGrupo]) _mb[mdpGrupo] = {};
+            _mb[mdpGrupo][baaVal] = (_mb[mdpGrupo][baaVal]||0) + tv;
           }
         }
       }
@@ -4037,6 +4044,7 @@ const COBR_MDP_COLORS = {Deposito:'#7F77DD',Efectivo:'#1D9E75',Transferencia:'#4
 function aggCobr(dates){
   const mdpTot = {}; // canal -> mdp -> importe
   const baaTot = {}; // canal -> AA/B -> importe
+  const mdpBaaTot = {}; // canal -> mdp -> AA/B -> importe
   for(const d of dates){
     const v = COBR_D[d]||{};
     for(const[canal,mdps] of Object.entries(v.mdp||{})){
@@ -4051,8 +4059,15 @@ function aggCobr(dates){
         baaTot[canal][b] = (baaTot[canal][b]||0) + val;
       }
     }
+    for(const[canal,mdps] of Object.entries(v.mdpbaa||{})){
+      if(!mdpBaaTot[canal]) mdpBaaTot[canal]={};
+      for(const[mg,baas] of Object.entries(mdps)){
+        if(!mdpBaaTot[canal][mg]) mdpBaaTot[canal][mg]={};
+        for(const[b,val] of Object.entries(baas)){ mdpBaaTot[canal][mg][b] = (mdpBaaTot[canal][mg][b]||0) + val; }
+      }
+    }
   }
-  return {mdpTot, baaTot};
+  return {mdpTot, baaTot, mdpBaaTot};
 }
 
 function renderCobrTable(mdpTot){
@@ -4144,34 +4159,33 @@ function renderCobrCards(mdpTot){
       <div class="salcard-val" style="color:${col}">${fmt(v)}</div><div class="salcard-pct">${pct.toFixed(1)}% del total</div></div>`;
   }).join('')||'<div class="prov-empty">Sin cobranzas en el período</div>';
 }
-function renderCobrCanalDetail(mdpTot, baaTot){
+function renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot){
   const w=document.getElementById('cobrDetailWrap'); const c=cobrSelCanal;
   w.style.setProperty('--cobrc', (c&&CC[COBR_CMAP[c]])?CC[COBR_CMAP[c]]:'#2c2c2a');
   if(!c||!mdpTot[c]){ w.innerHTML='<div class="prov-empty" style="padding:1rem">Tocá un canal para ver el desglose</div>'; return; }
   const entries=Object.entries(mdpTot[c]).filter(([,v])=>Math.abs(v)>0.5).sort((a,b)=>b[1]-a[1]);
   const tot=entries.reduce((s,[,v])=>s+v,0);
-  const rows=entries.map(([mg,v])=>`<tr><td>${mg}</td><td style="text-align:right">${ffl(v)}</td></tr>`).join('');
-  // AA / B · Total del canal (importe facturado s/IVA en cada tipo de comprobante)
-  const baa=(baaTot&&baaTot[c])||{}; const aa=baa['AA']||0, b=baa['B']||0, tb=aa+b;
-  const pc=(x)=>tb>0?` <span style="font-size:9px;color:var(--txt2);font-weight:400">${(x/tb*100).toFixed(0)}%</span>`:'';
-  const baaHTML = (Math.abs(aa)>0.5||Math.abs(b)>0.5) ? `<div class="prov-title" style="margin-top:12px">Facturación AA / B · ${COBR_CANAL_LABELS[c]}</div>
-    <table class="prov-table"><thead><tr><th style="text-align:right">AA</th><th style="text-align:right">B</th><th style="text-align:right">Total</th></tr></thead>
-    <tbody><tr>
-      <td style="text-align:right">${ffl(aa)}${pc(aa)}</td>
-      <td style="text-align:right">${ffl(b)}${pc(b)}</td>
-      <td style="text-align:right;font-weight:700">${ffl(tb)}</td>
-    </tr></tbody></table>` : '';
+  const mb=(mdpBaaTot&&mdpBaaTot[c])||{}; const hasMB=Object.keys(mb).length>0; // cruce MDP × AA/B disponible?
+  let totAA=0, totB=0;
+  const rows=entries.map(([mg,v])=>{ const bb=mb[mg]||{}; const aa=bb['AA']||0, b=bb['B']||0; totAA+=aa; totB+=b;
+    return `<tr><td>${mg}</td>`+(hasMB?`<td style="text-align:right">${aa?ffl(aa):'—'}</td><td style="text-align:right">${b?ffl(b):'—'}</td>`:'')+`<td style="text-align:right">${ffl(v)}</td></tr>`;
+  }).join('');
+  const head=`<thead><tr><th>MDP</th>`+(hasMB?`<th style="text-align:right">AA</th><th style="text-align:right">B</th>`:'')+`<th style="text-align:right">Importe</th></tr></thead>`;
+  const totalRow=`<tr class="cobr-total-row"><td>Total</td>`+(hasMB?`<td style="text-align:right">${ffl(totAA)}</td><td style="text-align:right">${ffl(totB)}</td>`:'')+`<td style="text-align:right">${ffl(tot)}</td></tr>`;
+  // fallback (datos viejos sin el cruce): cuadro AA/B total del canal + aviso
+  let baaHTML='';
+  if(!hasMB){ const baa=(baaTot&&baaTot[c])||{}; const aa=baa['AA']||0, b=baa['B']||0, tb=aa+b;
+    if(Math.abs(aa)>0.5||Math.abs(b)>0.5){ baaHTML=`<div class="prov-title" style="margin-top:12px">Facturación AA / B · ${COBR_CANAL_LABELS[c]}</div><table class="prov-table"><thead><tr><th style="text-align:right">AA</th><th style="text-align:right">B</th><th style="text-align:right">Total</th></tr></thead><tbody><tr><td style="text-align:right">${ffl(aa)}</td><td style="text-align:right">${ffl(b)}</td><td style="text-align:right;font-weight:700">${ffl(tb)}</td></tr></tbody></table><div style="font-size:10px;color:var(--txt2);margin-top:4px"><i class="ti ti-info-circle"></i> El AA/B por cada medio de pago aparece al re-subir la facturación 2026.</div>`; } }
   w.innerHTML=`<div class="prov-title">Medios de pago · ${COBR_CANAL_LABELS[c]}</div>
-    <table class="prov-table"><thead><tr><th>MDP</th><th>Importe</th></tr></thead>
-    <tbody>${rows}<tr class="cobr-total-row"><td>Total</td><td style="text-align:right">${ffl(tot)}</td></tr></tbody></table>`+baaHTML;
+    <table class="prov-table">${head}<tbody>${rows}${totalRow}</tbody></table>`+baaHTML;
 }
-function selectCobrCanal(c){ cobrSelCanal=c; const {mdpTot,baaTot}=aggCobr(getRange()); renderCobrCards(mdpTot); renderCobrCanalDetail(mdpTot, baaTot); }
+function selectCobrCanal(c){ cobrSelCanal=c; const {mdpTot,baaTot,mdpBaaTot}=aggCobr(getRange()); renderCobrCards(mdpTot); renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot); }
 
 function renderCobr(){
   const dates = getRange();
-  const {mdpTot, baaTot} = aggCobr(dates);
+  const {mdpTot, baaTot, mdpBaaTot} = aggCobr(dates);
   renderCobrCards(mdpTot);
-  renderCobrCanalDetail(mdpTot, baaTot);
+  renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot);
   renderCobrBAADonut(baaTot);
   renderCobrBAATable(baaTot);
 }
