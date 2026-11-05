@@ -3105,10 +3105,9 @@ function renderCyberARBody(){
     var _oInfo=function(yr){ var rg=CYBER_RANGE[yr], a=_anchor(yr); return {lo:_diff(rg[0],a), hi:_diff(rg[1],a)}; };
     var o25=_oInfo('2025'), o26=_oInfo('2026'); var loOff=Math.min(o25.lo,o26.lo), hiOff=Math.max(o25.hi,o26.hi);
     var offsets=[]; for(var _o=loOff;_o<=hiOff;_o++) offsets.push(_o);
-    // fila de fases (referencia: la fase que tenga algún año en ese offset, prioriza no-neu)
-    var _gph=function(off){ var p=_phaseAt(off,'2025'); return (p!=='neu')?p:_phaseAt(off,'2026'); };
-    var groups=[]; offsets.forEach(function(off){ var ph=_gph(off); var last=groups[groups.length-1]; if(last&&last.ph===ph) last.n++; else groups.push({ph:ph,n:1}); });
     var _blk=function(yr,lbl,lblCol,lblBg){ var Y=CYBER_AR[yr]; var days=(Y&&Y.days)||{}; var adj=(yr==='2025')?_ipcDay:1; var a=_anchor(yr); var rg=CYBER_RANGE[yr]; var hasData=false; for(var k in days){hasData=true;break;} var tot=offsets.map(function(){return 0;});
+      // fila de fases de ESTE año (el rótulo arranca donde arranca su propia fase)
+      var groups=[]; offsets.forEach(function(off){ var ph=_phaseAt(off,yr); var last=groups[groups.length-1]; if(last&&last.ph===ph) last.n++; else groups.push({ph:ph,n:1}); });
       var cells=offsets.map(function(off){ var iso=_add(a,off); var inR=(iso>=rg[0]&&iso<=rg[1]); return {iso:inR?iso:null, ph:_phaseAt(off,yr)}; }); // la fecha de ESTE año en cada offset (día de semana alineado)
       var h='<table style="border-collapse:collapse;font-size:11px;white-space:nowrap"><tr><th colspan="'+(offsets.length+1)+'" style="text-align:left;padding:6px 10px;background:'+lblBg+';color:'+lblCol+';border-bottom:1px solid var(--brd);font-weight:800">'+lbl+'</th></tr>';
       // fila de rótulos de fase (agrupados)
