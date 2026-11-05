@@ -901,7 +901,7 @@ var CYBER_DATES = {
   '2026':{ pre:['2026-10-30','2026-11-01'], durante:['2026-11-02','2026-11-04'], post:['2026-11-05','2026-11-08'], extras:['2026-11-09','2026-11-15'] } // Post = 4 días (igual que 2025); extras 09→15 = días que el 2025 no tuvo (solo 2026)
 };
 // Rango del cuadro por día (incluye el día previo al Pre, 29/10): facturación por canal/día
-var CYBER_RANGE = { '2025':['2025-10-29','2025-11-15'], '2026':['2026-10-29','2026-11-15'] }; // 2025 hasta 15/11 para capturar los días post-cierre (equivalente a los días extras del 2026)
+var CYBER_RANGE = { '2025':['2025-10-29','2025-11-15'], '2026':['2026-10-28','2026-11-15'] }; // 2025 hasta 15/11 (días post-cierre); 2026 desde 28/10 para alinear por día de semana (28/10/26 miércoles ↔ 29/10/25 miércoles)
 // Fechas del Cyber Web 2025 por factura (del "Apunte contable" hoja CYBER, col A=Creado el). Solo Web: se usa para re-fechar las filas Web del Reporte 2025. { 'FA-B 00009-00018279':'2025-11-03', ... }
 var CYBER_WEB_DATES = {};
 function _cyberInvNorm(s){ return String(s==null?'':s).toUpperCase().replace(/\s*\(.*$/,'').replace(/\s+/g,' ').trim(); }
@@ -3096,31 +3096,36 @@ function renderCyberARBody(){
     var _ipcDay=ipcFactor('11'); // ajuste IPC interanual nov para el 2025
     var _dowL=function(iso){ return ['D','L','M','M','J','V','S'][new Date(iso+'T00:00:00').getDay()]; };
     var _dl=function(a,bb){ var out=[],d=new Date(a+'T00:00:00'),e=new Date(bb+'T00:00:00'); while(d<=e){ out.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); d.setDate(d.getDate()+1); } return out; };
-    // ── esqueleto de columnas por FASE (compartido por ambos años) → Durante/Post quedan a la par ──
-    var PHORD=['pre','durante','post','extras'], PHLBL={pre:'Pre Cyber',durante:'Durante',post:'Post Cyber',extras:'Días extras'};
-    var _phDays=function(yr,ph){ var dd=CYBER_DATES[yr], r=dd&&dd[ph]; return r?(Math.round((new Date(r[1]+'T00:00:00')-new Date(r[0]+'T00:00:00'))/86400000)+1):0; };
-    var slotN={}; PHORD.forEach(function(ph){ slotN[ph]=Math.max(_phDays('2025',ph),_phDays('2026',ph)); });
-    var groups=[{ph:'neu',n:1}]; PHORD.forEach(function(ph){ if(slotN[ph]>0) groups.push({ph:ph,n:slotN[ph]}); });
-    var yearSlots=function(yr){ var rg=CYBER_RANGE[yr]; var dd=CYBER_DATES[yr]||{}; var postEnd=dd.post?dd.post[1]:null; var buck={neu:[],pre:[],durante:[],post:[],extras:[]};
-      if(rg) _dl(rg[0],rg[1]).forEach(function(iso){ var ph=_cyberPhase(iso,yr); if(ph){ buck[ph].push(iso); } else if(postEnd && iso>postEnd){ buck.extras.push(iso); } else { buck.neu.push(iso); } }); // días post-Post sin fase (ej. 2025 10→15/11) = extras-equivalente, alineados por índice con el 2026
-      var slots=[{ph:'neu',iso:buck.neu[0]||null}]; PHORD.forEach(function(ph){ for(var i=0;i<slotN[ph];i++) slots.push({ph:ph,iso:buck[ph][i]||null}); }); return slots; };
-    var _blk=function(yr,lbl,lblCol,lblBg){ var Y=CYBER_AR[yr]; var days=(Y&&Y.days)||{}; var adj=(yr==='2025')?_ipcDay:1; var hasData=false; for(var k in days){hasData=true;break;} var slots=yearSlots(yr); var tot=slots.map(function(){return 0;});
-      var h='<table style="border-collapse:collapse;font-size:11px;white-space:nowrap"><tr><th colspan="'+(slots.length+1)+'" style="text-align:left;padding:6px 10px;background:'+lblBg+';color:'+lblCol+';border-bottom:1px solid var(--brd);font-weight:800">'+lbl+'</th></tr>';
+    // ── columnas alineadas por DÍA DE SEMANA: offset respecto del Cyber Monday (inicio de Durante = lunes) ──
+    var PHLBL={pre:'Pre Cyber',durante:'Durante',post:'Post Cyber',extras:'Días extras'};
+    var _anchor=function(yr){ return CYBER_DATES[yr].durante[0]; }; // lunes de Cyber Monday (03/11/25, 02/11/26)
+    var _diff=function(a,b){ return Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000); };
+    var _add=function(iso,n){ var d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+    var _phaseAt=function(off,yr){ var iso=_add(_anchor(yr),off); var ph=_cyberPhase(iso,yr); if(ph) return ph; var dd=CYBER_DATES[yr]; if(dd.post && iso>dd.post[1] && iso<=CYBER_RANGE[yr][1]) return 'extras'; return 'neu'; }; // post-Post sin fase = extras-equiv
+    var _oInfo=function(yr){ var rg=CYBER_RANGE[yr], a=_anchor(yr); return {lo:_diff(rg[0],a), hi:_diff(rg[1],a)}; };
+    var o25=_oInfo('2025'), o26=_oInfo('2026'); var loOff=Math.min(o25.lo,o26.lo), hiOff=Math.max(o25.hi,o26.hi);
+    var offsets=[]; for(var _o=loOff;_o<=hiOff;_o++) offsets.push(_o);
+    // fila de fases (referencia: la fase que tenga algún año en ese offset, prioriza no-neu)
+    var _gph=function(off){ var p=_phaseAt(off,'2025'); return (p!=='neu')?p:_phaseAt(off,'2026'); };
+    var groups=[]; offsets.forEach(function(off){ var ph=_gph(off); var last=groups[groups.length-1]; if(last&&last.ph===ph) last.n++; else groups.push({ph:ph,n:1}); });
+    var _blk=function(yr,lbl,lblCol,lblBg){ var Y=CYBER_AR[yr]; var days=(Y&&Y.days)||{}; var adj=(yr==='2025')?_ipcDay:1; var a=_anchor(yr); var rg=CYBER_RANGE[yr]; var hasData=false; for(var k in days){hasData=true;break;} var tot=offsets.map(function(){return 0;});
+      var cells=offsets.map(function(off){ var iso=_add(a,off); var inR=(iso>=rg[0]&&iso<=rg[1]); return {iso:inR?iso:null, ph:_phaseAt(off,yr)}; }); // la fecha de ESTE año en cada offset (día de semana alineado)
+      var h='<table style="border-collapse:collapse;font-size:11px;white-space:nowrap"><tr><th colspan="'+(offsets.length+1)+'" style="text-align:left;padding:6px 10px;background:'+lblBg+';color:'+lblCol+';border-bottom:1px solid var(--brd);font-weight:800">'+lbl+'</th></tr>';
       // fila de rótulos de fase (agrupados)
       h+='<tr><th style="position:sticky;left:0;z-index:2;background:var(--bg);text-align:left;padding:4px 10px;border-bottom:1px solid var(--brd);min-width:84px;font-size:9.5px;color:var(--txt2)">Fase</th>';
       groups.forEach(function(g){ var c=PHC[g.ph]; h+='<th colspan="'+g.n+'" style="padding:3px 6px;text-align:center;background:'+c.hd+';color:'+c.tx+';border-bottom:1px solid var(--brd);border-left:2px solid var(--bg);font-weight:800;font-size:10px">'+(g.ph==='neu'?'·':PHLBL[g.ph])+'</th>'; });
       h+='</tr>';
       h+='<tr><th style="position:sticky;left:0;z-index:2;background:var(--bg);text-align:left;padding:5px 10px;border-bottom:1px solid var(--brd);min-width:84px">Canal</th>';
-      slots.forEach(function(s){ var c=PHC[s.ph]; h+='<th style="padding:4px 8px;text-align:right;background:'+c.hd+';color:'+c.tx+';border-bottom:1px solid var(--brd);min-width:80px;font-weight:700">'+(s.iso?('<div style="font-size:8px;font-weight:700;opacity:.7;line-height:1">'+_dowL(s.iso)+'</div>'+_cyberDDMM(s.iso)):'<span style="opacity:.4">—</span>')+'</th>'; });
+      cells.forEach(function(s){ var c=PHC[s.ph]; h+='<th style="padding:4px 8px;text-align:right;background:'+c.hd+';color:'+c.tx+';border-bottom:1px solid var(--brd);min-width:80px;font-weight:700">'+(s.iso?('<div style="font-size:8px;font-weight:700;opacity:.7;line-height:1">'+_dowL(s.iso)+'</div>'+_cyberDDMM(s.iso)):'<span style="opacity:.4">—</span>')+'</th>'; });
       h+='</tr>';
       CYBER_CANORD.forEach(function(ck){ h+='<tr><td style="position:sticky;left:0;z-index:1;background:var(--bg);font-weight:600;padding:5px 10px;border-bottom:.5px solid var(--brd)">'+CYBER_CANLBL[ck]+'</td>';
-        slots.forEach(function(s,i){ var c=PHC[s.ph]; var raw=(s.iso&&days[s.iso]&&days[s.iso][ck])?days[s.iso][ck]:null; var v=raw!=null?raw*adj:null; tot[i]+=v||0; h+='<td style="padding:5px 8px;text-align:right;background:'+c.bg+';color:'+(v?'#3a3a3a':'var(--txt2)')+';border-bottom:.5px solid var(--brd)">'+(v?fmt(v):'—')+'</td>'; });
+        cells.forEach(function(s,i){ var c=PHC[s.ph]; var raw=(s.iso&&days[s.iso]&&days[s.iso][ck])?days[s.iso][ck]:null; var v=raw!=null?raw*adj:null; tot[i]+=v||0; h+='<td style="padding:5px 8px;text-align:right;background:'+c.bg+';color:'+(v?'#3a3a3a':'var(--txt2)')+';border-bottom:.5px solid var(--brd)">'+(v?fmt(v):'—')+'</td>'; });
         h+='</tr>'; });
       h+='<tr><td style="position:sticky;left:0;z-index:1;background:var(--bg2);font-weight:800;padding:6px 10px;border-top:2px solid var(--brd2)">Total</td>';
-      slots.forEach(function(s,i){ var c=PHC[s.ph]; h+='<td style="padding:6px 8px;text-align:right;background:'+c.bg+';font-weight:800;border-top:2px solid var(--brd2);color:'+(hasData&&s.iso?'#2a2a2a':'var(--txt2)')+'">'+(hasData&&s.iso?fmt(tot[i]):'—')+'</td>'; });
+      cells.forEach(function(s,i){ var c=PHC[s.ph]; h+='<td style="padding:6px 8px;text-align:right;background:'+c.bg+';font-weight:800;border-top:2px solid var(--brd2);color:'+(hasData&&s.iso?'#2a2a2a':'var(--txt2)')+'">'+(hasData&&s.iso?fmt(tot[i]):'—')+'</td>'; });
       h+='</tr></table>';
       return '<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;margin-bottom:12px">'+h+'</div>'; };
-    var leg='<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;font-size:11px"><span style="font-weight:700">Fases:</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#d2d8e2"></span> Pre</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#f3dca6"></span> Durante</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#b5dbe2"></span> Post</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#dcdce0"></span> Extras / 29-10 <span style="color:var(--txt2)">(fuera de fase)</span></span><span style="color:var(--txt2)">· columnas alineadas por fase en ambos años</span></div>';
+    var leg='<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;font-size:11px"><span style="font-weight:700">Fases:</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#d2d8e2"></span> Pre</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#f3dca6"></span> Durante</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#b5dbe2"></span> Post</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#dcdce0"></span> Extras / previo <span style="color:var(--txt2)">(fuera de fase)</span></span><span style="color:var(--txt2)">· columnas alineadas por día de semana (lunes de Cyber a la par)</span></div>';
     // ── crecimiento por canal (2026 vs 2025 aj.IPC · Pre+Durante+Post, sin extras) ──
     var crecTbl=(function(){ var S25=_cySum(Y25), S26=_cySum(Y26); if(!S25 && !S26) return ''; var b25=(S25&&S25.byC)||{}, b26=(S26&&S26.byC)||{};
       var rows=CYBER_CANORD.map(function(ck){ var a=b25[ck], b=b26[ck]; var t25=a?a.tv:0, t26=b?b.tv:0; if(!t25&&!t26) return ''; var aj=t25*_ipcDay, cr=(aj>0&&t26>0)?((t26/aj-1)*100):null;
@@ -3134,7 +3139,7 @@ function renderCyberARBody(){
        +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:520px"><table style="width:100%;border-collapse:collapse;font-size:12px">'
        +'<thead><tr style="color:#274d80"><th style="text-align:left;padding:5px 10px">Canal</th><th style="text-align:right;padding:5px 10px;background:#faf1e6;color:#a5764a">2025 aj.IPC</th><th style="text-align:right;padding:5px 10px;background:#fbf0f6;color:#b0468f">2026</th><th style="text-align:right;padding:5px 10px">Crec. real</th></tr></thead>'
        +'<tbody>'+rows+totR+'</tbody></table></div>'; })();
-    return '<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-table"></i>Por canal · por día <span class="sec-sub">· facturación s/IVA · 2025 aj.IPC · columnas a la par por fase</span></div>'+leg+_blk('2025','Cyber 2025 · aj.IPC · '+_cyberDDMM(CYBER_RANGE['2025'][0])+' → '+_cyberDDMM(CYBER_RANGE['2025'][1]),'#42617f','#eef3f8')+_blk('2026','Cyber 2026 · '+_cyberDDMM(CYBER_RANGE['2026'][0])+' → '+_cyberDDMM(CYBER_RANGE['2026'][1])+' (pendiente)','#b0468f','#fbf0f6')+crecTbl;
+    return '<div class="sec-hdr" style="margin-top:18px"><i class="ti ti-table"></i>Por canal · por día <span class="sec-sub">· facturación s/IVA · 2025 aj.IPC · columnas por día de semana</span></div>'+leg+_blk('2025','Cyber 2025 · aj.IPC · '+_cyberDDMM(CYBER_RANGE['2025'][0])+' → '+_cyberDDMM(CYBER_RANGE['2025'][1]),'#42617f','#eef3f8')+_blk('2026','Cyber 2026 · '+_cyberDDMM(CYBER_RANGE['2026'][0])+' → '+_cyberDDMM(CYBER_RANGE['2026'][1])+' (pendiente)','#b0468f','#fbf0f6')+crecTbl;
   })();
   // cuadro rubro/proveedor 2 años
   var g25=function(cat){ if(!P25)return null; if(cat==='__NA')return P25.na; return P25.cats&&P25.cats[cat]; };
