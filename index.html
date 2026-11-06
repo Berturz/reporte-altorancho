@@ -3140,14 +3140,14 @@ function renderCyberARBody(){
       var FASE_DEF=[['pre','Pre Cyber','#6f757e','#565b64'],['durante','Durante','#c98500','#8a5f10'],['post','Post Cyber','#1f7a8c','#176575'],['extras','Días extras','#a8562a','#8a4a24']];
       var faseCards=FASE_DEF.map(function(f){ var ph=f[0]; var t25=(ph==='extras')?_extra25():_phTv(Y25,ph); var t26=_phTv(Y26,ph); if(!(t25>0)&&!(t26>0)) return '';
         var aj=t25*_ipcDay, cr=(aj>0&&t26>0)?((t26/aj-1)*100):null; var crCol=cr==null?'var(--txt2)':(cr<0?'#a32d2d':'#1a7a3a'); var crTxt=cr==null?'—':((cr>=0?'+':'')+cr.toFixed(1)+'%');
-        return '<div style="background:var(--bg);border:1px solid var(--brd);border-top:3px solid '+f[2]+';border-radius:10px;padding:9px 11px">'
-          +'<div style="font-size:12px;font-weight:800;color:'+f[3]+'">'+f[1]+'</div>'
-          +'<div style="display:flex;align-items:baseline;gap:6px;margin:3px 0 6px"><span style="font-size:20px;font-weight:800;color:'+crCol+'">'+crTxt+'</span><span style="font-size:9.5px;color:var(--txt2)">crec. real</span></div>'
-          +'<div style="font-size:10px;color:var(--txt2);display:flex;justify-content:space-between;gap:8px"><span>2025 aj.IPC</span><span style="color:#8a5a2b;font-weight:600">'+(t25?fmt(aj):'—')+'</span></div>'
-          +'<div style="font-size:10px;color:var(--txt2);display:flex;justify-content:space-between;gap:8px;margin-top:1px"><span>2026</span><span style="color:#b0468f;font-weight:700">'+(t26?fmt(t26):'—')+'</span></div>'
+        return '<div style="background:var(--bg);border:1px solid var(--brd);border-top:3px solid '+f[2]+';border-radius:10px;padding:10px 11px">'
+          +'<div style="font-size:11.5px;font-weight:800;color:'+f[3]+'">'+f[1]+'</div>'
+          +'<div style="display:flex;align-items:baseline;gap:5px;margin:4px 0 7px"><span style="font-size:20px;font-weight:800;color:'+crCol+'">'+crTxt+'</span><span style="font-size:9px;color:var(--txt2)">crec. real</span></div>'
+          +'<div style="font-size:9px;color:var(--txt2)">2025 aj.IPC</div><div style="font-size:12.5px;font-weight:600;color:#8a5a2b;margin-bottom:5px">'+(t25?fmt(aj):'—')+'</div>'
+          +'<div style="font-size:9px;color:var(--txt2)">2026</div><div style="font-size:12.5px;font-weight:700;color:#b0468f">'+(t26?fmt(t26):'—')+'</div>'
           +'</div>';
       }).join('');
-      var faseGrid=faseCards?'<div style="display:grid;grid-template-columns:repeat(2,minmax(148px,1fr));gap:9px;align-content:start;flex:1 1 300px;min-width:300px">'+faseCards+'</div>':'';
+      var faseGrid=faseCards?'<div style="display:grid;grid-template-columns:repeat(2,152px);gap:9px;align-content:start;flex:0 0 auto">'+faseCards+'</div>':'';
       return '<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-arrows-diff"></i>Crecimiento por canal <span class="sec-sub">· 2026 vs 2025 aj.IPC · Pre + Durante + Post (sin extras)</span></div>'
        +'<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">'
        +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:520px;flex:0 1 auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
