@@ -911,6 +911,8 @@ var cyberView='total'; // 'total' (resumen+rubro/prov) · 'dia' (por canal/día)
 function setCyberView(v){ cyberView=v; try{renderEventos();}catch(e){} }
 var cyberCrecFase='total'; // fase del cuadro "Crecimiento por canal" (chips clickeables)
 function setCyberCrecFase(f){ cyberCrecFase=f; try{renderEventos();}catch(e){} }
+var cyberTopFase='total'; // fase del Top productos (chips clickeables)
+function setCyberTopFase(f){ cyberTopFase=f; try{renderEventos();}catch(e){} }
 function _cyberPhase(dia, year){ var dd=CYBER_DATES[year]; if(!dd||!dia) return null; if(dia>=dd.pre[0]&&dia<=dd.pre[1]) return 'pre'; if(dia>=dd.durante[0]&&dia<=dd.durante[1]) return 'durante'; if(dia>=dd.post[0]&&dia<=dd.post[1]) return 'post'; if(dd.extras&&dia>=dd.extras[0]&&dia<=dd.extras[1]) return 'extras'; return null; }
 var CYBER_CANMAP={Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'}; // Lett (Mayorista) no entra
 var CYBER_CANLBL={web:'Web', lbe:'Belgrano', lsi:'San Isidro', alc:'Alcorta', lnd:'Nordelta'};
@@ -927,8 +929,11 @@ function _cyberAcc(accObj, daysObj, prodObj, dia, year, canal, rubro, skuU, cat,
       if(!P.cats[cat]) P.cats[cat]={qty:0,tv:0,fac:0,cn:0}; var bk=P.cats[cat]; bk.qty+=qty; bk.tv+=tv; if(cmv>0){ bk.fac+=tv; bk.cn+=cmv; P.mgFac+=tv; P.mgCn+=cmv; }
       if(!P.byC[ck]) P.byC[ck]={qty:0,tv:0,fac:0,cn:0}; var bc=P.byC[ck]; bc.qty+=qty; bc.tv+=tv; if(cmv>0){ bc.fac+=tv; bc.cn+=cmv; }
       P.tot.qty+=qty; P.tot.tv+=tv;
-      // Top 5 productos (total del Cyber = todas las fases): [qty, tv, cmv, {sku:qty}] por modelo|estilo
-      if(prodObj && ph!=='extras'){ var pk=(modelo||'')+'|'+(estilo||''); if(!prodObj[pk]) prodObj[pk]=[0,0,0,{}]; prodObj[pk][0]+=qty; prodObj[pk][1]+=tv; prodObj[pk][2]+=cmv; if(skuU) prodObj[pk][3][skuU]=(prodObj[pk][3][skuU]||0)+qty; } // Top excluye extras (comparable con 2025)
+      // Top 5 productos (total del Cyber = Pre+Durante+Post, sin extras): [qty, tv, cmv, {sku:qty}] por modelo|estilo
+      var _pk=(modelo||'')+'|'+(estilo||'');
+      if(prodObj && ph!=='extras'){ if(!prodObj[_pk]) prodObj[_pk]=[0,0,0,{}]; prodObj[_pk][0]+=qty; prodObj[_pk][1]+=tv; prodObj[_pk][2]+=cmv; if(skuU) prodObj[_pk][3][skuU]=(prodObj[_pk][3][skuU]||0)+qty; } // Total excluye extras (comparable con 2025)
+      // Top 5 por FASE (para los chips sobre el cuadro de productos)
+      if(!P.prod) P.prod={}; if(!P.prod[_pk]) P.prod[_pk]=[0,0,0,{}]; P.prod[_pk][0]+=qty; P.prod[_pk][1]+=tv; P.prod[_pk][2]+=cmv; if(skuU) P.prod[_pk][3][skuU]=(P.prod[_pk][3][skuU]||0)+qty;
     }
   }
   // Detalle por día: incluye clasificados + GIFTCARD; excluye #N/A (cat null que no sea giftcard)
@@ -3182,7 +3187,13 @@ function renderCyberARBody(){
   }).join('')+'</div>';
   // ── Top 5 productos · total Cyber · doble año (2025 + 2026 pendiente), 5 en una fila ──
   var buildTop=function(){
-    var items25=_cyberTop5((Y25&&Y25.prod)||null), items26=_cyberTop5((Y26&&Y26.prod)||null);
+    var _tCF=cyberTopFase; if(['total','pre','durante','post','extras'].indexOf(_tCF)<0) _tCF='total';
+    var _prodOf=function(Y){ if(!Y) return null; if(_tCF==='total') return Y.prod||null; return (Y[_tCF]&&Y[_tCF].prod)||null; };
+    var items25=_cyberTop5(_prodOf(Y25)), items26=_cyberTop5(_prodOf(Y26));
+    var _TFAS=[['total','Total Cyber','#5a4e9c'],['pre','Pre Cyber','#6f757e'],['durante','Durante','#c98500'],['post','Post Cyber','#1f7a8c'],['extras','Días extras','#a8562a']];
+    var _tLbl=(_TFAS.filter(function(f){return f[0]===_tCF;})[0]||['','Total Cyber'])[1];
+    var topChips='<div style="display:flex;gap:7px;flex-wrap:wrap;margin:2px 0 14px;max-width:900px">'+_TFAS.map(function(f){ var on=_tCF===f[0];
+      return '<button onclick="setCyberTopFase(\''+f[0]+'\')" style="cursor:pointer;border:'+(on?'2px':'1.5px')+' solid '+f[2]+';background:'+(on?f[2]+'22':f[2]+'0d')+';border-radius:10px;padding:'+(on?'6px 14px':'7px 15px')+';font-size:12.5px;font-weight:800;color:'+f[2]+';box-shadow:'+(on?'0 2px 7px '+f[2]+'33':'none')+'">'+f[1]+'</button>'; }).join('')+'</div>';
     // fila horizontal: foto (1ª columna) con SKU + rank, al lado nombre / cantidad / detalle de venta por color
     var cyRow=function(p,i,rc){
       var foto=resolveProdFoto(p.skus), url=foto.url||'', sku=foto.sku||'';
@@ -3205,13 +3216,15 @@ function renderCyberARBody(){
     var list=function(items,rc){ return items.map(function(p,i){return cyRow(p,i,rc);}).join(''); };
     var ph=''; for(var i=0;i<5;i++){ ph+='<div style="border:1.5px dashed var(--brd);border-radius:10px;height:84px;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:10px;margin-bottom:6px">— pendiente —</div>'; }
     var lbl=function(txt,bg,fg,extra){ return '<div style="margin:0 0 7px"><span style="background:'+bg+';color:'+fg+';border-radius:5px;padding:2px 9px;font-size:11px;font-weight:800">'+txt+'</span>'+(extra||'')+'</div>'; };
-    var col25=lbl('2025','#e7effa','#2f5fa6')+(items25.length?list(items25,'#4472c4'):'<div style="font-size:11px;color:var(--txt2);padding:8px;border:1px dashed var(--brd);border-radius:10px">Sin datos 2025. Re-subí el “Reporte 2025 USAR.xlsx” y Guardá.</div>');
+    var _emptyMsg25=(_tCF==='extras')?'El Top por producto del 2025 no está disponible para los días extras (post-cierre).':'Sin datos 2025 para esta fase. Re-subí el “Reporte 2025 USAR.xlsx” y Guardá.';
+    var col25=lbl('2025','#e7effa','#2f5fa6')+(items25.length?list(items25,'#4472c4'):'<div style="font-size:11px;color:var(--txt2);padding:8px;border:1px dashed var(--brd);border-radius:10px">'+_emptyMsg25+'</div>');
     var col26=lbl('2026','#f7e2ee','#b0468f',items26.length?'':' <span style="color:var(--txt2);font-size:10.5px">· pendiente</span>')+(items26.length?list(items26,'#b0468f'):ph);
-    return '<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-trophy"></i>Top productos · Total Cyber <span class="sec-sub">· Top 5 por unidades · 2025 vs 2026 · Web + Locales</span></div>'
+    var _tSub=(_tCF==='total')?'Pre + Durante + Post (sin extras)':_tLbl;
+    return '<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-trophy"></i>Top productos · '+_tLbl+' <span class="sec-sub">· Top 5 por unidades · '+_tSub+' · 2025 vs 2026</span></div>'+topChips
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;align-items:start">'
         +'<div>'+col25+'</div><div>'+col26+'</div>'
       +'</div>'
-      +'<div style="font-size:10.5px;color:var(--txt2);margin-top:10px;max-width:900px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Top 5 por unidades en todo el Cyber (Pre + Durante + Post), Web + Locales. Sin Mayorista, ENVIOS, GIFTCARD ni #N/A. El <b>SKU</b> bajo la foto es el color más vendido (de ahí sale la imagen). Fotos del mapa de productos.</div>';
+      +'<div style="font-size:10.5px;color:var(--txt2);margin-top:10px;max-width:900px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Top 5 por unidades, Web + Locales. Sin Mayorista, ENVIOS, GIFTCARD ni #N/A. Elegí la fase con los chips de arriba. El <b>SKU</b> bajo la foto es el color más vendido (de ahí sale la imagen). El Top por fase necesita re-subir la facturación/Reporte.</div>';
   };
   var body=(cyberView==='dia')?porCanal:((cyberView==='top')?buildTop():(fasesBar+resTbl+cuadro));
   return '<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-bolt"></i>AR Cyber Monday <span class="sec-sub">· Total · Pre · Durante · Post · 2025 vs 2026 · Web + Locales (sin Mayorista)</span><i class="ti ti-settings" title="Cargar fechas Cyber Web (Apunte contable · hoja CYBER)" onclick="document.getElementById(\'cyberWebFileInput\').click()" style="cursor:pointer;color:var(--txt2);font-size:13px;margin-left:8px;opacity:.4"></i></div>'
