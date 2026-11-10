@@ -268,6 +268,21 @@ table.t tr.sub td{background:color-mix(in srgb,var(--gc,#999) 7%,#fff);
 .blk table.t tbody tr:last-child td{border-bottom:0}
 .blk table.t tr.sub td{background:var(--bg2);background:color-mix(in srgb,var(--gc,#999) 8%,#fff);
  border-top:1px solid color-mix(in srgb,var(--gc,#999) 26%,#fff)}
+/* ══ engranaje de exportar ══ */
+#sec6{position:relative}
+.gear{position:absolute;top:.9rem;right:1rem;border:1px solid var(--brd2);background:var(--bg2);
+ border-radius:8px;padding:.28rem .55rem;cursor:pointer;font-size:1rem;line-height:1;color:var(--txt2)}
+.gear:hover{border-color:var(--sc,var(--ink));color:var(--sc,var(--ink));background:#fff}
+.expmenu{position:absolute;top:2.9rem;right:1rem;z-index:60;background:var(--bg);
+ border:1px solid var(--brd2);border-radius:var(--r);box-shadow:0 10px 28px rgba(44,44,42,.18);
+ padding:.35rem;min-width:270px}
+.expmenu .t{font-size:.67rem;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);
+ font-weight:800;padding:.35rem .6rem}
+.expmenu button{display:block;width:100%;text-align:left;border:0;background:none;
+ padding:.45rem .6rem;border-radius:7px;cursor:pointer;font-family:inherit;font-size:.82rem;
+ font-weight:600;color:var(--txt)}
+.expmenu button:hover:not(:disabled){background:var(--bg2);color:var(--sc,var(--ink))}
+.expmenu button:disabled{opacity:.42;cursor:default}
 </style></head><body>
 
 <!-- ══════════ LOGIN ══════════ -->
@@ -370,6 +385,15 @@ table.t tr.sub td{background:color-mix(in srgb,var(--gc,#999) 7%,#fff);
   <div class="sec" id="sec6" style="--sc:#993556;--sct:#7a2a45">
     <div class="sec-hdr"><h2><span class="num">6</span><span class="emo">🔍</span>Detalle de gastos por sector — <span id="dMes"></span></h2>
       <div class="sub">Gasto total del mes por sector. Tocá una tarjeta para abrir el detalle.</div></div>
+    <button class="gear" id="btnExp" title="Descargar el detalle">⚙</button>
+    <div class="expmenu" id="expMenu" hidden>
+      <div class="t">Descargar como CSV</div>
+      <button id="expSec">Solo un sector</button>
+      <button id="expMes">Todo el mes</button>
+      <button id="expAno">Todo el año</button>
+      <div class="t" style="font-weight:400;text-transform:none;letter-spacing:0;padding-top:.4rem;
+        border-top:1px solid var(--brd);margin-top:.3rem">Se abre directo en Excel</div>
+    </div>
     <div class="cards" id="dcards"></div>
     <div id="dpanel"></div>
   </div>
@@ -1161,6 +1185,76 @@ function render(){
   msel();tabFact();tabGastos();extras();tabSector();desvGlobal();detalle();
 }
 
+// ══════════ EXPORTAR A CSV ══════════
+// Separador ";" y BOM para que Excel en español lo abra en columnas sin pedir nada.
+function csvEsc(s){ s=txt(s); return /[;"\r\n]/.test(s) ? ('"'+s.replace(/"/g,'""')+'"') : s; }
+function bajarCSV(nombre,filas){
+  try{
+    var csv=filas.map(function(f){return f.map(csvEsc).join(';');}).join('\r\n');
+    var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=nombre;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); if(a.parentNode)a.parentNode.removeChild(a); },1500);
+    stat('✔ Descargado <b>'+nombre+'</b> · '+(filas.length-1)+' movimientos');
+  }catch(e){ stat('⚠ No se pudo descargar: '+(e&&e.message?e.message:e),true); }
+}
+var EXPHD=['Mes','Bloque','Sector','Categoría','Concepto','Fijo/Variable','Asignación',
+           'Proveedor / detalle','Fecha','Comprobante','Origen','Importe'];
+// Un mes entero: los movimientos de CF-gastos mas los comprobantes de compras.
+function expFilas(mi,soloSector){
+  var cf=D.det[mi]; if(!cf) return [];
+  var out=[];
+  (cf.rows||[]).forEach(function(x){
+    if(soloSector&&x.s!==soloSector) return;
+    out.push([cf.mes,'Gastos por sector',x.s,x.c,x.k,x.f,x.a,x.p,'','','',x.v]);
+  });
+  if(cf.compras){
+    [['INSUMOS FÁBRICA',cf.compras.insumos],['MERCADERÍA DE REVENTA',cf.compras.reventa]]
+    .forEach(function(par){
+      if(soloSector&&par[0]!==soloSector) return;
+      (par[1]||[]).forEach(function(x){
+        var p=txt(x.p), d=txt(x.d);              // en muchas filas el proveedor y el detalle
+        var pd=(!d||d===p)?p:(p?(p+' — '+d):d);  // son el mismo texto: no se repite
+        out.push([cf.mes,'Compras',par[0],'','','','',pd,x.f,x.cmp,x.o,x.v]);
+      });
+    });
+  }
+  return out;
+}
+function expSector(){
+  if(!DS) return;
+  var f=expFilas(M,DS);
+  if(!f.length){ stat('⚠ No hay movimientos para exportar.',true); return; }
+  bajarCSV('gastos-'+MESL[M].toLowerCase()+'-'+YY()+'-'+
+    txt(DS).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.csv',[EXPHD].concat(f));
+}
+function expMes(){
+  var f=expFilas(M);
+  if(!f.length){ stat('⚠ '+MESL[M]+' no tiene detalle cargado.',true); return; }
+  bajarCSV('gastos-'+MESL[M].toLowerCase()+'-'+YY()+'.csv',[EXPHD].concat(f));
+}
+function expAnio(){
+  var ks=Object.keys(D.det).map(Number).sort(function(a,b){return a-b;}), f=[];
+  ks.forEach(function(i){ f=f.concat(expFilas(i)); });
+  if(!f.length){ stat('⚠ Todavía no hay ningún mes con detalle cargado.',true); return; }
+  bajarCSV('gastos-20'+YY()+'.csv',[EXPHD].concat(f));
+}
+function expMenu(abrir){
+  var m=$('expMenu'); if(!m) return;
+  if(abrir===undefined) abrir=m.hidden;
+  if(abrir){
+    var cf=D.det[M], ks=Object.keys(D.det).length;
+    $('expSec').disabled=!DS;
+    $('expSec').textContent=DS?('Solo '+DS+' · '+MESL[M]):'Solo un sector (abrí una tarjeta)';
+    $('expMes').disabled=!cf;
+    $('expMes').textContent='Todo '+MESL[M]+' 20'+YY()+(cf?'':' (sin detalle)');
+    $('expAno').disabled=!ks;
+    $('expAno').textContent='Todo el año · '+ks+(ks===1?' mes cargado':' meses cargados');
+  }
+  m.hidden=!abrir;
+}
+
 // ══════════ ARRANQUE ══════════
 async function enter(){
   var row=null;
@@ -1185,6 +1279,14 @@ window.addEventListener('load',function(){
   $('fFc').onchange=function(){if(this.files[0])upFc(this.files[0]);this.value='';};
   $('fCf').onchange=function(){if(this.files[0])upCf(this.files[0]);this.value='';};
   $('btnSave').onclick=function(){saveData(this);};
+  $('btnExp').onclick=function(ev){ev.stopPropagation();expMenu();};
+  $('expSec').onclick=function(){expMenu(false);expSector();};
+  $('expMes').onclick=function(){expMenu(false);expMes();};
+  $('expAno').onclick=function(){expMenu(false);expAnio();};
+  document.addEventListener('click',function(ev){
+    var m=$('expMenu');
+    if(m&&!m.hidden&&!m.contains(ev.target)&&ev.target!==$('btnExp')) expMenu(false);
+  });
   $('btnOut').onclick=function(){
     if(DIRTY && !confirm('Hay cambios sin guardar. ¿Salir igual?')) return;
     try{localStorage.removeItem('__PSUP_SESS__');sessionStorage.removeItem('__RSEM_SESS__');}catch(_){}
