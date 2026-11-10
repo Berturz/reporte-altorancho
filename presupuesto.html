@@ -387,12 +387,12 @@ table.t tr.sub td{background:color-mix(in srgb,var(--gc,#999) 7%,#fff);
       <div class="sub">Gasto total del mes por sector. Tocá una tarjeta para abrir el detalle.</div></div>
     <button class="gear" id="btnExp" title="Descargar el detalle">⚙</button>
     <div class="expmenu" id="expMenu" hidden>
-      <div class="t">Descargar como CSV</div>
+      <div class="t">Descargar a Excel</div>
       <button id="expSec">Solo un sector</button>
       <button id="expMes">Todo el mes</button>
       <button id="expAno">Todo el año</button>
       <div class="t" style="font-weight:400;text-transform:none;letter-spacing:0;padding-top:.4rem;
-        border-top:1px solid var(--brd);margin-top:.3rem">Se abre directo en Excel</div>
+        border-top:1px solid var(--brd);margin-top:.3rem">Archivo Excel (.xlsx) · una columna por dato, con filtros</div>
     </div>
     <div class="cards" id="dcards"></div>
     <div id="dpanel"></div>
@@ -1185,18 +1185,32 @@ function render(){
   msel();tabFact();tabGastos();extras();tabSector();desvGlobal();detalle();
 }
 
-// ══════════ EXPORTAR A CSV ══════════
-// Separador ";" y BOM para que Excel en español lo abra en columnas sin pedir nada.
-function csvEsc(s){ s=txt(s); return /[;"\r\n]/.test(s) ? ('"'+s.replace(/"/g,'""')+'"') : s; }
-function bajarCSV(nombre,filas){
+// ══════════ EXPORTAR A EXCEL ══════════
+// Se genera un .xlsx de verdad (no CSV): cada dato en su columna, sin depender de
+// cual sea el separador de listas que tenga configurado el Excel de cada máquina.
+var EXPW=[10,18,20,34,30,12,13,52,9,22,11,15];   // ancho de cada columna
+function bajarXLSX(nombre,filas){
   try{
-    var csv=filas.map(function(f){return f.map(csvEsc).join(';');}).join('\r\n');
-    var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob); a.download=nombre;
-    document.body.appendChild(a); a.click();
-    setTimeout(function(){ URL.revokeObjectURL(a.href); if(a.parentNode)a.parentNode.removeChild(a); },1500);
-    stat('✔ Descargado <b>'+nombre+'</b> · '+(filas.length-1)+' movimientos');
+    var ws=XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols']=EXPW.map(function(w){return {wch:w};});
+    var ultCol=filas[0].length-1, ultFila=filas.length-1;
+    ws['!autofilter']={ref:'A1:'+XLSX.utils.encode_cell({r:ultFila,c:ultCol})};
+    // (los paneles congelados no se pueden escribir con esta version de SheetJS:
+    //  en Excel se hace con Vista > Inmovilizar fila superior)
+    // los importes como número, con separador de miles
+    for(var r=1;r<=ultFila;r++){
+      var a=XLSX.utils.encode_cell({r:r,c:ultCol});
+      if(ws[a]&&typeof ws[a].v==='number'){ ws[a].t='n'; ws[a].z='#,##0'; }
+    }
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Gastos');
+    var buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var a2=document.createElement('a');
+    a2.href=URL.createObjectURL(blob); a2.download=nombre;
+    document.body.appendChild(a2); a2.click();
+    setTimeout(function(){ URL.revokeObjectURL(a2.href); if(a2.parentNode)a2.parentNode.removeChild(a2); },1500);
+    stat('✔ Descargado <b>'+nombre+'</b> · '+ultFila+' movimientos');
   }catch(e){ stat('⚠ No se pudo descargar: '+(e&&e.message?e.message:e),true); }
 }
 var EXPHD=['Mes','Bloque','Sector','Categoría','Concepto','Fijo/Variable','Asignación',
@@ -1226,19 +1240,19 @@ function expSector(){
   if(!DS) return;
   var f=expFilas(M,DS);
   if(!f.length){ stat('⚠ No hay movimientos para exportar.',true); return; }
-  bajarCSV('gastos-'+MESL[M].toLowerCase()+'-'+YY()+'-'+
-    txt(DS).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.csv',[EXPHD].concat(f));
+  bajarXLSX('gastos-'+MESL[M].toLowerCase()+'-'+YY()+'-'+
+    txt(DS).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.xlsx',[EXPHD].concat(f));
 }
 function expMes(){
   var f=expFilas(M);
   if(!f.length){ stat('⚠ '+MESL[M]+' no tiene detalle cargado.',true); return; }
-  bajarCSV('gastos-'+MESL[M].toLowerCase()+'-'+YY()+'.csv',[EXPHD].concat(f));
+  bajarXLSX('gastos-'+MESL[M].toLowerCase()+'-'+YY()+'.xlsx',[EXPHD].concat(f));
 }
 function expAnio(){
   var ks=Object.keys(D.det).map(Number).sort(function(a,b){return a-b;}), f=[];
   ks.forEach(function(i){ f=f.concat(expFilas(i)); });
   if(!f.length){ stat('⚠ Todavía no hay ningún mes con detalle cargado.',true); return; }
-  bajarCSV('gastos-20'+YY()+'.csv',[EXPHD].concat(f));
+  bajarXLSX('gastos-20'+YY()+'.xlsx',[EXPHD].concat(f));
 }
 function expMenu(abrir){
   var m=$('expMenu'); if(!m) return;
