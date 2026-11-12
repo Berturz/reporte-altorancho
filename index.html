@@ -4731,7 +4731,8 @@ function renderClientes(){
    +'<thead><tr>'+_th('','Cliente','#38506e','left')+_th('','Vendedor','#38506e','left')+_th('ped25','Ventas 2025','#b5832f','right')+_th('ped26','Ventas 2026','#17876b','right')+_th('f25aj','Facturación 2025 aj.IPC','#b5832f','right')+_th('f26','Facturación 2026','#17876b','right')+_th('pct','% del total','#38506e','right')+_th('gro','vs 2025 real','#38506e','right')+_th('','Estado','#38506e','left')+'</tr></thead>'
    +'<tbody>'+(_t1||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+(_t1?_totRow:'')+'</tbody></table></div></div>';
   // ── BLOQUE 1: gráfico evolución mensual (Mayorista, respeta el filtro de vendedor): 2025 aj.IPC vs 2026 ──
-  var _mSum=function(src,mm,adj){ var md=src&&src[mm]; if(!md) return 0; var s=0; for(var c in md){ var d=md[c]; var vU=String(d.vend||'').toUpperCase(); if(!VEND_MAYORISTA[vU]) continue; if(cliVendSel!=='todos' && d.vend!==cliVendSel) continue; s+=(d.fc||0)*(adj?((typeof ipcFactor==='function')?ipcFactor(mm):1):1); } return s; };
+  // CLIENTE_2025/2026 ya son SOLO canal Lett (mayorista) → no re-filtrar por VEND_MAYORISTA (eso descartaba clientes mayoristas con vendedor viejo/no listado, ej. enero 2025). Sí respeta el filtro por vendedor seleccionado.
+  var _mSum=function(src,mm,adj){ var md=src&&src[mm]; if(!md) return 0; var s=0; for(var c in md){ var d=md[c]; if(cliVendSel!=='todos' && d.vend!==cliVendSel) continue; s+=(d.fc||0)*(adj?((typeof ipcFactor==='function')?ipcFactor(mm):1):1); } return s; };
   var evoMM=closed.slice(); var ev25=evoMM.map(function(mm){return _mSum(CLIENTE_2025,mm,true);}), ev26=evoMM.map(function(mm){return _mSum(CLIENTE_2026,mm,false);});
   var block1H='<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-chart-bar"></i>Evolución mensual <span class="sec-sub">· Mayorista'+(cliVendSel!=='todos'?' · '+vendShort(cliVendSel):'')+' · 2026 vs 2025 aj.IPC</span></div>'
     +'<div style="display:flex;gap:14px;font-size:11px;color:var(--txt2);margin:2px 0 6px"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#888780"></span>2025 aj.IPC</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6"></span>2026</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;border-top:2px dashed #d95926"></span>variación real %</span></div>'
@@ -4749,7 +4750,7 @@ function renderClientes(){
    +block1H
    +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-user-search"></i>Análisis de clientes <span class="sec-sub">· Mayorista · '+perLbl+(cliVendSel!=='todos'?' · '+vendShort(cliVendSel):'')+' · a mes cerrado</span></div>'
    +vendCardsH
-   +kpisH+chipsH
+   // KPIs y chips quitados (pedido del usuario) — queda gráfico + tarjetas de vendedor + cuadros
    // Cuadro 1 · Análisis de clientes
    +cuadro1new
    // Cuadro 2 · Tipo de cliente (antes "3"; se quitó "Rubros por cliente")
