@@ -4451,6 +4451,8 @@ function renderVend(){
 
 // ══════════ ANÁLISIS DE CLIENTES (Mayorista) ══════════
 var cliCardSel='todos', cliMesSel='YTD', cliDataCur=[], cliTipoSel='todos', cliSortK='f26', cliSortDir=-1;
+var cliVendSel='todos'; // filtro por vendedor del análisis de clientes (tarjetas + todo lo de abajo)
+var cliEvoChartObj=null; // instancia del gráfico de evolución mensual
 var CLI_MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 function cliClosedMonths(){
   var now=new Date(); var curMM=(now.getFullYear()===2026)?(now.getMonth()+1):13;
@@ -4469,6 +4471,7 @@ function cliAgg(monthsSel){
 function setCliCard(g){ cliCardSel=g; cliSortK=(g==='fue'?'f25aj':'f26'); cliSortDir=-1; renderClientes(); }
 function setCliMes(v){ cliMesSel=v; renderClientes(); }
 function setCliTipo(t){ cliTipoSel=(cliTipoSel===t?'todos':t); renderClientes(); }
+function setCliVend(v){ cliVendSel=(cliVendSel===v?'todos':v); cliCardSel='todos'; cliTipoSel='todos'; renderClientes(); }
 function setCliSort(k){ if(cliSortK===k){ cliSortDir=-cliSortDir; } else { cliSortK=k; cliSortDir=-1; } renderClientes(); }
 function exportClientesNA(){
   try{
@@ -4605,9 +4608,16 @@ function renderClientes(){
   }
   if(cliMesSel!=='YTD' && closed.indexOf(cliMesSel)<0) cliMesSel='YTD';
   var monthsSel = cliMesSel==='YTD' ? closed : [cliMesSel];
-  var data=cliAgg(monthsSel); cliDataCur=data;
+  var dataAll=cliAgg(monthsSel);
+  // ── vendedores: agregación + filtro global (tarjetas Todos + cada vendedor) ──
+  var vAgg={}; dataAll.forEach(function(x){ var v=x.vend||'—'; if(!vAgg[v])vAgg[v]={n:0,f26:0,f25:0}; vAgg[v].n++; vAgg[v].f26+=x.f26; vAgg[v].f25+=(x.f25aj||0); });
+  var vList=Object.keys(vAgg).sort(function(a,b){return vAgg[b].f26-vAgg[a].f26;});
+  if(cliVendSel!=='todos' && !vAgg[cliVendSel]) cliVendSel='todos';
+  var data = (cliVendSel==='todos') ? dataAll : dataAll.filter(function(x){return x.vend===cliVendSel;});
+  cliDataCur=data;
   var perLbl = cliMesSel==='YTD' ? ('YTD ('+CLI_MN[+closed[0]-1].slice(0,3)+'–'+CLI_MN[+closed[closed.length-1]-1].slice(0,3)+')') : CLI_MN[+cliMesSel-1];
   var fml=function(v){return v>0?('$'+Math.round(v).toLocaleString('es-AR')):'—';};
+  var fMc=function(v){return v>0?'$'+(v/1e6).toFixed(1).replace('.',',')+'M':'—';}; // compacto para tarjetas
   var RUBC={'MUEBLES':'#4472c4','ILUMINACION':'#5a9ca8','DECO':'#6c5fa6','BAZAR':'#3f8e68','TEXTIL':'#c88a3c','GIFTCARD':'#c8ab6f','BAÑO':'#7fa07a','LIBRERIA':'#8e6e9d','NAVIDAD':'#b5714a','BOLSAS':'#5a7a99','BIENESTAR':'#9bb8b4'};
   var rc=function(r){return RUBC[r]||'#888';};
   var RABBR={'MUEBLES':'MUEB','ILUMINACION':'ILUM','DECO':'DECO','BAZAR':'BAZ','TEXTIL':'TEX','GIFTCARD':'GIFT','BAÑO':'BAÑO','LIBRERIA':'LIBR','NAVIDAD':'NAV','BOLSAS':'BOLS','BIENESTAR':'BIEN'};
@@ -4654,6 +4664,8 @@ function renderClientes(){
   var tsum=Object.keys(byT).sort(function(a,b){return byT[b].fac-byT[a].fac;}).map(function(t){var c=tc(t);var on=cliTipoSel===t;var gic=TIPO_GROUP_LABELS[t]?' <i class="ti ti-stack-2" style="font-size:9px" title="Grupo de tipos"></i>':'';return '<div onclick="setCliTipo(\''+t.replace(/'/g,"\\'")+'\')" title="Filtrar por '+t+'" style="cursor:pointer;border:1.5px solid '+c+';border-left:4px solid '+c+';border-radius:9px;padding:5px 9px;min-width:96px;background:'+(on?c+'22':'var(--bg)')+';box-shadow:'+(on?'0 0 0 2px '+c+'55':'none')+'"><div style="font-size:10.5px;font-weight:700;color:'+c+'">'+t+gic+(on?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+' <span style="font-weight:400;color:#9aa0a8">·'+byT[t].n+'</span></div><div style="font-size:13px;font-weight:800;color:'+c+'">'+fml(byT[t].fac)+'</div></div>';}).join('');
   var g3 = cliTipoSel==='todos' ? g26 : g26.filter(function(x){return tipoGroup(x.tipo)===cliTipoSel;});
   var t3=g3.map(function(x){var c=tc(x.tipo);var tot=x.f25+x.f26;return '<tr style="border-top:.5px solid var(--brd)"><td title="'+x.cli+'" style="text-align:left;padding:5px 8px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x.cli+'</td><td style="text-align:center;padding:5px 6px"><span style="background:'+c+'18;color:'+c+';font-weight:700;border-radius:6px;padding:1px 6px;font-size:9.5px;line-height:1.2;display:inline-block">'+x.tipo+'</span></td><td style="text-align:center;padding:5px 6px;overflow:hidden">'+cliVendChip(x.vend)+'</td><td style="text-align:right;padding:5px 8px;background:#f4f9f6;color:#5a7a6a;white-space:nowrap">'+fml(x.f25)+'</td><td style="text-align:right;padding:5px 8px;background:#fcf7f0;color:#8a5a2b;font-weight:700;white-space:nowrap">'+fml(x.f26)+'</td><td style="text-align:right;padding:5px 8px;background:#f3f6fb;color:#274d80;font-weight:800;white-space:nowrap">'+fml(tot)+'</td><td style="text-align:right;padding:5px 6px;color:var(--txt2)">'+(gtT?(tot/gtT*100).toFixed(1):'0')+'%</td></tr>';}).join('');
+  var _T3=g3.reduce(function(a,x){ a.f25+=x.f25; a.f26+=x.f26; return a; },{f25:0,f26:0}); var _T3t=_T3.f25+_T3.f26;
+  var t3tot=g3.length?('<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:6px 8px">Total · '+g3.length+'</td><td></td><td></td><td style="text-align:right;padding:6px 8px;background:#f4f9f6;color:#5a7a6a">'+fml(_T3.f25)+'</td><td style="text-align:right;padding:6px 8px;background:#fcf7f0;color:#8a5a2b">'+fml(_T3.f26)+'</td><td style="text-align:right;padding:6px 8px;background:#f3f6fb;color:#274d80">'+fml(_T3t)+'</td><td style="text-align:right;padding:6px 6px;color:var(--txt2)">'+(gtT?(_T3t/gtT*100).toFixed(1):'0')+'%</td></tr>'):'';
   // ── Dashboard mayorista: KPIs + chips + tabla estilo render (reemplaza cuadro 1, manejado por las tarjetas) ──
   var _tot26=0,_tot25=0,_v26=0,_v25=0,_nuevos=0,_fueron=0,_actives=0,_recNow=0,_recBase=0,_churn=0,_newf=0;
   data.forEach(function(d){ _tot26+=d.f26; _tot25+=(d.f25aj||0); _v26+=d.ped26; _v25+=d.ped25; if(d.f26>0)_actives++; if(d.est==='nuevo'){_nuevos++;_newf+=d.f26;} if(d.est==='fue'){_fueron++;_churn+=(d.f25aj||0);} if(d.est==='siempre'){_recNow+=d.f26;_recBase+=(d.f25aj||0);} });
@@ -4683,29 +4695,50 @@ function renderClientes(){
     return '<tr style="border-bottom:.5px solid var(--brd)">'
      +'<td title="'+x.cli+'" style="padding:5px 6px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px">'+x.cli+'</td>'
      +'<td style="padding:5px 6px;white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+vc+';margin-right:5px;vertical-align:1px"></span><span style="font-weight:700;color:'+vc+'">'+x.vend+'</span></td>'
-     +'<td style="padding:5px 6px;text-align:right;background:#eef1f7">'+(x.ped25>0?x.ped25:'—')+'</td>'
-     +'<td style="padding:5px 6px;text-align:right;background:#edf6f0">'+(x.ped26>0?x.ped26:'—')+'</td>'
-     +'<td style="padding:5px 6px;text-align:right;background:#eef1f7;color:#5a6b86;white-space:nowrap">'+fml(x.f25aj)+'</td>'
-     +'<td style="padding:5px 6px;text-align:right;background:#edf6f0;white-space:nowrap"><b>'+fml(x.f26)+'</b><div style="height:5px;border-radius:3px;background:#dfe6df;overflow:hidden;margin-top:2px"><i style="display:block;height:100%;width:'+(x.f26/_maxf*100)+'%;background:'+_BB[x.est][1]+'"></i></div></td>'
+     +'<td style="padding:5px 6px;text-align:right;background:#faf2e6">'+(x.ped25>0?x.ped25:'—')+'</td>'
+     +'<td style="padding:5px 6px;text-align:right;background:#e6f4ee">'+(x.ped26>0?x.ped26:'—')+'</td>'
+     +'<td style="padding:5px 6px;text-align:right;background:#faf2e6;color:#8a6d3b;white-space:nowrap">'+fml(x.f25aj)+'</td>'
+     +'<td style="padding:5px 6px;text-align:right;background:#e6f4ee;white-space:nowrap"><b>'+fml(x.f26)+'</b><div style="height:5px;border-radius:3px;background:#d7e8de;overflow:hidden;margin-top:2px"><i style="display:block;height:100%;width:'+(x.f26/_maxf*100)+'%;background:'+_BB[x.est][1]+'"></i></div></td>'
      +'<td style="padding:5px 6px;text-align:right;color:var(--txt2)">'+pct+'</td>'
      +'<td style="padding:5px 6px;text-align:right">'+gr+'</td>'
      +'<td style="padding:5px 6px"><span style="background:'+b[0]+';color:'+b[1]+';font-weight:800;border-radius:20px;padding:1px 7px;font-size:9px;white-space:nowrap">'+b[2]+'</span></td></tr>';
   }).join('');
   var _th=function(k,lbl,bg,al){ return '<th'+(k?' onclick="setCliSort(\''+k+'\')" style="cursor:pointer;':' style="')+_thb+';background:'+bg+';text-align:'+al+'">'+lbl+(k?arrOf(k):'')+'</th>'; };
-  var cuadro1new='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-bottom:14px"><div style="background:#4472c4;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px"><i class="ti ti-users-group" style="margin-right:6px"></i>1 · Análisis de clientes <span style="font-weight:400;opacity:.85;font-size:11.5px">· 2025 aj.IPC · clic en encabezados para ordenar</span></div>'
-   +'<div style="overflow:auto;max-height:360px"><table style="width:100%;border-collapse:collapse;font-size:11px">'
-   +'<thead><tr>'+_th('','Cliente','#4472c4','left')+_th('','Vendedor','#4472c4','left')+_th('ped25','Ventas 2025','#395fa8','right')+_th('ped26','Ventas 2026','#5183d4','right')+_th('f25aj','Facturación 2025 aj.IPC','#395fa8','right')+_th('f26','Facturación 2026','#5183d4','right')+_th('pct','% del total','#4472c4','right')+_th('gro','vs 2025 real','#4472c4','right')+_th('','Estado','#4472c4','left')+'</tr></thead>'
-   +'<tbody>'+(_t1||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+'</tbody></table></div></div>';
+  // totales (de las filas mostradas) al pie de cada columna de importes
+  var _T=grp.reduce(function(a,x){ a.p25+=x.ped25; a.p26+=x.ped26; a.f25+=(x.f25aj||0); a.f26+=x.f26; return a; },{p25:0,p26:0,f25:0,f26:0});
+  var _Tgr=(_T.f25>0&&_T.f26>0)?('<span style="color:'+(_T.f26>=_T.f25?'#1a7a3a':'#c0392b')+'">'+(_T.f26>=_T.f25?'▲ +':'▼ ')+((_T.f26/_T.f25-1)*100).toFixed(0)+'%</span>'):'—';
+  var _totRow='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="padding:6px 6px">Total <span style="font-weight:400;color:var(--txt2)">· '+grp.length+'</span></td><td></td>'
+    +'<td style="padding:6px 6px;text-align:right;background:#faf2e6">'+(_T.p25||'—')+'</td><td style="padding:6px 6px;text-align:right;background:#e6f4ee">'+(_T.p26||'—')+'</td>'
+    +'<td style="padding:6px 6px;text-align:right;background:#faf2e6;color:#8a6d3b">'+fml(_T.f25)+'</td><td style="padding:6px 6px;text-align:right;background:#e6f4ee;color:#1f6e58">'+fml(_T.f26)+'</td>'
+    +'<td style="padding:6px 6px;text-align:right">'+(gt?(_T.f26/gt*100).toFixed(0)+'%':'—')+'</td><td style="padding:6px 6px;text-align:right">'+_Tgr+'</td><td></td></tr>';
+  var cuadro1new='<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;margin-bottom:14px"><div style="background:#4472c4;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px"><i class="ti ti-users-group" style="margin-right:6px"></i>1 · Análisis de clientes <span style="font-weight:400;opacity:.85;font-size:11.5px">· 2025 aj.IPC · clic en encabezados para ordenar · total al pie</span></div>'
+   +'<div style="overflow:auto;max-height:380px"><table style="width:100%;border-collapse:collapse;font-size:11px">'
+   +'<thead><tr>'+_th('','Cliente','#4472c4','left')+_th('','Vendedor','#4472c4','left')+_th('ped25','Ventas 2025','#a07b2e','right')+_th('ped26','Ventas 2026','#1f8a6e','right')+_th('f25aj','Facturación 2025 aj.IPC','#a07b2e','right')+_th('f26','Facturación 2026','#1f8a6e','right')+_th('pct','% del total','#4472c4','right')+_th('gro','vs 2025 real','#4472c4','right')+_th('','Estado','#4472c4','left')+'</tr></thead>'
+   +'<tbody>'+(_t1||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+(_t1?_totRow:'')+'</tbody></table></div></div>';
+  // ── BLOQUE 1: gráfico evolución mensual (Mayorista, respeta el filtro de vendedor): 2025 aj.IPC vs 2026 ──
+  var _mSum=function(src,mm,adj){ var md=src&&src[mm]; if(!md) return 0; var s=0; for(var c in md){ var d=md[c]; var vU=String(d.vend||'').toUpperCase(); if(!VEND_MAYORISTA[vU]) continue; if(cliVendSel!=='todos' && d.vend!==cliVendSel) continue; s+=(d.fc||0)*(adj?((typeof ipcFactor==='function')?ipcFactor(mm):1):1); } return s; };
+  var evoMM=closed.slice(); var ev25=evoMM.map(function(mm){return _mSum(CLIENTE_2025,mm,true);}), ev26=evoMM.map(function(mm){return _mSum(CLIENTE_2026,mm,false);});
+  var block1H='<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-chart-bar"></i>Evolución mensual <span class="sec-sub">· Mayorista'+(cliVendSel!=='todos'?' · '+vendShort(cliVendSel):'')+' · 2026 vs 2025 aj.IPC</span></div>'
+    +'<div style="display:flex;gap:14px;font-size:11px;color:var(--txt2);margin:2px 0 6px"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#888780"></span>2025 aj.IPC</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6"></span>2026</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;border-top:2px dashed #d95926"></span>variación real %</span></div>'
+    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:10px 12px;margin-bottom:14px"><div style="position:relative;height:220px"><canvas id="cliEvoChart"></canvas></div></div>';
+  // ── tarjetas de vendedor (Todos + cada uno) · filtran todo el análisis ──
+  var vendCardsH='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:.2rem 0 11px">'
+    +'<div onclick="setCliVend(\'todos\')" style="cursor:pointer;border:'+(cliVendSel==='todos'?'2px':'1.5px')+' solid #5b6472;border-radius:10px;padding:7px 12px;min-width:94px;background:'+(cliVendSel==='todos'?'#5b647218':'var(--bg)')+'"><div style="font-size:11px;font-weight:800;color:#5b6472"><i class="ti ti-users" style="font-size:11px;margin-right:3px"></i>Todos'+(cliVendSel==='todos'?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+'</div><div style="font-size:16px;font-weight:800;color:#5b6472">'+dataAll.length+'</div><div style="font-size:9.5px;color:var(--txt2)">'+fMc(dataAll.reduce(function(s,x){return s+x.f26;},0))+'</div></div>'
+    +vList.map(function(v){ var c=vendColor(v), on=cliVendSel===v, a=vAgg[v];
+      return '<div onclick="setCliVend(\''+v.replace(/'/g,"\\'")+'\')" style="cursor:pointer;border:'+(on?'2px':'1.5px')+' solid '+c+';border-radius:10px;padding:7px 12px;min-width:94px;background:'+(on?c+'18':'var(--bg)')+'"><div style="font-size:11px;font-weight:800;color:'+c+'"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+c+';margin-right:4px;vertical-align:1px"></span>'+vendShort(v)+(on?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+'</div><div style="font-size:16px;font-weight:800;color:'+c+'">'+a.n+'</div><div style="font-size:9.5px;color:var(--txt2)">'+fMc(a.f26)+'</div></div>'; }).join('')
+    +'</div>';
   var HDR='background:#3d74ae;color:#fff;padding:8px 14px;font-weight:700;font-size:13.5px';
   wrap.innerHTML=''
    +'<style>#cliWrap thead th{position:sticky;top:0;z-index:2;background:#eef2f6}#cliWrap thead tr{position:static}</style>'
-   +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-user-search"></i>Análisis de clientes <span class="sec-sub">· Mayorista · '+perLbl+' · a mes cerrado</span></div>'
+   +block1H
+   +'<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-user-search"></i>Análisis de clientes <span class="sec-sub">· Mayorista · '+perLbl+(cliVendSel!=='todos'?' · '+vendShort(cliVendSel):'')+' · a mes cerrado</span></div>'
+   +vendCardsH
    +kpisH+chipsH+'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:.3rem 0 .7rem"><div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">'+cards+'</div>'
      +'<span style="font-size:12px;font-weight:600;color:var(--txt2)">Mes: <select onchange="setCliMes(this.value)" style="font-size:12px;font-weight:700;border:1px solid var(--brd);border-radius:7px;padding:4px 9px;background:var(--bg);color:var(--txt)">'+opts+'</select></span></div>'
    // Cuadro 1 · Análisis de clientes
    +cuadro1new
    // Cuadro 2 · Tipo de cliente (antes "3"; se quitó "Rubros por cliente")
-   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="'+HDR+';display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span><i class="ti ti-tags" style="margin-right:6px"></i>2 · Tipo de cliente</span>'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="'+HDR+';display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span><i class="ti ti-tags" style="margin-right:6px"></i>2 · Tipo de cliente'+(cliVendSel!=='todos'?' <span style="font-weight:400;opacity:.85;font-size:11.5px">· '+vendShort(cliVendSel)+'</span>':'')+'</span>'
      +'<span style="margin-left:auto;display:flex;gap:7px;align-items:center">'
        +'<label style="background:rgba(255,255,255,.2);border-radius:7px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer"><i class="ti ti-refresh" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Actualizar etiquetas<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleEtiquetasFile(this.files[0])"></label>'
        +'<span onclick="exportClientesNA()" style="background:#e7a33e;color:#3a2600;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer"><i class="ti ti-file-download" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Exportar N/A ('+naN+')</span>'
@@ -4713,8 +4746,27 @@ function renderClientes(){
      +'<div class="etiq-status" style="font-size:11px;color:var(--txt2);padding:4px 14px 0"></div>'
      +'<div style="display:grid;grid-template-columns:300px 1fr;gap:0">'
        +'<div style="border-right:1px solid var(--brd);padding:9px 10px;max-height:560px;overflow:auto"><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">'+(tsum||'<span style="font-size:11px;color:var(--txt2)">Subí el Excel de etiquetas para clasificar</span>')+'</div></div>'
-       +'<div style="overflow:auto;max-height:560px;padding:4px 12px 12px"><table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed"><colgroup><col style="width:25%"><col style="width:20%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:11%"><col style="width:6%"></colgroup><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:center;padding:5px 6px">Cliente</th><th style="text-align:center;padding:5px 6px">Tipo</th><th style="text-align:center;padding:5px 6px">Vend.</th><th style="text-align:center;padding:5px 6px;background:#eef6f2!important;color:#3f8266!important">F.25</th><th style="text-align:center;padding:5px 6px;background:#faf1e6!important;color:#a5764a!important">F.26</th><th style="text-align:center;padding:5px 6px;background:#e8eef7!important;color:#274d80!important">Total</th><th style="text-align:center;padding:5px 6px">%</th></tr></thead><tbody>'+(t3||'<tr><td colspan="7" style="text-align:center;color:var(--txt2);padding:.6rem">Sin datos</td></tr>')+'</tbody></table></div>'
+       +'<div style="overflow:auto;max-height:560px;padding:4px 12px 12px"><table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed"><colgroup><col style="width:25%"><col style="width:20%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:11%"><col style="width:6%"></colgroup><thead><tr style="background:#eef2f6;color:#274d80"><th style="text-align:center;padding:5px 6px">Cliente</th><th style="text-align:center;padding:5px 6px">Tipo</th><th style="text-align:center;padding:5px 6px">Vend.</th><th style="text-align:center;padding:5px 6px;background:#eef6f2!important;color:#3f8266!important">F.25</th><th style="text-align:center;padding:5px 6px;background:#faf1e6!important;color:#a5764a!important">F.26</th><th style="text-align:center;padding:5px 6px;background:#e8eef7!important;color:#274d80!important">Total</th><th style="text-align:center;padding:5px 6px">%</th></tr></thead><tbody>'+(t3||'<tr><td colspan="7" style="text-align:center;color:var(--txt2);padding:.6rem">Sin datos</td></tr>')+t3tot+'</tbody></table></div>'
      +'</div></div>';
+  // ── render del gráfico de evolución mensual (Chart.js ya cargado) ──
+  try{ if(cliEvoChartObj){ cliEvoChartObj.destroy(); cliEvoChartObj=null; }
+    var _cvs=document.getElementById('cliEvoChart');
+    if(_cvs && typeof Chart!=='undefined' && evoMM.length){
+      var _lbls=evoMM.map(function(mm){return CLI_MN[+mm-1].slice(0,3);});
+      var _vr=ev26.map(function(v,i){return ev25[i]>0?+((v/ev25[i]-1)*100).toFixed(1):null;});
+      cliEvoChartObj=new Chart(_cvs,{ data:{labels:_lbls,datasets:[
+        {type:'bar',label:'2025 aj.IPC',data:ev25.map(function(v){return Math.round(v);}),backgroundColor:'#888780',borderRadius:3,barPercentage:.78,categoryPercentage:.72,yAxisID:'y',order:2},
+        {type:'bar',label:'2026',data:ev26.map(function(v){return Math.round(v);}),backgroundColor:'#2a78d6',borderRadius:3,barPercentage:.78,categoryPercentage:.72,yAxisID:'y',order:2},
+        {type:'line',label:'variación %',data:_vr,borderColor:'#d95926',borderDash:[5,4],borderWidth:2,pointRadius:3,pointBackgroundColor:'#d95926',yAxisID:'y1',tension:.25,spanGaps:true,order:1}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.dataset.yAxisID==='y1'?(c.raw==null?'—':((c.raw>=0?'+':'')+c.raw+'%')):('$'+Math.round(c.raw).toLocaleString('es-AR')));}}}},
+        scales:{y:{ticks:{callback:function(v){return '$'+(v/1e6).toFixed(0)+'M';},font:{size:10}},grid:{color:'rgba(0,0,0,.06)'}},
+          y1:{position:'right',ticks:{callback:function(v){return v+'%';},color:'#d95926',font:{size:10}},grid:{display:false}},
+          x:{ticks:{font:{size:10},autoSkip:false},grid:{display:false}}}}
+      });
+    }
+  }catch(e){ console.error('cliEvoChart',e); }
 }
 
 // ── EVENTOS / FERIAS ──
