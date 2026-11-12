@@ -4731,12 +4731,33 @@ function renderClientes(){
    +'<thead><tr>'+_th('','Cliente','#38506e','left')+_th('','Vendedor','#38506e','left')+_th('ped25','Ventas 2025','#b5832f','right')+_th('ped26','Ventas 2026','#17876b','right')+_th('f25aj','Facturación 2025 aj.IPC','#b5832f','right')+_th('f26','Facturación 2026','#17876b','right')+_th('pct','% del total','#38506e','right')+_th('gro','vs 2025 real','#38506e','right')+_th('','Estado','#38506e','left')+'</tr></thead>'
    +'<tbody>'+(_t1||'<tr><td colspan="9" style="text-align:center;color:var(--txt2);padding:.6rem">Sin clientes en la selección</td></tr>')+(_t1?_totRow:'')+'</tbody></table></div></div>';
   // ── BLOQUE 1: gráfico evolución mensual (Mayorista, respeta el filtro de vendedor): 2025 aj.IPC vs 2026 ──
-  // CLIENTE_2025/2026 ya son SOLO canal Lett (mayorista) → no re-filtrar por VEND_MAYORISTA (eso descartaba clientes mayoristas con vendedor viejo/no listado, ej. enero 2025). Sí respeta el filtro por vendedor seleccionado.
-  var _mSum=function(src,mm,adj){ var md=src&&src[mm]; if(!md) return 0; var s=0; for(var c in md){ var d=md[c]; if(cliVendSel!=='todos' && d.vend!==cliVendSel) continue; s+=(d.fc||0)*(adj?((typeof ipcFactor==='function')?ipcFactor(mm):1):1); } return s; };
+  // suma mensual del gráfico: SIEMPRE el total mayorista (los 5 de VEND_MAYORISTA), INDEPENDIENTE del vendedor seleccionado arriba. Coincide con el Total de la tabla "Facturación por vendedor".
+  var _mSum=function(src,mm,adj){ var md=src&&src[mm]; if(!md) return 0; var s=0; for(var c in md){ var d=md[c]; if(!VEND_MAYORISTA[String(d.vend||'').toUpperCase()]) continue; s+=(d.fc||0)*(adj?((typeof ipcFactor==='function')?ipcFactor(mm):1):1); } return s; };
   var evoMM=closed.slice(); var ev25=evoMM.map(function(mm){return _mSum(CLIENTE_2025,mm,true);}), ev26=evoMM.map(function(mm){return _mSum(CLIENTE_2026,mm,false);});
-  var block1H='<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-chart-bar"></i>Evolución mensual <span class="sec-sub">· Mayorista'+(cliVendSel!=='todos'?' · '+vendShort(cliVendSel):'')+' · 2026 vs 2025 aj.IPC</span></div>'
-    +'<div style="display:flex;gap:14px;font-size:11px;color:var(--txt2);margin:2px 0 6px"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#888780"></span>2025 aj.IPC</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6"></span>2026</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;border-top:2px dashed #d95926"></span>variación real %</span></div>'
-    +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:10px 12px;margin-bottom:14px"><div style="position:relative;height:220px"><canvas id="cliEvoChart"></canvas></div></div>';
+  // tabla de datos al lado del gráfico (Mes · 2025 Aj.IPC · 2026 · Var $ real · Crec.) — mismos datos que el gráfico (total mayorista)
+  var _evFmt=function(v){return '$'+Math.round(v).toLocaleString('es-AR');};
+  var _evR='', _evTA=0, _evT6=0;
+  for(var _ei=0;_ei<evoMM.length;_ei++){ var _ea=ev25[_ei], _es=ev26[_ei], _ev=_es-_ea, _ecr=_ea>0?(_es/_ea-1)*100:0, _ep=_ev>=0; _evTA+=_ea; _evT6+=_es;
+    _evR+='<tr style="border-top:.5px solid var(--brd);background:'+((_ei%2)?'#f6f8fb':'transparent')+'">'
+      +'<td style="text-align:left;padding:5px 9px;font-weight:600">'+CLI_MN[+evoMM[_ei]-1]+'</td>'
+      +'<td style="text-align:right;padding:5px 9px;background:#f8f0dd;color:#876630;white-space:nowrap">'+_evFmt(_ea)+'</td>'
+      +'<td style="text-align:right;padding:5px 9px;background:#e2f2ec;color:#136654;font-weight:700;white-space:nowrap">'+_evFmt(_es)+'</td>'
+      +'<td style="text-align:right;padding:5px 9px;font-weight:700;white-space:nowrap;color:'+(_ep?'#0f6e56':'#a32d2d')+'">'+(_ea>0?((_ep?'+':'−')+_evFmt(Math.abs(_ev)).slice(1)):'—')+'</td>'
+      +'<td style="text-align:right;padding:5px 9px;font-weight:700;color:'+(_ecr>=0?'#0f6e56':'#a32d2d')+'">'+(_ea>0?((_ecr>=0?'+':'')+_ecr.toFixed(1)+'%'):'—')+'</td></tr>';
+  }
+  var _evTV=_evT6-_evTA, _evTC=_evTA>0?(_evT6/_evTA-1)*100:0;
+  var _evTot='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:#e9edf3">'
+    +'<td style="text-align:left;padding:6px 9px">YTD</td>'
+    +'<td style="text-align:right;padding:6px 9px;background:#f2e6cb;color:#876630;white-space:nowrap">'+_evFmt(_evTA)+'</td>'
+    +'<td style="text-align:right;padding:6px 9px;background:#d5ebde;color:#136654;white-space:nowrap">'+_evFmt(_evT6)+'</td>'
+    +'<td style="text-align:right;padding:6px 9px;white-space:nowrap;color:'+(_evTV>=0?'#0f6e56':'#a32d2d')+'">'+(_evTV>=0?'+':'−')+_evFmt(Math.abs(_evTV)).slice(1)+'</td>'
+    +'<td style="text-align:right;padding:6px 9px;color:'+(_evTC>=0?'#0f6e56':'#a32d2d')+'">'+(_evTC>=0?'+':'')+_evTC.toFixed(1)+'%</td></tr>';
+  var block1H='<div class="sec-hdr" style="margin-top:4px"><i class="ti ti-chart-bar"></i>Evolución mensual <span class="sec-sub">· Mayorista (Lett) · 2026 vs 2025 aj.IPC · total</span></div>'
+    +'<div style="display:flex;gap:12px;font-size:11px;color:var(--txt2);margin:2px 0 6px;flex-wrap:wrap"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#888780"></span>2025 aj.IPC</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#17876b"></span>2026</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;border-top:2px dashed #d95926"></span>variación real %</span></div>'
+    +'<div style="display:flex;gap:12px;align-items:stretch;flex-wrap:wrap;margin-bottom:14px">'
+      +'<div style="flex:1.25 1 300px;min-width:280px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:10px 12px"><div style="position:relative;height:262px"><canvas id="cliEvoChart"></canvas></div></div>'
+      +'<div style="flex:1 1 300px;min-width:280px;background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#38506e;color:#fff"><th style="text-align:left;padding:6px 9px;font-weight:700">Mes</th><th style="text-align:right;padding:6px 9px;font-weight:700">2025 Aj. IPC</th><th style="text-align:right;padding:6px 9px;font-weight:700">2026</th><th style="text-align:right;padding:6px 9px;font-weight:700">Var $ real</th><th style="text-align:right;padding:6px 9px;font-weight:700">Crec.</th></tr></thead><tbody>'+_evR+_evTot+'</tbody></table></div></div>'
+    +'</div>';
   // ── tarjetas de vendedor (Todos + cada uno) · filtran todo el análisis ──
   var vendCardsH='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;margin:.2rem 0 11px">'
     +'<div onclick="setCliVend(\'todos\')" style="cursor:pointer;border:'+(cliVendSel==='todos'?'2px':'1.5px')+' solid #5b6472;border-radius:10px;padding:7px 12px;min-width:94px;background:'+(cliVendSel==='todos'?'#5b647218':'var(--bg)')+'"><div style="font-size:11px;font-weight:800;color:#5b6472"><i class="ti ti-users" style="font-size:11px;margin-right:3px"></i>Todos'+(cliVendSel==='todos'?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+'</div><div style="font-size:16px;font-weight:800;color:#5b6472">'+dataAll.length+'</div><div style="font-size:9.5px;color:var(--txt2)">'+fMc(dataAll.reduce(function(s,x){return s+x.f26;},0))+'</div></div>'
@@ -4772,8 +4793,8 @@ function renderClientes(){
       var _lbls=evoMM.map(function(mm){return CLI_MN[+mm-1].slice(0,3);});
       var _vr=ev26.map(function(v,i){return ev25[i]>0?+((v/ev25[i]-1)*100).toFixed(1):null;});
       cliEvoChartObj=new Chart(_cvs,{ data:{labels:_lbls,datasets:[
-        {type:'bar',label:'2025 aj.IPC',data:ev25.map(function(v){return Math.round(v);}),backgroundColor:'#888780',borderRadius:3,barPercentage:.78,categoryPercentage:.72,yAxisID:'y',order:2},
-        {type:'bar',label:'2026',data:ev26.map(function(v){return Math.round(v);}),backgroundColor:'#2a78d6',borderRadius:3,barPercentage:.78,categoryPercentage:.72,yAxisID:'y',order:2},
+        {type:'bar',label:'2025 aj.IPC',data:ev25.map(function(v){return Math.round(v);}),backgroundColor:'#888780',borderRadius:3,barPercentage:.82,categoryPercentage:.74,yAxisID:'y',order:2},
+        {type:'bar',label:'2026',data:ev26.map(function(v){return Math.round(v);}),backgroundColor:'#17876b',borderRadius:3,barPercentage:.82,categoryPercentage:.74,yAxisID:'y',order:2},
         {type:'line',label:'variación %',data:_vr,borderColor:'#d95926',borderDash:[5,4],borderWidth:2,pointRadius:3,pointBackgroundColor:'#d95926',yAxisID:'y1',tension:.25,spanGaps:true,order:1}
       ]},
       options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
