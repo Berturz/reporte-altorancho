@@ -4452,6 +4452,7 @@ function renderVend(){
 // ══════════ ANÁLISIS DE CLIENTES (Mayorista) ══════════
 var cliCardSel='todos', cliMesSel='YTD', cliDataCur=[], cliTipoSel='todos', cliSortK='f26', cliSortDir=-1;
 var cliVendSel='todos'; // filtro por vendedor del análisis de clientes (tarjetas + todo lo de abajo)
+var cliTipoVendSel='todos'; // filtro por vendedor INDEPENDIENTE del cuadro "Tipo de cliente" (no toca las tarjetas de arriba)
 var cliEvoChartObj=null; // instancia del gráfico de evolución mensual
 var CLI_MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 function cliClosedMonths(){
@@ -4472,6 +4473,7 @@ function setCliCard(g){ cliCardSel=g; cliSortK=(g==='fue'?'f25aj':'f26'); cliSor
 function setCliMes(v){ cliMesSel=v; renderClientes(); }
 function setCliTipo(t){ cliTipoSel=(cliTipoSel===t?'todos':t); renderClientes(); }
 function setCliVend(v){ cliVendSel=(cliVendSel===v?'todos':v); cliCardSel='todos'; cliTipoSel='todos'; renderClientes(); }
+function setCliTipoVend(v){ cliTipoVendSel=(cliTipoVendSel===v?'todos':v); cliTipoSel='todos'; renderClientes(); }
 function setCliSort(k){ if(cliSortK===k){ cliSortDir=-cliSortDir; } else { cliSortK=k; cliSortDir=-1; } renderClientes(); }
 function exportClientesNA(){
   try{
@@ -4613,6 +4615,7 @@ function renderClientes(){
   var vAgg={}; dataAll.forEach(function(x){ var v=x.vend||'—'; if(!vAgg[v])vAgg[v]={n:0,f26:0,f25:0}; vAgg[v].n++; vAgg[v].f26+=x.f26; vAgg[v].f25+=(x.f25aj||0); });
   var vList=Object.keys(vAgg).sort(function(a,b){return vAgg[b].f26-vAgg[a].f26;});
   if(cliVendSel!=='todos' && !vAgg[cliVendSel]) cliVendSel='todos';
+  if(cliTipoVendSel!=='todos' && !vAgg[cliTipoVendSel]) cliTipoVendSel='todos';
   var data = (cliVendSel==='todos') ? dataAll : dataAll.filter(function(x){return x.vend===cliVendSel;});
   cliDataCur=data;
   var perLbl = cliMesSel==='YTD' ? ('YTD ('+CLI_MN[+closed[0]-1].slice(0,3)+'–'+CLI_MN[+closed[closed.length-1]-1].slice(0,3)+')') : CLI_MN[+cliMesSel-1];
@@ -4638,7 +4641,17 @@ function renderClientes(){
   var arrOf=function(k){ return cliSortK===k?(cliSortDir<0?' <i class="ti ti-caret-down-filled" style="font-size:9px;vertical-align:0"></i>':' <i class="ti ti-caret-up-filled" style="font-size:9px;vertical-align:0"></i>'):' <i class="ti ti-arrows-sort" style="font-size:9px;opacity:.35;vertical-align:0"></i>'; };
   var g26 = grp.filter(function(x){return facOf(x)>0;}).sort(function(a,b){return facOf(b)-facOf(a);});
   var gt = g26.reduce(function(s,x){return s+facOf(x);},0);
-  var gtT = g26.reduce(function(s,x){return s+x.f25+x.f26;},0); // total ambos años (base del % en cuadro 3)
+  // ── Cuadro "Tipo de cliente": dataset INDEPENDIENTE (su propio selector de vendedor, no el de las tarjetas de arriba) ──
+  var dataT = (cliTipoVendSel==='todos') ? dataAll : dataAll.filter(function(x){return x.vend===cliTipoVendSel;});
+  var grpT = cliCardSel==='todos' ? dataT : dataT.filter(function(x){return x.est===cliCardSel;});
+  var g26T = grpT.filter(function(x){return facOf(x)>0;}).sort(function(a,b){return facOf(b)-facOf(a);});
+  var gtT = g26T.reduce(function(s,x){return s+x.f25+x.f26;},0); // total ambos años (base del % del cuadro Tipo)
+  // fila de chips de vendedor del cuadro Tipo (selector INDEPENDIENTE → setCliTipoVend)
+  var tvChip=function(v,lbl,c,on){ return '<button onclick="setCliTipoVend(\''+String(v).replace(/'/g,"\\'")+'\')" style="cursor:pointer;border:'+(on?'2px':'1.5px')+' solid '+c+';background:'+(on?c+'22':'var(--bg)')+';border-radius:9px;padding:3px 10px;font-size:11px;font-weight:800;color:'+c+';white-space:nowrap"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c+';margin-right:4px;vertical-align:1px"></span>'+lbl+'</button>'; };
+  var tipoVendChips='<div style="padding:7px 12px;border-bottom:1px solid var(--brd);display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--bg2)"><span style="font-size:10.5px;color:var(--txt2);font-weight:700;margin-right:1px">Vendedor:</span>'
+    +tvChip('todos','Todos','#5b6472',cliTipoVendSel==='todos')
+    +vList.map(function(v){ return tvChip(v,vendShort(v),vendColor(v),cliTipoVendSel===v); }).join('')
+    +'</div>';
   // rubros presentes (columnas de la matriz), top por total
   var rubTot={}; g26.forEach(function(x){var rr=rubOf(x);for(var r in rr)rubTot[r]=(rubTot[r]||0)+rr[r];});
   var RUBS=Object.keys(rubTot).sort(function(a,b){return rubTot[b]-rubTot[a];});
@@ -4657,12 +4670,12 @@ function renderClientes(){
   var t2=g26.map(function(x){var rr=rubOf(x);var cells=RUBS.map(function(r){var v=rr[r]||0;var c=rc(r);return '<td style="text-align:right;padding:4px 3px;white-space:nowrap;font-size:9.5px;font-weight:'+(v?'700':'400')+';color:'+(v?c:'#ccc')+';background:'+(v?c+'14':'transparent')+'">'+(v?fml(v):'—')+'</td>';}).join('');
     return '<tr style="border-top:.5px solid var(--brd)"><td title="'+x.cli+'" style="text-align:left;padding:4px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x.cli+'</td>'+cells+'<td style="text-align:right;padding:4px 5px;font-weight:800;font-size:9.5px;background:rgba(39,77,128,.10);color:#274d80;white-space:nowrap">'+fml(facOf(x))+'</td></tr>';
   }).join('');
-  // CUADRO 3 (tipo)
-  var byT={}; g26.forEach(function(x){var g=tipoGroup(x.tipo);if(!byT[g])byT[g]={fac:0,n:0};byT[g].fac+=facOf(x);byT[g].n++;});
-  var naN=g26.filter(function(x){return x.tipo==='N/A';}).length;
+  // CUADRO 3 (tipo) — usa g26T (filtro de vendedor INDEPENDIENTE cliTipoVendSel)
+  var byT={}; g26T.forEach(function(x){var g=tipoGroup(x.tipo);if(!byT[g])byT[g]={fac:0,n:0};byT[g].fac+=facOf(x);byT[g].n++;});
+  var naN=g26T.filter(function(x){return x.tipo==='N/A';}).length;
   if(cliTipoSel!=='todos' && !byT[cliTipoSel]) cliTipoSel='todos';
   var tsum=Object.keys(byT).sort(function(a,b){return byT[b].fac-byT[a].fac;}).map(function(t){var c=tc(t);var on=cliTipoSel===t;var gic=TIPO_GROUP_LABELS[t]?' <i class="ti ti-stack-2" style="font-size:9px" title="Grupo de tipos"></i>':'';return '<div onclick="setCliTipo(\''+t.replace(/'/g,"\\'")+'\')" title="Filtrar por '+t+'" style="cursor:pointer;border:1.5px solid '+c+';border-left:4px solid '+c+';border-radius:9px;padding:5px 9px;min-width:96px;background:'+(on?c+'22':'var(--bg)')+';box-shadow:'+(on?'0 0 0 2px '+c+'55':'none')+'"><div style="font-size:10.5px;font-weight:700;color:'+c+'">'+t+gic+(on?' <i class="ti ti-eye" style="font-size:10px"></i>':'')+' <span style="font-weight:400;color:#9aa0a8">·'+byT[t].n+'</span></div><div style="font-size:13px;font-weight:800;color:'+c+'">'+fml(byT[t].fac)+'</div></div>';}).join('');
-  var g3 = cliTipoSel==='todos' ? g26 : g26.filter(function(x){return tipoGroup(x.tipo)===cliTipoSel;});
+  var g3 = cliTipoSel==='todos' ? g26T : g26T.filter(function(x){return tipoGroup(x.tipo)===cliTipoSel;});
   var t3=g3.map(function(x){var c=tc(x.tipo);var tot=x.f25+x.f26;return '<tr style="border-top:.5px solid var(--brd)"><td title="'+x.cli+'" style="text-align:left;padding:5px 8px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x.cli+'</td><td style="text-align:center;padding:5px 6px"><span style="background:'+c+'18;color:'+c+';font-weight:700;border-radius:6px;padding:1px 6px;font-size:9.5px;line-height:1.2;display:inline-block">'+x.tipo+'</span></td><td style="text-align:center;padding:5px 6px;overflow:hidden">'+cliVendChip(x.vend)+'</td><td style="text-align:right;padding:5px 8px;background:#faf2e6;color:#8a6d3b;white-space:nowrap">'+fml(x.f25)+'</td><td style="text-align:right;padding:5px 8px;background:#e6f4ee;color:#1f6e58;font-weight:700;white-space:nowrap">'+fml(x.f26)+'</td><td style="text-align:right;padding:5px 8px;background:#f3f6fb;color:#274d80;font-weight:800;white-space:nowrap">'+fml(tot)+'</td><td style="text-align:right;padding:5px 6px;color:var(--txt2)">'+(gtT?(tot/gtT*100).toFixed(1):'0')+'%</td></tr>';}).join('');
   var _T3=g3.reduce(function(a,x){ a.f25+=x.f25; a.f26+=x.f26; return a; },{f25:0,f26:0}); var _T3t=_T3.f25+_T3.f26;
   var t3tot=g3.length?('<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:6px 8px">Total · '+g3.length+'</td><td></td><td></td><td style="text-align:right;padding:6px 8px;background:#f6ecd3;color:#8a6d3b">'+fml(_T3.f25)+'</td><td style="text-align:right;padding:6px 8px;background:#dceee4;color:#1f6e58">'+fml(_T3.f26)+'</td><td style="text-align:right;padding:6px 8px;background:#e8eef7;color:#274d80">'+fml(_T3t)+'</td><td style="text-align:right;padding:6px 6px;color:var(--txt2)">'+(gtT?(_T3t/gtT*100).toFixed(1):'0')+'%</td></tr>'):'';
@@ -4740,11 +4753,12 @@ function renderClientes(){
    // Cuadro 1 · Análisis de clientes
    +cuadro1new
    // Cuadro 2 · Tipo de cliente (antes "3"; se quitó "Rubros por cliente")
-   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="'+HDR+';display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span><i class="ti ti-tags" style="margin-right:6px"></i>2 · Tipo de cliente'+(cliVendSel!=='todos'?' <span style="font-weight:400;opacity:.85;font-size:11.5px">· '+vendShort(cliVendSel)+'</span>':'')+'</span>'
+   +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden"><div style="'+HDR+';display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span><i class="ti ti-tags" style="margin-right:6px"></i>2 · Tipo de cliente'+(cliTipoVendSel!=='todos'?' <span style="font-weight:400;opacity:.85;font-size:11.5px">· '+vendShort(cliTipoVendSel)+'</span>':'')+'</span>'
      +'<span style="margin-left:auto;display:flex;gap:7px;align-items:center">'
        +'<label style="background:rgba(255,255,255,.2);border-radius:7px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer"><i class="ti ti-refresh" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Actualizar etiquetas<input type="file" accept=".xlsx,.xls" style="display:none" onchange="handleEtiquetasFile(this.files[0])"></label>'
        +'<span onclick="exportClientesNA()" style="background:#e7a33e;color:#3a2600;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer"><i class="ti ti-file-download" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Exportar N/A ('+naN+')</span>'
      +'</span></div>'
+     +tipoVendChips
      +'<div class="etiq-status" style="font-size:11px;color:var(--txt2);padding:4px 14px 0"></div>'
      +'<div style="display:grid;grid-template-columns:300px 1fr;gap:0">'
        +'<div style="border-right:1px solid var(--brd);padding:9px 10px;max-height:560px;overflow:auto"><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">'+(tsum||'<span style="font-size:11px;color:var(--txt2)">Subí el Excel de etiquetas para clasificar</span>')+'</div></div>'
