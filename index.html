@@ -5077,12 +5077,12 @@ function renderEventos(){
   #arMayoristaTableWrap table thead th{background:#4472c4!important;color:#fff!important}
   #arMayoristaTableWrap .cobr-total-row td{font-weight:800!important;color:#4472c4!important;border-top:2px solid #4472c4!important;background:var(--bg3)!important}
   </style>
-  <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:.9rem">
-    <div id="cajasRentab" style="flex:2;min-width:460px"></div>
-    <div style="flex:1;min-width:320px">
-      <div class="orig-group-label" style="margin-bottom:.5rem"><span class="orig-dot" style="background:#1D9E75"></span>Variación semana a semana</div>
-      <div id="cajasVarARSWrap" style="margin-bottom:.6rem"></div>
-      <div id="cajasVarUSDWrap"></div>
+  <div style="margin-bottom:.9rem">
+    <div id="cajasRentab"></div>
+    <div class="orig-group-label" style="margin:.9rem 0 .5rem"><span class="orig-dot" style="background:#1D9E75"></span>Variación semana a semana</div>
+    <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <div id="cajasVarARSWrap" style="flex:1;min-width:300px"></div>
+      <div id="cajasVarUSDWrap" style="flex:1;min-width:300px"></div>
     </div>
   </div>
 
@@ -5115,6 +5115,7 @@ function renderEventos(){
 var CAJAS_D = {};
 var AR_MAYORISTA_D = {};
 var RENTAB_D = {meses:[]};
+var FIMA_D = {int:{},sal:{},rend:{}};  // FIMA del archivo Cajas: int=interés mensual (hoja "Intereses $"), sal=saldo valorizado capitalizado, rend=rentabilidad simple nominal (hoja "FIMA")
 var rentabMesSel = null, rentabChart = null;
 
 const CAJAS_CUENTA_COLORS = {
@@ -5514,6 +5515,40 @@ function rentabDetCard(name, nom, real, color){
     +'<div style="font-size:11px;color:var(--txt2);font-weight:600">'+name+'</div>'
     +'<div style="font-size:17px;font-weight:700;color:'+color+'">'+pf(nom)+'</div>'+realHtml+'</div>';
 }
+function buildFimaCuadro(){
+  var F=(typeof FIMA_D!=='undefined'&&FIMA_D)?FIMA_D:null; if(!F) return '';
+  var hasInt=F.int&&Object.keys(F.int).length, hasSal=F.sal&&Object.keys(F.sal).length;
+  if(!hasInt && !hasSal) return '';
+  var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var fmt=function(v){return '$'+Math.round(v).toLocaleString('es-AR');};
+  var pctOf=function(rv){ var p=(Math.abs(rv)<=1?rv*100:rv); return p.toFixed(2).replace('.',',')+'%'; };
+  var body='', tot=0;
+  for(var m=1;m<=12;m++){
+    var iv=(F.int&&F.int[m]!=null)?F.int[m]:null, sv=(F.sal&&F.sal[m]!=null)?F.sal[m]:null, rv=(F.rend&&F.rend[m]!=null)?F.rend[m]:null;
+    if(iv==null && sv==null && rv==null) continue;
+    if(iv!=null) tot+=iv;
+    body+='<tr style="border-top:.5px solid var(--brd)">'
+      +'<td style="text-align:left;padding:4px 10px;font-weight:600">'+MN[m-1]+'</td>'
+      +'<td style="text-align:right;padding:4px 10px;color:#17604a;font-weight:700;white-space:nowrap">'+(iv&&iv>0?fmt(iv):'—')+'</td>'
+      +'<td style="text-align:right;padding:4px 10px;color:#1b4a86;white-space:nowrap">'+(sv?fmt(sv):'—')+'</td>'
+      +'<td style="text-align:right;padding:4px 10px;color:#854f0b;font-weight:700">'+(rv!=null?pctOf(rv):'—')+'</td></tr>';
+  }
+  if(!body) return '';
+  var totRow='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)">'
+    +'<td style="text-align:left;padding:5px 10px">Total</td>'
+    +'<td style="text-align:right;padding:5px 10px;color:#17604a;white-space:nowrap">'+fmt(tot)+'</td>'
+    +'<td style="text-align:right;padding:5px 10px;color:var(--txt2)">—</td>'
+    +'<td style="text-align:right;padding:5px 10px;color:var(--txt2)">—</td></tr>';
+  return '<div style="border:1px solid var(--brd);border-radius:12px;overflow:hidden;background:var(--bg)">'
+    +'<div style="background:#1D9E75;color:#fff;padding:6px 11px;font-size:12.5px;font-weight:700"><i class="ti ti-businessplan" style="font-size:13px;vertical-align:-2px;margin-right:5px"></i>FIMA · intereses y rendimiento</div>'
+    +'<div style="overflow:auto;max-height:330px"><table style="width:100%;border-collapse:collapse;font-size:11.5px">'
+    +'<thead><tr style="color:var(--txt2)">'
+      +'<th style="text-align:left;padding:5px 10px;position:sticky;top:0;background:var(--bg);z-index:1">Mes</th>'
+      +'<th style="text-align:right;padding:5px 10px;position:sticky;top:0;background:var(--bg);z-index:1">Interés FIMA</th>'
+      +'<th style="text-align:right;padding:5px 10px;position:sticky;top:0;background:var(--bg);z-index:1">Saldo capitaliz.</th>'
+      +'<th style="text-align:right;padding:5px 10px;position:sticky;top:0;background:var(--bg);z-index:1">Rend.</th></tr></thead>'
+    +'<tbody>'+body+totRow+'</tbody></table></div></div>';
+}
 function renderRentab(){
   var el=document.getElementById('cajasRentab'); if(!el) return;
   var R=(typeof RENTAB_D!=='undefined'&&RENTAB_D&&RENTAB_D.meses)?RENTAB_D.meses:[];
@@ -5528,14 +5563,20 @@ function renderRentab(){
     +rentabDetCard('Cocos',sel.cocos,sel.cocosReal,col.cocos)
     +rentabDetCard('Balanz',sel.balanz,sel.balanzReal,col.balanz)
     +rentabDetCard('Inflación INDEC',sel.inflacion,null,col.infl)+'</div>';
+  var fimaC=buildFimaCuadro();
   el.innerHTML='<div class="cp">'
     +'<div class="st" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
       +'<span><i class="ti ti-chart-line"></i>Rentabilidad de inversiones vs inflación</span>'
       +'<select onchange="setRentabMes(this.value)" style="font-size:12px;padding:4px 8px;border-radius:8px;border:.5px solid var(--brd2);background:var(--bg);color:var(--txt)">'+opts+'</select>'
     +'</div>'
     +'<div style="font-size:11px;color:var(--txt2);margin:.15rem 0 .6rem">'+sel.label+' · % nominal y real (descontada la inflación)</div>'
-    +det+'<div style="font-size:10.5px;color:var(--txt2);margin:.1rem 0 .2rem"><i class="ti ti-arrows-diff" style="font-size:11px;vertical-align:-1px"></i> Desvío vs IPC (rentabilidad − inflación) · sobre 0 le gana a la inflación</div>'
-    +'<div style="position:relative;height:175px"><canvas id="cRentab"></canvas></div></div>';
+    +'<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">'
+      +'<div style="flex:1.3 1 320px;min-width:300px">'
+        +det+'<div style="font-size:10.5px;color:var(--txt2);margin:.1rem 0 .2rem"><i class="ti ti-arrows-diff" style="font-size:11px;vertical-align:-1px"></i> Desvío vs IPC (rentabilidad − inflación) · sobre 0 le gana a la inflación</div>'
+        +'<div style="position:relative;height:190px"><canvas id="cRentab"></canvas></div>'
+      +'</div>'
+      +(fimaC?('<div style="flex:1 1 300px;min-width:290px">'+fimaC+'</div>'):'')
+    +'</div></div>';
   var labels=R.map(function(m){return m.label;});
   var mk=function(lbl,key,c){return {label:lbl,data:R.map(function(m){return m[key]==null?null:+(m[key]*100).toFixed(2);}),backgroundColor:c,borderRadius:4,maxBarThickness:26};};
   if(rentabChart) rentabChart.destroy();
@@ -5657,8 +5698,30 @@ async function handleCajasFile(file) {
       }
     }
 
+    // ── FIMA: interés mensual (hoja "Intereses $") + saldo valorizado y rendimiento simple (hoja "FIMA") ──
+    const newFIMA = {int:{}, sal:{}, rend:{}};
+    const MES_NUM = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+    const _fnum = v => { if(typeof v==='number') return v; if(v==null||v==='') return null; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; };
+    const _lastNum = row => { let out=null; for(let i=0;i<row.length;i++){ const n=_fnum(row[i]); if(n!=null) out=n; } return out; };
+    if (wb.SheetNames.includes('Intereses $')) {
+      const rowsI = XLSX.utils.sheet_to_json(wb.Sheets['Intereses $'], { header:1, raw:true, defval:null });
+      let cFima = -1; const hdr = rowsI[0]||[];
+      for (let i=0;i<hdr.length;i++){ if(String(hdr[i]||'').toLowerCase().replace(/\s+/g,' ').indexOf('interes fima')>=0) cFima=i; }
+      if (cFima>=0) for (let r=1;r<rowsI.length;r++){ const row=rowsI[r]||[]; const mn=MES_NUM[String(row[0]||'').trim().toLowerCase()]; if(mn){ const v=_fnum(row[cFima]); if(v!=null) newFIMA.int[mn]=v; } }
+    }
+    if (wb.SheetNames.includes('FIMA')) {
+      const rowsF = XLSX.utils.sheet_to_json(wb.Sheets['FIMA'], { header:1, raw:true, defval:null });
+      let curMonth = 0;
+      for (let r=0;r<rowsF.length;r++){ const row=rowsF[r]||[]; const a=String(row[0]||''); const la=a.toLowerCase();
+        for (const mname in MES_NUM){ if(la.indexOf(mname)>=0){ curMonth=MES_NUM[mname]; break; } }
+        if (la.indexOf('saldo valorizado al')>=0){ const md=a.match(/\d{2}\/(\d{2})\/\d{4}/); const mn=md?parseInt(md[1],10):curMonth; const sv=_lastNum(row); if(mn&&sv!=null) newFIMA.sal[mn]=sv; }
+        if (la.indexOf('rentabilidad simple')>=0){ const rv=_lastNum(row); if(curMonth&&rv!=null) newFIMA.rend[curMonth]=rv; }  // rv viene como fracción (0.0106) o % (1.06)
+      }
+    }
+
     CAJAS_D = newCAJAS;
     RENTAB_D = newRENTAB;
+    FIMA_D = newFIMA;
     if (Object.keys(newARMAY).length) AR_MAYORISTA_D = newARMAY;
     cajasSemana = null;
     buildCajasWeekChips();
@@ -7758,7 +7821,7 @@ function rsemBuildPlano(){
     fact:{name:'actualizado '+fecha,DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR'),CFIN_D:g('CFIN_D'),PRODMOD_D:g('PRODMOD_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
-    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
+    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D'),FIMA_D:g('FIMA_D')},
     stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo'),LLEGADAS_D:g('LLEGADAS_D')},
     logistica:{LOG_D:g('LOG_D')},
     fotos:Object.assign({},(typeof prodImgUser!=='undefined'?prodImgUser:{})),
@@ -7769,6 +7832,7 @@ function rsemBuildPlano(){
     +'try{if(s.cajas&&s.cajas.CAJAS_D&&typeof CAJAS_D!=="undefined")CAJAS_D=s.cajas.CAJAS_D;}catch(e){}'
     +'try{if(s.cajas&&s.cajas.AR_MAYORISTA_D&&typeof AR_MAYORISTA_D!=="undefined")AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}'
     +'try{if(s.cajas&&s.cajas.RENTAB_D&&typeof RENTAB_D!=="undefined")RENTAB_D=s.cajas.RENTAB_D;}catch(e){}'
+    +'try{if(s.cajas&&s.cajas.FIMA_D&&typeof FIMA_D!=="undefined")FIMA_D=s.cajas.FIMA_D;}catch(e){}'
     +'try{if(s.stock){if(s.stock.STOCK_HIST){STOCK_HIST=s.stock.STOCK_HIST;stockPeriodo=s.stock.stockPeriodo||Object.keys(STOCK_HIST).sort().pop()||null;if(stockPeriodo&&STOCK_HIST[stockPeriodo])STOCK_D=STOCK_HIST[stockPeriodo];}else if(s.stock.STOCK_D){STOCK_D=s.stock.STOCK_D;if(STOCK_D&&STOCK_D.fecha){STOCK_HIST[STOCK_D.fecha]=STOCK_D;stockPeriodo=STOCK_D.fecha;}}}}catch(e){}'
     +'try{if(s.logistica&&s.logistica.LOG_D&&typeof LOG_D!=="undefined")LOG_D=s.logistica.LOG_D;}catch(e){}'
     +'try{if(s.fotos){Object.assign(prodImgCache,s.fotos);Object.assign(prodImgUser,s.fotos);}}catch(e){}'
@@ -7846,7 +7910,7 @@ function rsemSnapObj(){
     fact:{DATA_D:g('DATA_D'),VENTAS_D:g('VENTAS_D'),FIN_D:g('FIN_D'),FIN_SUB:g('FIN_SUB'),ORIG_D:g('ORIG_D'),PROD_D:g('PROD_D'),TOPFC_D:g('TOPFC_D'),PROV_D:g('PROV_D'),RUBROPROV_D:g('RUBROPROV_D'),COBR_D:g('COBR_D'),VEND_D:g('VEND_D'),ORIGEN_D:g('ORIGEN_D'),COSTFIN_D:g('COSTFIN_D'),EVENTOS_D:g('EVENTOS_D'),FERIA_AR:g('FERIA_AR'),CFIN_D:g('CFIN_D'),PRODMOD_D:g('PRODMOD_D')},
     salidas:{SALIDAS_B_D:g('SALIDAS_B_D'),SALIDAS_AA_D:g('SALIDAS_AA_D'),SALIDAS_EXTRA_D:g('SALIDAS_EXTRA_D')},
     impo:{IMPO_D:g('IMPO_D')},
-    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D')},
+    cajas:{CAJAS_D:g('CAJAS_D'),AR_MAYORISTA_D:g('AR_MAYORISTA_D'),RENTAB_D:g('RENTAB_D'),FIMA_D:g('FIMA_D')},
     stock:{STOCK_D:g('STOCK_D'),STOCK_HIST:g('STOCK_HIST'),stockPeriodo:g('stockPeriodo'),LLEGADAS_D:g('LLEGADAS_D')},
     logistica:{LOG_D:g('LOG_D')},
     hist:{YTD_2025:g('YTD_2025'),RP2025_CANAL:g('RP2025_CANAL'),RP2025M:g('RP2025M'),EVOL_2025:g('EVOL_2025'),CYBER_AR:g('CYBER_AR'),CYBER_WEB_DATES:g('CYBER_WEB_DATES')},
@@ -7863,6 +7927,7 @@ function rsemApplySnap(s){
   try{if(s.cajas&&s.cajas.CAJAS_D)CAJAS_D=s.cajas.CAJAS_D;}catch(e){}
   try{if(s.cajas&&s.cajas.AR_MAYORISTA_D)AR_MAYORISTA_D=s.cajas.AR_MAYORISTA_D;}catch(e){}
   try{if(s.cajas&&s.cajas.RENTAB_D)RENTAB_D=s.cajas.RENTAB_D;}catch(e){}
+  try{if(s.cajas&&s.cajas.FIMA_D)FIMA_D=s.cajas.FIMA_D;}catch(e){}
   try{if(s.stock&&s.stock.LLEGADAS_D)LLEGADAS_D=s.stock.LLEGADAS_D;}catch(e){}
   try{if(s.stock){ if(s.stock.STOCK_HIST){ STOCK_HIST=s.stock.STOCK_HIST; stockPeriodo=s.stock.stockPeriodo||Object.keys(STOCK_HIST).sort().pop()||null; if(stockPeriodo&&STOCK_HIST[stockPeriodo])STOCK_D=STOCK_HIST[stockPeriodo]; } else if(s.stock.STOCK_D){ STOCK_D=s.stock.STOCK_D; if(STOCK_D&&STOCK_D.fecha){STOCK_HIST[STOCK_D.fecha]=STOCK_D;stockPeriodo=STOCK_D.fecha;} } }}catch(e){}
   try{if(s.logistica&&s.logistica.LOG_D)LOG_D=s.logistica.LOG_D;}catch(e){}
