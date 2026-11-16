@@ -901,7 +901,7 @@ var CYBER_DATES = {
   '2026':{ pre:['2026-10-30','2026-11-01'], durante:['2026-11-02','2026-11-04'], post:['2026-11-05','2026-11-08'], extras:['2026-11-09','2026-11-15'] } // Post = 4 días (igual que 2025); extras 09→15 = días que el 2025 no tuvo (solo 2026)
 };
 // Rango del cuadro por día (incluye el día previo al Pre, 29/10): facturación por canal/día
-var CYBER_RANGE = { '2025':['2025-10-29','2025-11-15'], '2026':['2026-10-28','2026-11-15'] }; // 2025 hasta 15/11 (días post-cierre); 2026 desde 28/10 para alinear por día de semana (28/10/26 miércoles ↔ 29/10/25 miércoles)
+var CYBER_RANGE = { '2025':['2025-10-29','2025-11-16'], '2026':['2026-10-28','2026-11-15'] }; // 2025 hasta 16/11 (domingo): el Cyber corrió un día de semana (Cyber Monday 03/11/25 vs 02/11/26), así que el último domingo del 2026 (15/11) alinea con el domingo 16/11 del 2025; 2026 desde 28/10 para alinear por día de semana (28/10/26 miércoles ↔ 29/10/25 miércoles)
 // Fechas del Cyber Web 2025 por factura (del "Apunte contable" hoja CYBER, col A=Creado el). Solo Web: se usa para re-fechar las filas Web del Reporte 2025. { 'FA-B 00009-00018279':'2025-11-03', ... }
 var CYBER_WEB_DATES = {};
 function _cyberInvNorm(s){ return String(s==null?'':s).toUpperCase().replace(/\s*\(.*$/,'').replace(/\s+/g,' ').trim(); }
@@ -2849,7 +2849,7 @@ async function handleFact2025File(file){
       var cat=rpClasificar(rubro, provNombre2, origVal2, skuU2);
       // AR Cyber Monday 2025 (Web + Locales; sin Mayorista/ENVIOS/GIFTCARD/ARTVARIOS)
       // Web: si hay mapa del Apunte contable, re-fechar por factura (col A) y contar SOLO las facturas que estén en el archivo; Locales con la fecha del Reporte.
-      { var _cyDia=dia; if(canal==='Web' && _cwHas){ _cyDia=CYBER_WEB_DATES[_cyberInvNorm(row[_asIdx])]||null; } // Web SIEMPRE del Apunte contable (incluye los días post-cierre 10→15/11 ahora que CYBER_RANGE 2025 llega a 15/11); sin match = no cuenta. Locales = fecha del Reporte.
+      { var _cyDia=dia; if(canal==='Web' && _cwHas){ _cyDia=CYBER_WEB_DATES[_cyberInvNorm(row[_asIdx])]||null; } // Web SIEMPRE del Apunte contable (incluye los días post-cierre 10→16/11 ahora que CYBER_RANGE 2025 llega a 16/11); sin match = no cuenta. Locales = fecha del Reporte.
         if(_cyDia) _cyberAcc(cyberAcc, cyberDays, cyberProd, _cyDia, '2025', canal, rubro, skuU2, cat, n(row[COL.TV]), Math.round(n(row[COL.QTY])), n(row[COL.CMV]), (row[COL.MODELO]?String(row[COL.MODELO]).trim():''), (row[COL.ESTILO]?String(row[COL.ESTILO]).trim():'')); }
       if(!cat) continue;
       var mm2=dia.slice(5,7);
@@ -3137,7 +3137,7 @@ function renderCyberARBody(){
       if(!_S25 && !_S26 && !(Y25&&Y25.extras) && !(Y26&&Y26.extras) && !(Y25&&Y25.days)) return '';
       var _byC=function(yr, ph, ck){ var Y=(yr==='2025')?Y25:Y26;
         if(ph==='total'){ var S=(yr==='2025')?_S25:_S26; return (S&&S.byC&&S.byC[ck])?S.byC[ck].tv:0; }
-        if(ph==='extras'){ if(yr==='2025'){ var pe=(CYBER_DATES['2025'].post||[])[1], rg=CYBER_RANGE['2025'], s=0; if(Y25&&Y25.days) for(var iso in Y25.days){ if(pe&&iso>pe&&iso<=rg[1]&&Y25.days[iso][ck]) s+=Y25.days[iso][ck]; } return s; } // 2025 extras = días post-cierre 10→15/11
+        if(ph==='extras'){ if(yr==='2025'){ var pe=(CYBER_DATES['2025'].post||[])[1], rg=CYBER_RANGE['2025'], s=0; if(Y25&&Y25.days) for(var iso in Y25.days){ if(pe&&iso>pe&&iso<=rg[1]&&Y25.days[iso][ck]) s+=Y25.days[iso][ck]; } return s; } // 2025 extras = días post-cierre 10→16/11
           return (Y&&Y.extras&&Y.extras.byC&&Y.extras.byC[ck])?Y.extras.byC[ck].tv:0; }
         return (Y&&Y[ph]&&Y[ph].byC&&Y[ph].byC[ck])?Y[ph].byC[ck].tv:0; };
       var CF=cyberCrecFase; if(['total','pre','durante','post','extras'].indexOf(CF)<0) CF='total';
@@ -3152,7 +3152,7 @@ function renderCyberARBody(){
           +'<td style="text-align:right;padding:6px 10px;font-weight:800;color:'+(cr==null?'var(--txt2)':(cr<0?'#a32d2d':'#1a7a3a'))+'">'+(cr==null?'—':((cr>=0?'+':'')+cr.toFixed(1)+'%'))+'</td></tr>'; }).join('');
       var Tcr=(TA>0&&TB>0)?((TB/TA-1)*100):null;
       var totR='<tr style="border-top:2px solid var(--brd2);font-weight:800;background:var(--bg2)"><td style="text-align:left;padding:7px 10px">Total</td><td style="text-align:right;padding:7px 10px;color:#a5764a">'+(TA?fmt(TA):'—')+'</td><td style="text-align:right;padding:7px 10px;color:#b0468f">'+(TB?fmt(TB):'—')+'</td><td style="text-align:right;padding:7px 10px;color:'+(Tcr==null?'var(--txt2)':(Tcr<0?'#a32d2d':'#1a7a3a'))+'">'+(Tcr==null?'—':((Tcr>=0?'+':'')+Tcr.toFixed(1)+'%'))+'</td></tr>';
-      var subMap={total:'Pre + Durante + Post (sin extras)',pre:'Pre Cyber',durante:'Durante',post:'Post Cyber',extras:'Días extras · 2025 = post-cierre 10→15/11'};
+      var subMap={total:'Pre + Durante + Post (sin extras)',pre:'Pre Cyber',durante:'Durante',post:'Post Cyber',extras:'Días extras · 2025 = post-cierre 10→16/11'};
       return '<div class="sec-hdr" style="margin-top:16px"><i class="ti ti-arrows-diff"></i>Crecimiento por canal <span class="sec-sub">· 2026 vs 2025 aj.IPC · '+subMap[CF]+'</span></div>'+chips
        +'<div style="background:var(--bg);border:1px solid var(--brd);border-radius:12px;overflow:hidden;max-width:520px"><table style="width:100%;border-collapse:collapse;font-size:12px">'
        +'<thead><tr style="color:#274d80"><th style="text-align:left;padding:5px 10px">Canal</th><th style="text-align:right;padding:5px 10px;background:#faf1e6;color:#a5764a">2025 aj.IPC</th><th style="text-align:right;padding:5px 10px;background:#fbf0f6;color:#b0468f">2026</th><th style="text-align:right;padding:5px 10px">Crec. real</th></tr></thead>'
