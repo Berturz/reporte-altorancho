@@ -4244,14 +4244,14 @@ function renderCobrIngresos(mdpTot, dates, civaTot){
     +'<span style="font-size:12px;color:var(--txt2)'+(strong?';font-weight:700;color:var(--txt)':'')+'">'+lbl+(sub?' <span style="font-size:10px;color:var(--txt2);font-weight:400">'+sub+'</span>':'')+'</span>'
     +'<b style="font-size:'+(strong?'15px':'13.5px')+';font-weight:'+(strong?'800':'700')+';color:'+col+';white-space:nowrap">'+fmt(val)+'</b></div>';
   const ingRow = hasCfin
-    ? row('Ingreso por venta','S/IVA − costo fin.',ingreso,'#1f7a44',true)
-    : '<div style="padding:5px 2px;border-top:1px solid var(--brd)"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:12px;font-weight:700;color:var(--txt)">Ingreso por venta <span style="font-size:10px;color:var(--txt2);font-weight:400">S/IVA − costo fin.</span></span><b style="font-size:15px;color:var(--txt2)">—</b></div><div style="font-size:10px;color:#b4322a;margin-top:2px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> Re-subí la facturación 2026 + Guardar para el costo de financiación.</div></div>';
+    ? row('Ingreso por venta S/IVA','',ingreso,'#1f7a44',true)
+    : '<div style="padding:5px 2px;border-top:1px solid var(--brd)"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:12px;font-weight:700;color:var(--txt)">Ingreso por venta S/IVA</span><b style="font-size:15px;color:var(--txt2)">—</b></div><div style="font-size:10px;color:#b4322a;margin-top:2px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> Re-subí la facturación 2026 + Guardar para el costo de financiación.</div></div>';
   el.innerHTML='<div style="border:1px solid var(--brd);border-radius:10px;padding:.55rem .75rem;background:var(--bg2)">'
     +'<div class="st" style="font-size:12px;margin:0 0 .35rem"><i class="ti ti-coin"></i>Ingreso real del período</div>'
     +row('Facturación S/IVA','',sIVA,'var(--txt)',false)
-    +row('FC C/IVA',hasCiva?'columna madre':'×1,21 estimado',cIVA,'#4472c4',false)
+    +row('Facturación C/IVA','',cIVA,'#4472c4',false)
     +ingRow
-    +(hasCfin?'<div style="font-size:10px;color:var(--txt2);margin-top:3px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Costo de financiación: '+fmt(cfin)+' (medio de pago + cuotas, igual que Financiación).</div>':'')
+    +(hasCfin?'<div style="font-size:10px;color:var(--txt2);margin-top:3px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> Costo de financiación: '+fmt(cfin)+'</div>':'')
     +'</div>';
 }
 
