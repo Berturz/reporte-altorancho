@@ -1493,14 +1493,21 @@ async function handleFile(file) {
         const CANAL_MAP3 = {Lett:'lett', Web:'web', LBE:'lbe', LSI:'lsi', ALC:'alc', LND:'lnd'};
         const canalKey3 = CANAL_MAP3[canal];
         if (canalKey3 && rubro !== 'ENVIOS' && rubro !== 'N/A') {
-          if (!newCOBR[dia]) newCOBR[dia] = {mdp:{}, baa:{}, mdpbaa:{}, civa:{}};
+          if (!newCOBR[dia]) newCOBR[dia] = {mdp:{}, baa:{}, mdpbaa:{}, civa:{}, cfmdp:{}, cfmdpbaa:{}};
           if (!newCOBR[dia].civa) newCOBR[dia].civa = {};
+          if (!newCOBR[dia].cfmdp) newCOBR[dia].cfmdp = {};
+          if (!newCOBR[dia].cfmdpbaa) newCOBR[dia].cfmdpbaa = {};
+          // costo de financiación s/IVA de esta fila (misma fórmula que CFIN_D): Lett → chq+cdp_lt · AR → mdpw+cdp_ar
+          const _cfRow = (canal==='Lett' ? (chq+cdp_lt) : (mdpw+cdp_ar));
           const mdpGrupo = row[COL.MDPR] ? String(row[COL.MDPR]).trim() : null;
           if (mdpGrupo) {
             if (!newCOBR[dia].mdp[canalKey3]) newCOBR[dia].mdp[canalKey3] = {};
             newCOBR[dia].mdp[canalKey3][mdpGrupo] = (newCOBR[dia].mdp[canalKey3][mdpGrupo]||0) + tv;
             // Total C/IVA (columna madre AO) por canal, sobre las MISMAS filas que el total s/IVA → FC C/IVA real
             newCOBR[dia].civa[canalKey3] = (newCOBR[dia].civa[canalKey3]||0) + tvc;
+            // costo de financiación por medio de pago → Ingresos = Facturación − cfmdp
+            if (!newCOBR[dia].cfmdp[canalKey3]) newCOBR[dia].cfmdp[canalKey3] = {};
+            newCOBR[dia].cfmdp[canalKey3][mdpGrupo] = (newCOBR[dia].cfmdp[canalKey3][mdpGrupo]||0) + _cfRow;
           }
           const baaVal = row[COL.BAA] ? String(row[COL.BAA]).trim() : null;
           if (baaVal) {
@@ -1513,6 +1520,11 @@ async function handleFile(file) {
             const _mb = newCOBR[dia].mdpbaa[canalKey3];
             if (!_mb[mdpGrupo]) _mb[mdpGrupo] = {};
             _mb[mdpGrupo][baaVal] = (_mb[mdpGrupo][baaVal]||0) + tv;
+            // costo de financiación por MDP × AA/B → Ingresos AA/B = importe AA/B − cfmdpbaa
+            if (!newCOBR[dia].cfmdpbaa[canalKey3]) newCOBR[dia].cfmdpbaa[canalKey3] = {};
+            const _cmb = newCOBR[dia].cfmdpbaa[canalKey3];
+            if (!_cmb[mdpGrupo]) _cmb[mdpGrupo] = {};
+            _cmb[mdpGrupo][baaVal] = (_cmb[mdpGrupo][baaVal]||0) + _cfRow;
           }
         }
       }
@@ -4091,9 +4103,13 @@ function aggCobr(dates){
   const baaTot = {}; // canal -> AA/B -> importe
   const mdpBaaTot = {}; // canal -> mdp -> AA/B -> importe
   const civaTot = {}; // canal -> importe C/IVA (Total C/IVA columna madre)
+  const mdpCostTot = {}; // canal -> mdp -> costo financiación (para Ingresos = importe − costo)
+  const mdpBaaCostTot = {}; // canal -> mdp -> AA/B -> costo financiación
   for(const d of dates){
     const v = COBR_D[d]||{};
     for(const[canal,val] of Object.entries(v.civa||{})){ civaTot[canal]=(civaTot[canal]||0)+val; }
+    for(const[canal,mdps] of Object.entries(v.cfmdp||{})){ if(!mdpCostTot[canal])mdpCostTot[canal]={}; for(const[mg,val] of Object.entries(mdps)){ mdpCostTot[canal][mg]=(mdpCostTot[canal][mg]||0)+val; } }
+    for(const[canal,mdps] of Object.entries(v.cfmdpbaa||{})){ if(!mdpBaaCostTot[canal])mdpBaaCostTot[canal]={}; for(const[mg,baas] of Object.entries(mdps)){ if(!mdpBaaCostTot[canal][mg])mdpBaaCostTot[canal][mg]={}; for(const[b,val] of Object.entries(baas)){ mdpBaaCostTot[canal][mg][b]=(mdpBaaCostTot[canal][mg][b]||0)+val; } } }
     for(const[canal,mdps] of Object.entries(v.mdp||{})){
       if(!mdpTot[canal]) mdpTot[canal]={};
       for(const[mg,val] of Object.entries(mdps)){
@@ -4114,7 +4130,7 @@ function aggCobr(dates){
       }
     }
   }
-  return {mdpTot, baaTot, mdpBaaTot, civaTot};
+  return {mdpTot, baaTot, mdpBaaTot, civaTot, mdpCostTot, mdpBaaCostTot};
 }
 
 function renderCobrTable(mdpTot){
@@ -4206,25 +4222,69 @@ function renderCobrCards(mdpTot){
       <div class="salcard-val" style="color:${col}">${fmt(v)}</div><div class="salcard-pct">${pct.toFixed(1)}% del total</div></div>`;
   }).join('')||'<div class="prov-empty">Sin cobranzas en el período</div>';
 }
-function renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot){
+function renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot, mdpCostTot, mdpBaaCostTot){
   const w=document.getElementById('cobrDetailWrap'); const c=cobrSelCanal;
-  w.style.setProperty('--cobrc', (c&&CC[COBR_CMAP[c]])?CC[COBR_CMAP[c]]:'#2c2c2a');
+  const col=(c&&CC[COBR_CMAP[c]])?CC[COBR_CMAP[c]]:'#2c2c2a';
+  w.style.setProperty('--cobrc', col);
   if(!c||!mdpTot[c]){ w.innerHTML='<div class="prov-empty" style="padding:1rem">Tocá un canal para ver el desglose</div>'; return; }
   const entries=Object.entries(mdpTot[c]).filter(([,v])=>Math.abs(v)>0.5).sort((a,b)=>b[1]-a[1]);
   const tot=entries.reduce((s,[,v])=>s+v,0);
   const mb=(mdpBaaTot&&mdpBaaTot[c])||{}; const hasMB=Object.keys(mb).length>0; // cruce MDP × AA/B disponible?
-  let totAA=0, totB=0;
-  const rows=entries.map(([mg,v])=>{ const bb=mb[mg]||{}; const aa=bb['AA']||0, b=bb['B']||0; totAA+=aa; totB+=b;
-    return `<tr><td>${mg}</td>`+(hasMB?`<td style="text-align:right">${aa?ffl(aa):'—'}</td><td style="text-align:right">${b?ffl(b):'—'}</td>`:'')+`<td style="text-align:right">${ffl(v)}</td></tr>`;
+  const cm=(mdpCostTot&&mdpCostTot[c])||{}; const cmb=(mdpBaaCostTot&&mdpBaaCostTot[c])||{};
+  const hasCost=Object.keys(cm).length>0; // costo de financiación por MDP (para abrir Ingresos)
+  const g=(x)=>x?ffl(x):'—';
+  const rt='text-align:right;white-space:nowrap;padding:5px 6px';
+  const cellp='padding:5px 6px';
+
+  if(!hasCost){
+    // datos viejos (sin costo por MDP): cuadro actual + aviso para abrir Ingresos
+    let totAA=0, totB=0;
+    const rows=entries.map(([mg,v])=>{ const bb=mb[mg]||{}; const aa=bb['AA']||0, b=bb['B']||0; totAA+=aa; totB+=b;
+      return `<tr><td style="${cellp}">${mg}</td>`+(hasMB?`<td style="${rt}">${g(aa)}</td><td style="${rt}">${g(b)}</td>`:'')+`<td style="${rt}">${ffl(v)}</td></tr>`;
+    }).join('');
+    const head=`<thead><tr><th>MDP</th>`+(hasMB?`<th style="text-align:right">AA</th><th style="text-align:right">B</th>`:'')+`<th style="text-align:right">Importe</th></tr></thead>`;
+    const totalRow=`<tr class="cobr-total-row"><td style="${cellp}">Total</td>`+(hasMB?`<td style="${rt}">${ffl(totAA)}</td><td style="${rt}">${ffl(totB)}</td>`:'')+`<td style="${rt}">${ffl(tot)}</td></tr>`;
+    const note=(!hasMB?'<div style="font-size:10.5px;color:var(--txt2);margin-top:8px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> El AA/B por cada medio de pago aparece al re-subir la facturación 2026.</div>':'')
+      +'<div style="font-size:10.5px;color:#b4322a;margin-top:6px"><i class="ti ti-alert-triangle" style="vertical-align:-1px"></i> Para abrir <b>Ingresos</b> (facturación − costo de financiación) por medio de pago, re-subí la facturación 2026 + Guardar.</div>';
+    w.innerHTML=`<div class="prov-title">Medios de pago · ${COBR_CANAL_LABELS[c]}</div><table class="prov-table">${head}<tbody>${rows}${totalRow}</tbody></table>`+note;
+    return;
+  }
+
+  // Facturación + Ingresos (Ingresos = Facturación − costo de financiación del medio de pago)
+  const lt=chTint(col,0.42);      // header Ingresos (misma paleta, más clarito)
+  const cellTint=chTint(col,0.90); // fondo celdas Ingresos
+  const totTint=chTint(col,0.80);  // fondo total Ingresos
+  const hBrd='border-left:2px solid var(--bg)';
+  const ingH=`background:${lt}!important;color:#fff!important`;
+  const nCols=hasMB?3:1;
+  let fAA=0,fB=0, iAA=0,iB=0, iTot=0;
+  const rows=entries.map(([mg,v])=>{
+    const bb=mb[mg]||{}; const aa=bb['AA']||0, b=bb['B']||0;
+    const cb=cmb[mg]||{}; const caa=cb['AA']||0, cbb=cb['B']||0; const mc=cm[mg]||0;
+    const iaa=aa-caa, ib=b-cbb, iv=v-mc;
+    fAA+=aa; fB+=b; iAA+=iaa; iB+=ib; iTot+=iv;
+    return `<tr><td style="${cellp}">${mg}</td>`
+      +(hasMB?`<td style="${rt}">${g(aa)}</td><td style="${rt}">${g(b)}</td>`:'')
+      +`<td style="${rt}">${ffl(v)}</td>`
+      +(hasMB?`<td style="${rt};background:${cellTint};${hBrd}">${g(iaa)}</td><td style="${rt};background:${cellTint}">${g(ib)}</td>`:'')
+      +`<td style="${rt};background:${cellTint}${hasMB?'':';'+hBrd}">${ffl(iv)}</td></tr>`;
   }).join('');
-  const head=`<thead><tr><th>MDP</th>`+(hasMB?`<th style="text-align:right">AA</th><th style="text-align:right">B</th>`:'')+`<th style="text-align:right">Importe</th></tr></thead>`;
-  const totalRow=`<tr class="cobr-total-row"><td>Total</td>`+(hasMB?`<td style="text-align:right">${ffl(totAA)}</td><td style="text-align:right">${ffl(totB)}</td>`:'')+`<td style="text-align:right">${ffl(tot)}</td></tr>`;
-  // sin el cruce (datos viejos): solo un aviso, sin cuadro aparte (el AA/B va dentro de la tabla de MDP al re-subir)
-  const baaHTML = !hasMB ? '<div style="font-size:10.5px;color:var(--txt2);margin-top:8px"><i class="ti ti-info-circle" style="vertical-align:-1px"></i> El AA/B por cada medio de pago aparece al re-subir la facturación 2026.</div>' : '';
-  w.innerHTML=`<div class="prov-title">Medios de pago · ${COBR_CANAL_LABELS[c]}</div>
-    <table class="prov-table">${head}<tbody>${rows}${totalRow}</tbody></table>`+baaHTML;
+  const groupHead=`<tr><th rowspan="2" style="vertical-align:bottom">MDP</th>`
+    +`<th colspan="${nCols}" style="text-align:center">Facturación</th>`
+    +`<th colspan="${nCols}" style="text-align:center;${ingH};${hBrd}">Ingresos</th></tr>`;
+  const subHead=`<tr>`
+    +(hasMB?`<th style="text-align:right">AA</th><th style="text-align:right">B</th>`:'')+`<th style="text-align:right">Importe</th>`
+    +(hasMB?`<th style="text-align:right;${ingH};${hBrd}">AA</th><th style="text-align:right;${ingH}">B</th>`:'')
+    +`<th style="text-align:right;${ingH}${hasMB?'':';'+hBrd}">Importe</th></tr>`;
+  const totalRow=`<tr class="cobr-total-row"><td style="${cellp}">Total</td>`
+    +(hasMB?`<td style="${rt}">${ffl(fAA)}</td><td style="${rt}">${ffl(fB)}</td>`:'')+`<td style="${rt}">${ffl(tot)}</td>`
+    +(hasMB?`<td style="${rt};background:${totTint}!important;${hBrd}">${ffl(iAA)}</td><td style="${rt};background:${totTint}!important">${ffl(iB)}</td>`:'')
+    +`<td style="${rt};background:${totTint}!important${hasMB?'':';'+hBrd}">${ffl(iTot)}</td></tr>`;
+  w.innerHTML=`<div class="prov-title">Medios de pago · ${COBR_CANAL_LABELS[c]}</div>`
+    +`<table class="prov-table" style="font-size:11px">`
+    +`<thead>${groupHead}${subHead}</thead><tbody>${rows}${totalRow}</tbody></table>`;
 }
-function selectCobrCanal(c){ cobrSelCanal=c; const {mdpTot,baaTot,mdpBaaTot}=aggCobr(getRange()); renderCobrCards(mdpTot); renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot); }
+function selectCobrCanal(c){ cobrSelCanal=c; const {mdpTot,baaTot,mdpBaaTot,mdpCostTot,mdpBaaCostTot}=aggCobr(getRange()); renderCobrCards(mdpTot); renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot, mdpCostTot, mdpBaaCostTot); }
 
 // Ingreso real del período: Facturación S/IVA · FC C/IVA (×1,21) · Ingreso por venta (S/IVA − costo de financiación).
 // El costo de financiación sale de CFIN_D[dia][canal].cost (mismo dato que la sección Financiación), sumado sobre el período.
@@ -4257,9 +4317,9 @@ function renderCobrIngresos(mdpTot, dates, civaTot){
 
 function renderCobr(){
   const dates = getRange();
-  const {mdpTot, baaTot, mdpBaaTot, civaTot} = aggCobr(dates);
+  const {mdpTot, baaTot, mdpBaaTot, civaTot, mdpCostTot, mdpBaaCostTot} = aggCobr(dates);
   renderCobrCards(mdpTot);
-  renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot);
+  renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot, mdpCostTot, mdpBaaCostTot);
   renderCobrBAADonut(baaTot);
   renderCobrBAATable(baaTot);
   renderCobrSegCards(mdpBaaTot, mdpTot);
