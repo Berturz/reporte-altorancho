@@ -5698,18 +5698,46 @@ async function handleCajasFile(file) {
       }
     }
 
-    // ── FIMA: interés mensual (hoja "Intereses $") + saldo valorizado y rendimiento simple (hoja "FIMA") ──
+    // ── FIMA: interés mensual + saldo capitalizado + rendimiento simple por mes ──
+    // Fuente primaria: hoja "FIMA Mensual" (resumen mes a mes, TODOS los meses: col Mes / Saldo valorizado final / Intereses ($) / Rent. simple %).
+    // Fallback (formato viejo): hojas separadas "Intereses $" (interés) + "FIMA" (saldo/rend, solo últimos meses).
     const newFIMA = {int:{}, sal:{}, rend:{}};
     const MES_NUM = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
     const _fnum = v => { if(typeof v==='number') return v; if(v==null||v==='') return null; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; };
     const _lastNum = row => { let out=null; for(let i=0;i<row.length;i++){ const n=_fnum(row[i]); if(n!=null) out=n; } return out; };
-    if (wb.SheetNames.includes('Intereses $')) {
+    const _fimaMenSh = wb.SheetNames.filter(n=>/fima\s*mensual/i.test(n))[0];
+    if (_fimaMenSh) {
+      const rowsM = XLSX.utils.sheet_to_json(wb.Sheets[_fimaMenSh], { header:1, raw:true, defval:null });
+      let hr=-1, cMes=-1, cSal=-1, cInt=-1, cRend=-1;
+      for (let r=0;r<Math.min(rowsM.length,20);r++){ const row=rowsM[r]||[];
+        const low=row.map(x=>String(x==null?'':x).toLowerCase().replace(/\s+/g,' ').trim());
+        const hasInt=low.some(h=>h.indexOf('interes')>=0 && h.indexOf('fima')<0);
+        const hasRend=low.some(h=>h.indexOf('rent. simple')>=0 || h.indexOf('rent simple')>=0);
+        if (hasInt && hasRend){ hr=r;
+          for (let i=0;i<low.length;i++){ const h=low[i];
+            if (cMes<0 && h==='mes') cMes=i;
+            if (cSal<0 && h.indexOf('saldo valorizado')>=0) cSal=i;
+            if (cInt<0 && h.indexOf('interes')>=0 && h.indexOf('fima')<0) cInt=i;
+            if (cRend<0 && (h.indexOf('rent. simple')>=0 || h.indexOf('rent simple')>=0)) cRend=i;
+          }
+          break;
+        }
+      }
+      if (cMes<0) cMes=0;
+      if (hr>=0 && cInt>=0){ for (let r=hr+1;r<rowsM.length;r++){ const row=rowsM[r]||[];
+        const mn=MES_NUM[String(row[cMes]||'').trim().toLowerCase()]; if(!mn) continue; // saltea "Apertura" y "Total …"
+        const iv=_fnum(row[cInt]); if(iv) newFIMA.int[mn]=iv; // interés 0 (mes sin actividad, ej. agosto) = no cuenta
+        if(cSal>=0){ const sv=_fnum(row[cSal]); if(sv) newFIMA.sal[mn]=sv; }   // "-" / 0 → sin saldo
+        if(cRend>=0){ const rvv=_fnum(row[cRend]); if(rvv!=null) newFIMA.rend[mn]=rvv; } // fracción (0.0213) o % (2.13)
+      } }
+    }
+    if (!Object.keys(newFIMA.int).length && wb.SheetNames.includes('Intereses $')) {
       const rowsI = XLSX.utils.sheet_to_json(wb.Sheets['Intereses $'], { header:1, raw:true, defval:null });
       let cFima = -1; const hdr = rowsI[0]||[];
       for (let i=0;i<hdr.length;i++){ if(String(hdr[i]||'').toLowerCase().replace(/\s+/g,' ').indexOf('interes fima')>=0) cFima=i; }
       if (cFima>=0) for (let r=1;r<rowsI.length;r++){ const row=rowsI[r]||[]; const mn=MES_NUM[String(row[0]||'').trim().toLowerCase()]; if(mn){ const v=_fnum(row[cFima]); if(v!=null) newFIMA.int[mn]=v; } }
     }
-    if (wb.SheetNames.includes('FIMA')) {
+    if (!Object.keys(newFIMA.sal).length && !Object.keys(newFIMA.rend).length && wb.SheetNames.includes('FIMA')) {
       const rowsF = XLSX.utils.sheet_to_json(wb.Sheets['FIMA'], { header:1, raw:true, defval:null });
       let curMonth = 0;
       for (let r=0;r<rowsF.length;r++){ const row=rowsF[r]||[]; const a=String(row[0]||''); const la=a.toLowerCase();
