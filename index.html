@@ -4250,7 +4250,7 @@ function renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot, ingMdpTot, ingMdpBaaTo
     return;
   }
 
-  // Facturación + Ingresos (Ingresos = Facturación − costo de financiación del medio de pago)
+  // Facturación (tv) + Ingresos (columna madre fc = "Fact s/IVA incl D1+D2 − Otros costos fin."); las filas A no llevan costo → AA Ingresos = AA Facturación
   const lt=chTint(col,0.42);      // header Ingresos (misma paleta, más clarito)
   const cellTint=chTint(col,0.90); // fondo celdas Ingresos
   const totTint=chTint(col,0.80);  // fondo total Ingresos
@@ -4286,7 +4286,7 @@ function renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot, ingMdpTot, ingMdpBaaTo
 function selectCobrCanal(c){ cobrSelCanal=c; const {mdpTot,baaTot,mdpBaaTot,ingMdpTot,ingMdpBaaTot}=aggCobr(getRange()); renderCobrCards(mdpTot); renderCobrCanalDetail(mdpTot, baaTot, mdpBaaTot, ingMdpTot, ingMdpBaaTot); }
 
 // Ingreso real del período: Facturación S/IVA · FC C/IVA (×1,21) · Ingreso por venta (S/IVA − costo de financiación).
-// El costo de financiación sale de CFIN_D[dia][canal].cost (mismo dato que la sección Financiación), sumado sobre el período.
+// Ingreso por venta = columna madre fc (ingTot, misma que el detalle por MDP); C/IVA de la columna madre (civaTot); costo fin = sIVA − ingreso. Fallback a CFIN_D si el snapshot es viejo.
 function renderCobrIngresos(mdpTot, dates, civaTot, ingTot){
   const el=document.getElementById('cobrIngresos'); if(!el) return;
   let sIVA=0;
