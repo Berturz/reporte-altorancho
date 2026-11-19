@@ -3255,6 +3255,8 @@ function _feriaUploadBar(){
    +'<span class="feria-status" style="font-size:11.5px;color:var(--txt2)"></span></div>';
 }
 // ── EVOLUCIÓN FC / Mg / C.financiación · 2026 · por canal (un bloque por canal, meses en columnas) ──
+var evolCanalSel=null; // canal seleccionado → vista enfocada 2026 vs 2025 (null = todo normal)
+function setEvolCanal(ck){ evolCanalSel=(evolCanalSel===ck)?null:ck; renderEvol(); }
 function renderEvol(){
   var el=document.getElementById('evolWrap'); if(!el) return;
   if(typeof DATA_D==='undefined' || !DATA_D || !Object.keys(DATA_D).length){
@@ -3286,7 +3288,7 @@ function renderEvol(){
     var fcLbl=ajIPC?'FC <span style="font-weight:400;font-size:9px">aj.IPC</span>':'FC';
     var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){var _cur=!noCur&&('2026-'+mm)===_curYM;return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:'+(_cur?'#c98500':'#274d80')+'">'+MN[parseInt(mm,10)-1]+(_cur?'<div style="font-size:8.5px;font-weight:600;color:#c98500;text-transform:none;letter-spacing:0">en curso</div>':'')+'</th>';}).join('')+'</tr>';
     var body=(chList||CH).map(function(ch){ var ck=ch[0],lbl=ch[1],col=ch[2]; var tint=tintOf(col,0.09);
-      var name='<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+'</td>';
+      var name='<td rowspan="3" onclick="setEvolCanal(\''+ck+'\')" title="Ver 2026 vs 2025 de '+lbl+'" style="cursor:pointer;position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+' <i class="ti ti-chevron-right" style="font-size:11px;opacity:.55;vertical-align:-1px"></i></td>';
       var cFC=meses.map(function(mm){ var o=(U[mm]||{})[ck]; var _tv=o?(o.tv||0)*(ajIPC?ipcFactor(mm):1):0; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(_tv?fmt(_tv):'—')+'</td>'; }).join('');
       var cMg=meses.map(function(mm){ var o=(U[mm]||{})[ck]; var mg=(o&&o.cmv!==0)?(o.fc/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join('');
       var cCf=meses.map(function(mm){ var o=(U[mm]||{})[ck]; var pct=(o&&o.cfBase>0)?(o.cfCost/o.cfBase*100):null; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(pct!=null?pct.toFixed(2).replace('.',',')+'%':(cfHas?'—':'·'))+'</td>'; }).join('');
@@ -3306,7 +3308,7 @@ function renderEvol(){
   function cmpTableBuild(meses, chList){
     var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){var _cur=('2026-'+mm)===_curYM;return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:'+(_cur?'#c98500':'#274d80')+'">'+MN[parseInt(mm,10)-1]+(_cur?'<div style="font-size:8.5px;font-weight:600;color:#c98500;text-transform:none;letter-spacing:0">en curso</div>':'')+'</th>';}).join('')+'</tr>';
     var body=(chList||CH).map(function(ch){ var ck=ch[0],lbl=ch[1],col=ch[2]; var tint=tintOf(col,0.09);
-      var name='<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+'</td>';
+      var name='<td rowspan="3" onclick="setEvolCanal(\''+ck+'\')" title="Ver 2026 vs 2025 de '+lbl+'" style="cursor:pointer;position:sticky;left:0;z-index:1;background:'+tintOf(col,0.14)+';border-left:4px solid '+col+';color:'+col+';font-weight:800;font-size:12.5px;padding:8px 10px;vertical-align:middle;white-space:nowrap">'+lbl+' <i class="ti ti-chevron-right" style="font-size:11px;opacity:.55;vertical-align:-1px"></i></td>';
       var rFC=meses.map(function(mm){ var a=(u25[mm]||{})[ck], b=(u26[mm]||{})[ck]; var aj=a?(a.tv||0)*ipcFactor(mm):0; var v=(aj>0&&b&&b.tv>0)?(b.tv/aj-1)*100:null; return cellFC(v); }).join('');
       var rMg=meses.map(function(mm){ var a=(u25[mm]||{})[ck], b=(u26[mm]||{})[ck]; var m25=(a&&a.cmv!==0)?a.fc/a.cmv:null, m26=(b&&b.cmv!==0)?b.fc/b.cmv:null; var v=(m25!=null&&m26!=null)?(m26-m25):null; return cellMg(v); }).join('');
       var rCf=meses.map(function(mm){ var a=(u25[mm]||{})[ck], b=(u26[mm]||{})[ck]; var c25=(a&&a.cfBase>0)?a.cfCost/a.cfBase*100:null, c26=(b&&b.cfBase>0)?b.cfCost/b.cfBase*100:null; var v=(c25!=null&&c26!=null)?(c26-c25):null; return cellCf(v); }).join('');
@@ -3327,11 +3329,46 @@ function renderEvol(){
     ? '<div class="sec-hdr" style="margin-top:22px"><i class="ti ti-arrows-diff"></i>Comparativa 2025 → 2026 <span class="sec-sub">· mes a mes · <span style="color:#2a6b53">verde a favor</span> · <span style="color:#c0392b">rojo en contra</span></span></div>'
       +cmpTableBuild(meses26cl,CH25)
     : '';
-  el.innerHTML=note26
-    +'<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-calendar"></i>Evolución 2026 <span class="sec-sub">· por canal · FC · Mg · Cfinanciero</span></div>'
-    +evolTable(u26,meses26)+INFO
-    +tbl2025
-    +cmpTable;
+  // ── Vista enfocada: un canal, 2026 arriba / 2025 (aj.IPC) abajo / variación ──
+  function focusCanal(ck){
+    var ch=null; for(var _i=0;_i<CH.length;_i++){ if(CH[_i][0]===ck){ ch=CH[_i]; break; } }
+    if(!ch) return '';
+    var lbl=ch[1], col=ch[2], tint=tintOf(col,0.09);
+    var meses=meses26;
+    var head='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:2"></th><th></th>'+meses.map(function(mm){var _cur=('2026-'+mm)===_curYM;return '<th style="text-align:right;padding:6px 10px;font-weight:700;color:'+(_cur?'#c98500':'#274d80')+'">'+MN[parseInt(mm,10)-1]+(_cur?'<div style="font-size:8.5px;font-weight:600;color:#c98500;text-transform:none;letter-spacing:0">en curso</div>':'')+'</th>';}).join('')+'</tr>';
+    var fcRow=function(U,ajIPC){ return meses.map(function(mm){ var o=(U[mm]||{})[ck]; var _tv=o?(o.tv||0)*(ajIPC?ipcFactor(mm):1):0; return '<td style="text-align:right;padding:6px 10px;font-weight:700;color:#274d80">'+(_tv?fmt(_tv):'—')+'</td>'; }).join(''); };
+    var mgRow=function(U){ return meses.map(function(mm){ var o=(U[mm]||{})[ck]; var mg=(o&&o.cmv!==0)?(o.fc/o.cmv):null; return '<td style="text-align:right;padding:6px 10px;color:#1f7a44;font-weight:600">'+(mg!=null?mg.toFixed(2).replace('.',','):'—')+'</td>'; }).join(''); };
+    var cfRowF=function(U){ return meses.map(function(mm){ var o=(U[mm]||{})[ck]; var pct=(o&&o.cfBase>0)?(o.cfCost/o.cfBase*100):null; return '<td style="text-align:right;padding:6px 10px;color:'+col+';font-weight:600">'+(pct!=null?pct.toFixed(2).replace('.',',')+'%':'—')+'</td>'; }).join(''); };
+    var vFC=meses.map(function(mm){ var a=(u25[mm]||{})[ck], b=(u26[mm]||{})[ck]; var aj=a?(a.tv||0)*ipcFactor(mm):0; var v=(aj>0&&b&&b.tv>0)?(b.tv/aj-1)*100:null; return cellFC(v); }).join('');
+    var vMg=meses.map(function(mm){ var a=(u25[mm]||{})[ck], b=(u26[mm]||{})[ck]; var m25=(a&&a.cmv!==0)?a.fc/a.cmv:null, m26=(b&&b.cmv!==0)?b.fc/b.cmv:null; var v=(m25!=null&&m26!=null)?(m26-m25):null; return cellMg(v); }).join('');
+    var vCf=meses.map(function(mm){ var a=(u25[mm]||{})[ck], b=(u26[mm]||{})[ck]; var c25=(a&&a.cfBase>0)?a.cfCost/a.cfBase*100:null, c26=(b&&b.cfBase>0)?b.cfCost/b.cfBase*100:null; var v=(c25!=null&&c26!=null)?(c26-c25):null; return cellCf(v); }).join('');
+    var yl=function(txt,bg){ return '<td rowspan="3" style="position:sticky;left:0;z-index:1;background:'+bg+';color:#fff;font-weight:800;font-size:12px;padding:8px 10px;vertical-align:middle;text-align:center;white-space:nowrap">'+txt+'</td>'; };
+    var ml=function(txt,c){ return '<td style="padding:6px 10px;color:'+(c||'var(--txt2)')+';font-weight:600;white-space:nowrap">'+txt+'</td>'; };
+    var g25='#f4f4f2', gvar='#fbfbf9';
+    var body=
+      '<tr style="background:'+tint+';border-top:2px solid var(--bg)">'+yl('2026',col)+ml('FC')+fcRow(u26,false)+'</tr>'
+      +'<tr style="background:'+tint+'">'+ml('Mg.')+mgRow(u26)+'</tr>'
+      +'<tr style="background:'+tint+'">'+ml('Cfinanciero',col)+cfRowF(u26)+'</tr>'
+      +'<tr style="background:'+g25+';border-top:3px solid var(--bg)">'+yl('2025',chTint(col,0.30))+ml('FC <span style="font-size:9px">aj.IPC</span>')+fcRow(u25,true)+'</tr>'
+      +'<tr style="background:'+g25+'">'+ml('Mg.')+mgRow(u25)+'</tr>'
+      +'<tr style="background:'+g25+'">'+ml('Cfinanciero',col)+cfRowF(u25)+'</tr>'
+      +'<tr style="background:'+gvar+';border-top:3px solid var(--bg)">'+yl('Δ 26/25','#5f5e5a')+ml('FC Δ%')+vFC+'</tr>'
+      +'<tr style="background:'+gvar+'">'+ml('Mg. dif')+vMg+'</tr>'
+      +'<tr style="background:'+gvar+'">'+ml('Cfin. dif')+vCf+'</tr>';
+    var hdr='<div class="sec-hdr" style="margin-top:2px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span><i class="ti ti-calendar"></i>'+lbl+' <span class="sec-sub">· 2026 vs 2025 aj.IPC · mes a mes</span></span>'
+      +'<span onclick="setEvolCanal(\''+ck+'\')" style="cursor:pointer;margin-left:auto;font-size:11.5px;color:var(--txt2);border:1px solid var(--brd);border-radius:999px;padding:3px 11px;font-weight:600"><i class="ti ti-arrow-left" style="vertical-align:-1px;margin-right:3px"></i>Ver todos los canales</span></div>';
+    return hdr+'<div style="overflow-x:auto;border:1px solid var(--brd);border-radius:12px;background:var(--bg)"><table style="border-collapse:collapse;font-size:12px;width:100%;min-width:'+(220+meses.length*72)+'px"><thead style="background:#eef2f6">'+head+'</thead><tbody>'+body+'</tbody></table></div>'+INFO;
+  }
+  var _selValid = evolCanalSel && CH.some(function(ch){return ch[0]===evolCanalSel;});
+  if(_selValid){
+    el.innerHTML=note26+focusCanal(evolCanalSel);
+  } else {
+    el.innerHTML=note26
+      +'<div class="sec-hdr" style="margin-top:2px"><i class="ti ti-calendar"></i>Evolución 2026 <span class="sec-sub">· por canal · FC · Mg · Cfinanciero</span></div>'
+      +evolTable(u26,meses26)+INFO
+      +tbl2025
+      +cmpTable;
+  }
 }
 // Importa el Excel de etiquetas de clientes → mapa CLIENTE(mayúsc) → tipo (etiqueta "Tipo de cliente / …"). El resto queda N/A.
 async function handleEtiquetasFile(file){
